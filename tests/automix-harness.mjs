@@ -203,7 +203,6 @@ async function bundleEngine() {
       export function hasBridge() { return true; }
       export function requireBridge() {
         return {
-          getStreamUrl: async (id) => "fake:" + id,
           localTrackUrl: async (id) => "fake:" + id,
         };
       }`,
@@ -372,7 +371,7 @@ export async function createEngine({ tickMs = 20 } = {}) {
   return api;
 }
 
-export const track = (id, duration) => ({ id, title: id, artist: "Test", album: "T", duration, thumb: null });
+export const track = (id, duration) => ({ id, title: id, artist: "Test", album: "T", duration, thumb: null, localPath: `${id}.flac` });
 
 /* ------------------------------ query helpers ------------------------------ */
 

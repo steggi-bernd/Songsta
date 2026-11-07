@@ -7,7 +7,10 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Disc3, Download, Pencil, Shuffle } from "lucide-react";
-import { downloadForOffline, SERVER_SONG } from "../lib/downloads";
+import { useSettings } from "../stores/settings";
+import { SERVER_SONG } from "../lib/downloads";
+import { albumListKey } from "../lib/keptLists";
+import { toggleKeptList } from "../lib/keptListsWatch";
 import { AlbumEditor, useAlbumEditorRequest } from "../components/AlbumEditor";
 import { ArtistLinks } from "../components/ArtistLinks";
 import { AlbumTile, BigPlayButton, playCollection } from "../components/LibraryCards";
@@ -50,6 +53,8 @@ export function LibraryAlbumView({ param }: { param: string }) {
     return (["local", "jellyfin", "subsonic"] as const).filter((s) => found.has(s));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [album, catalogVersion]);
+  const keptLists = useSettings((s) => s.keptLists);
+  const kept = !!album && keptLists.includes(albumListKey(album.key));
   // Songs only a server has: what "Download for offline" fetches (each one's server copy).
   const serverOnly = useMemo(
     () =>
@@ -109,14 +114,15 @@ export function LibraryAlbumView({ param }: { param: string }) {
         >
           <Pencil className="w-5 h-5" />
         </button>
-        {serverOnly.length > 0 && (
+        {(serverOnly.length > 0 || kept) && (
           <button
-            onClick={() => downloadForOffline(serverOnly)}
-            title={T("Download for offline — {count} {value} only on the server", { count: serverOnly.length, value: serverOnly.length === 1 ? T("song") : T("songs") })}
+            onClick={() => toggleKeptList(albumListKey(album.key), album.tracks)}
+            title={kept ? T("Kept offline: new songs download by themselves. Press to stop that.") : T("Download for offline — {count} {value} only on the server", { count: serverOnly.length, value: serverOnly.length === 1 ? T("song") : T("songs") })}
             aria-label={T("Download for offline")}
+            aria-pressed={kept}
             className="w-10 h-10 grid place-items-center rounded-full text-ink-hi/70 hover:text-ink-hi hover:scale-105 transition-all"
           >
-            <Download className="w-5 h-5" />
+            <Download className={`w-5 h-5 ${kept ? "text-accent" : ""}`} />
           </button>
         )}
       </div>

@@ -59,15 +59,6 @@ export function resolveArtistAbout(artist: string): Promise<ArtistAbout | null> 
   return job;
 }
 
-/**
- * The YouTube home feed used to pre-seed this card from artist pages. The
- * feed is gone in the local player; kept so the (unrouted) feed module still
- * compiles.
- */
-export function seedArtistAbout(_page: unknown, _artistId: string, _fallbackName = ""): void {
-  /* nothing to seed — answers come from the open databases */
-}
-
 /** The playing track's artist about-card data — its first credited artist ("A, B" asks about A). */
 export function useArtistAbout(track: Track | null): ArtistAbout | null {
   const artist = track ? leadArtist(track.artist) : "";

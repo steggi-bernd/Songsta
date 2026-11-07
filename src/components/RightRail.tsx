@@ -18,7 +18,6 @@ import { useUI } from "../stores/ui";
 import { useAvailabilityCheck } from "../stores/availability";
 import { Artwork, EqBars, IconBtn } from "./primitives";
 import { handRows } from "../lib/queueSections";
-import { upgradeArtwork, wideArtwork } from "../lib/artwork";
 import { draggedTrack, dragHasQueueRow, dragHasTrack, readQueueIndex, readTrack, useDrag } from "../lib/dnd";
 import { branchOffAfterDrop } from "../lib/trackActions";
 import { fmtTime } from "../lib/format";
@@ -32,6 +31,7 @@ import { useSettings } from "../stores/settings";
 import { soundOf, useSound } from "../stores/sound";
 import { keyName } from "../../electron/sound-analysis";
 import type { Track } from "../types";
+import { upgradeArtwork } from "../lib/artwork";
 import { T } from "../lib/i18n";
 
 /** The queue's "Now playing" row — draggable like every other song row. */
@@ -662,8 +662,8 @@ function AboutArtistCard({ track }: { track: Track }) {
   const about = useArtistAbout(track);
   const navigate = useUI((s) => s.navigate);
   // Genius is asked only when the open databases have no photo.
-  const genius = useArtistImages(about && !about.thumb && !track.artistImage ? leadArtist(track.artist) : "");
-  const photo = about?.thumb ?? track.artistImage ?? genius?.photo ?? genius?.banner ?? null;
+  const genius = useArtistImages(about && !about.thumb ? leadArtist(track.artist) : "");
+  const photo = about?.thumb ?? genius?.photo ?? genius?.banner ?? null;
 
   if (!about) return null;
 
@@ -693,7 +693,7 @@ function AboutArtistCard({ track }: { track: Track }) {
           3:2 frame showing the whole artist shot, not a cropped strip. */}
       {photo ? (
         <div className="relative aspect-[3/2] bg-ink-hi/[0.06]">
-          <img src={wideArtwork(photo)} alt="" className="w-full h-full object-cover object-top art-hairline" />
+          <img src={upgradeArtwork(photo)} alt="" className="w-full h-full object-cover object-top art-hairline" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/10 to-transparent" />
           <div className="absolute top-2.5 left-3.5 text-[15px] font-bold text-ink-hi">{T("About the artist")}</div>
         </div>

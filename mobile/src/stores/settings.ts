@@ -3,7 +3,7 @@ import { create } from "zustand";
 import Player from "../../modules/media3-player";
 import { readJson, writeJson } from "../storage";
 import { colors } from "../theme";
-import { T, type LanguageChoice } from "../shared";
+import { NO_VERSION_MEMORY, T, type LanguageChoice, type NewVersionMemory, type DeviceLink } from "../shared";
 
 const FILE = "settings.json";
 
@@ -68,6 +68,23 @@ export interface Settings {
   language: LanguageChoice;
   /** what stands on top in Your Library, first pinned first: "album:…", "mix:…", "artist:…" (playlists carry their own pin) */
   pins: string[];
+  /** a short note and a dot when a newer version is out (newVersion.ts) */
+  checkNewVersion: boolean;
+  newVersion: NewVersionMemory;
+  /** the first start's pages were gone through */
+  setupDone: boolean;
+  /** fetches a new version unasked, on Wi-Fi; Android still asks before it goes in */
+  autoUpdate: boolean;
+  /** a receiver goes off half a minute after the music has left it (lib/devicePower.ts) */
+  switchOffDevices: boolean;
+  /** which device hangs on which input of a receiver */
+  deviceLinks: DeviceLink[];
+  /** TVs that took this app's code: they can be switched off from here */
+  pairedTvs: string[];
+  /** how far ahead a device plays in a group, in ms, set by hand; below zero behind */
+  playAhead: Record<string, number>;
+  /** the version that ran last, for the note after an update */
+  lastVersion: string;
 }
 
 const DEFAULTS: Settings = {
@@ -91,6 +108,15 @@ const DEFAULTS: Settings = {
   filterNonMusic: true,
   language: "auto",
   pins: [],
+  checkNewVersion: true,
+  newVersion: NO_VERSION_MEMORY,
+  setupDone: false,
+  autoUpdate: true,
+  switchOffDevices: true,
+  deviceLinks: [],
+  pairedTvs: [],
+  playAhead: {},
+  lastVersion: "",
 };
 
 interface SettingsState extends Settings {

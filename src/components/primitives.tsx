@@ -4,9 +4,8 @@
  * Every view composes from here so spacing, typography, states and surfaces
  * stay consistent across the entire application.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight, Music2, Pause, Play, Split, X, type LucideIcon } from "lucide-react";
-import { extractPalette, type Palette } from "../lib/ambient";
 import { upgradeArtwork } from "../lib/artwork";
 import { useBranchChosen } from "../stores/player";
 import { useUI } from "../stores/ui";
@@ -23,10 +22,6 @@ export function BranchMark({ id }: { id: string }) {
       <Split className="h-3.5 w-3.5" aria-label={T("The branch starts here")} />
     </span>
   );
-}
-
-export function Page({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`px-8 pt-6 pb-12 max-w-[1600px] ${className}`}>{children}</div>;
 }
 
 /** Section heading for horizontal shelves. */
@@ -450,19 +445,6 @@ export function CardSkeleton({ width = "w-44" }: { width?: string }) {
   );
 }
 
-export function ShelfSkeleton() {
-  return (
-    <div>
-      <div className="skeleton h-5 w-40 rounded-md mb-4" />
-      <div className="flex gap-4 overflow-hidden">
-        {Array.from({ length: 7 }, (_, i) => (
-          <CardSkeleton key={i} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function RowSkeleton() {
   return (
     <div className="flex items-center gap-3 h-[52px] px-3">
@@ -476,57 +458,49 @@ export function RowSkeleton() {
   );
 }
 
-export function ListSkeleton({ rows = 8 }: { rows?: number }) {
-  return (
-    <div className="space-y-0.5">
-      {Array.from({ length: rows }, (_, i) => (
-        <RowSkeleton key={i} />
-      ))}
-    </div>
-  );
-}
-
-export function HeroSkeleton() {
-  return (
-    <div className="flex items-end gap-6 mb-8">
-      <div className="skeleton w-48 h-48 rounded-2xl shrink-0" />
-      <div className="flex-1 pb-2 space-y-3">
-        <div className="skeleton h-3 w-16 rounded-md" />
-        <div className="skeleton h-9 w-[45%] rounded-lg" />
-        <div className="skeleton h-3.5 w-[28%] rounded-md" />
-        <div className="flex gap-2 pt-3">
-          <div className="skeleton h-9 w-24 rounded-full" />
-          <div className="skeleton h-9 w-24 rounded-full" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ============================================================ badges */
-
-/** Explicit-content badge: 11px, hairline border, 2px radius. */
-export function ExplicitBadge() {
-  return (
-    <span
-      className="inline-grid place-items-center shrink-0 w-[15px] h-[15px] text-[10px] font-semibold text-ink-faint border border-ink-hi/40 rounded-[2px] leading-none"
-      title={T("Explicit")}
-      aria-label={T("Explicit")}
-    >
-      E
-    </span>
-  );
-}
 
 /* ============================================================ equalizer */
 
-/** Animated "now playing" indicator. */
+const EQ_CYCLE_MS = 900;
+const EQ_STEP_MS = 125;
+const eqBars = new Set<HTMLElement>();
+let eqTimer: number | undefined;
+
+function moveEqBars(): void {
+  if (document.hidden || document.documentElement.classList.contains("reduce-motion")) return;
+  const now = performance.now();
+  for (const bar of eqBars) {
+    const turn = (now - Number(bar.dataset.eqAfter)) / EQ_CYCLE_MS;
+    bar.style.transform = `scaleY(${(0.675 - 0.325 * Math.cos(2 * Math.PI * turn)).toFixed(3)})`;
+  }
+}
+
+/**
+ * Animated "now playing" indicator. One timer moves all of them a few times a second: as a CSS
+ * animation these tiny bars kept the graphics process drawing at the screen's full rate, which
+ * cost more than playing the music.
+ */
 export function EqBars() {
+  const root = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const bars = [...(root.current?.children ?? [])] as HTMLElement[];
+    for (const bar of bars) eqBars.add(bar);
+    eqTimer ??= window.setInterval(moveEqBars, EQ_STEP_MS);
+    moveEqBars();
+    return () => {
+      for (const bar of bars) eqBars.delete(bar);
+      if (!eqBars.size) {
+        window.clearInterval(eqTimer);
+        eqTimer = undefined;
+      }
+    };
+  }, []);
   return (
-    <span className="flex items-end gap-0.5 h-3.5" aria-label={T("Playing")}>
-      <span className="eq-bar w-0.5 h-full rounded-sm bg-accent" style={{ animationDelay: "0ms" }} />
-      <span className="eq-bar w-0.5 h-full rounded-sm bg-accent" style={{ animationDelay: "160ms" }} />
-      <span className="eq-bar w-0.5 h-full rounded-sm bg-accent" style={{ animationDelay: "320ms" }} />
+    <span ref={root} className="flex items-end gap-0.5 h-3.5" aria-label={T("Playing")}>
+      <span className="eq-bar w-0.5 h-full rounded-sm bg-accent" data-eq-after="0" />
+      <span className="eq-bar w-0.5 h-full rounded-sm bg-accent" data-eq-after="160" />
+      <span className="eq-bar w-0.5 h-full rounded-sm bg-accent" data-eq-after="320" />
     </span>
   );
 }
@@ -569,15 +543,20 @@ export function PlayOverlay({ onClick, title = T("Play"), playing = false }: { o
  */
 export function Dialog() {
   const req = useUI((s) => s.dialog);
-  const close = useUI((s) => s.closeDialog);
+  const closeDialog = useUI((s) => s.closeDialog);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const close = useCallback((): void => closeDialog(), [closeDialog]);
+  const cancel = useCallback((): void => {
+    useUI.getState().dialog?.onCancel?.();
+    closeDialog();
+  }, [closeDialog]);
 
   useEffect(() => {
     if (!req) return;
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        close();
+        cancel();
       } else if (e.key === "Enter") {
         e.preventDefault();
         // One keystroke must not confirm the dialog AND activate whatever
@@ -599,7 +578,7 @@ export function Dialog() {
       window.removeEventListener("keydown", onKey, true);
       window.clearTimeout(t);
     };
-  }, [req, close]);
+  }, [req, close, cancel]);
 
   if (!req) return null;
   const hasInput = req.initialValue !== undefined;
@@ -608,7 +587,7 @@ export function Dialog() {
     <div
       className="fixed inset-0 z-[120] grid place-items-center animate-fade-in"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) close();
+        if (e.target === e.currentTarget) cancel();
       }}
     >
       <div className="absolute inset-0 bg-black/55 backdrop-blur-[3px]" aria-hidden />
@@ -638,7 +617,7 @@ export function Dialog() {
         )}
 
         <div className="flex items-center justify-end gap-2 mt-6">
-          <Btn variant="ghost" size="md" className="!rounded-xl" onClick={close}>
+          <Btn variant="ghost" size="md" className="!rounded-xl" onClick={cancel}>
             {req.cancelLabel ?? T("Cancel")}
           </Btn>
           <button

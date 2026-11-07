@@ -239,13 +239,20 @@ test("a song handed over that never starts: why, as far as it can be told, and t
   usePlayer.getState().playQueue([song("local:a"), song("local:b")], 0);
   await cast.castTo(TV);
   now += 60_000;
-  report({ trackId: "local:a", state: "stopped", fetched: false, members: [{ id: TV.id, name: "TV", volume: 0.3, muted: false }], notStarted: { id: TV.id, name: "TV" } });
+  report({ trackId: "local:a", state: "stopped", fetched: false, through: true, members: [{ id: TV.id, name: "TV", volume: 0.3, muted: false }], notStarted: { id: TV.id, name: "TV" } });
   await flush();
   assert.equal(usePlayer.getState().playing, false);
   assert.equal(cast.useCast.getState().active, null);
   assert.equal(cast.useCast.getState().connecting, null);
   assert.deepEqual(globalThis.__toasts.at(-1), ["TV didn't start. It may be off, or a firewall keeps it from this computer: let Songsta through for private networks. The music is back here, paused", "error"]);
   assert.ok(globalThis.__audio.some((a) => a[0] === "takeBack"));
+
+  // Handed its song straight from the server: no firewall of this computer's in the way.
+  usePlayer.getState().setPlaying(true);
+  await cast.castTo(TV);
+  report({ trackId: "local:a", state: "stopped", fetched: false, through: false, members: [{ id: TV.id, name: "TV", volume: 0.3, muted: false }], notStarted: { id: TV.id, name: "TV" } });
+  await flush();
+  assert.deepEqual(globalThis.__toasts.at(-1), ["TV didn't start. It may be off. The music is back here, paused", "error"]);
 
   // Fetched but not started: most likely the file type.
   usePlayer.getState().setPlaying(true);

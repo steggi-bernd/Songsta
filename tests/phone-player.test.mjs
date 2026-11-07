@@ -9,7 +9,7 @@ import { build } from "esbuild";
 const stores = fileURLToPath(new URL("../mobile/src/stores/", import.meta.url));
 const stubs = {
   "stores/connection": `export const useConnection = { getState: () => ({ reach: "online", metered: false, check: async () => "online" }), subscribe() {} };`,
-  "stores/devices": `export const useDevices = { getState: () => ({ others: [] }), setState() {} }; export const isAround = () => true;`,
+  "stores/devices": `const known = { others: [] }; export const useDevices = { getState: () => known, setState(next) { Object.assign(known, next); } }; export const isAround = () => true;`,
   "stores/localMusic": `export const fileOfSong = () => null;`,
   "stores/downloads": `export const useDownloads = { getState: () => ({ kept: {}, covers: {} }), subscribe() {} }; export const downloadsLine = () => "";`,
   "stores/library": `export const useLibrary = { getState: () => ({ muted: new Set(), byId: new Map(), loaded: true, data: { tracks: [], counts: {} }, notePlayed() {} }), subscribe() {} };`,
@@ -21,7 +21,7 @@ const stubs = {
   storage: `export const readJson = async () => null; export const writeJson = () => undefined;`,
   jellyfin: `export const streamUrl = () => "http://test/song";`,
   addresses: `export const withoutServer = (x) => x;`,
-  quality: `export const ORIGINAL = { kind: "original" }; export const chooseStream = () => ORIGINAL; export const levelGain = () => 0; export const sameChoice = () => true; export const stepDown = () => null;`,
+  quality: `export const ORIGINAL = { kind: "original" }; export const chooseStream = () => globalThis.__stream ?? ORIGINAL; export const levelGain = () => 0; export const sameChoice = () => true; export const stepDown = () => null;`,
 };
 const out = await build({
   stdin: { contents: `export { usePlayer, adoptPlayback, hearDevices, linkDevices, playbackNote, runCommand, wantsPlayback, watchPlayer } from "./player";`, resolveDir: stores, loader: "ts" },
@@ -653,4 +653,70 @@ test("what this phone tells the others holds the line and the branches", () => {
   assert.equal(doc.branches[0].name, "Mix");
   assert.equal(doc.context, "Mix");
   assert.equal(doc.home, "Album");
+});
+
+/* ------------------------------------------------------------- a copy the server can't make */
+
+/** A store of its own: that the server makes no smaller copies is remembered for as long as the app runs. */
+async function freshPlayer(tag) {
+  const fresh = await import(`data:text/javascript;base64,${Buffer.from(`${out.outputFiles[0].text}\n// ${tag}`).toString("base64")}`);
+  fresh.watchPlayer();
+  return fresh;
+}
+const smallerCopyFails = () => globalThis.__listeners.onError({ message: "not here", code: "ERROR_CODE_IO_BAD_HTTP_STATUS" });
+
+test("a smaller copy the server can't make: the file itself takes over, and a paused player stays paused", async (context) => {
+  globalThis.__stream = { kind: "transcode", kbps: 256 };
+  context.after(() => {
+    globalThis.__stream = undefined;
+    watchPlayer();
+  });
+  const fresh = await freshPlayer("paused");
+  fresh.adoptPlayback({ device: { id: "pc", name: "PC" }, at: Date.now(), playing: false, positionMs: 12000, track: t("a"), queueId: "q" }, { id: "q", tracks: songs("a", "b") });
+  assert.equal(fresh.usePlayer.getState().playWhenReady, false);
+  globalThis.__native.length = 0;
+  smallerCopyFails();
+  const said = globalThis.__native.map((c) => c[0]);
+  assert.ok(said.includes("replaceCurrent"), "the file itself, from the same place");
+  assert.ok(!said.includes("play"), "nobody pressed play");
+});
+
+test("a smaller copy the server can't make: a song under way goes on from the file", async (context) => {
+  globalThis.__stream = { kind: "transcode", kbps: 256 };
+  context.after(() => {
+    globalThis.__stream = undefined;
+    watchPlayer();
+  });
+  const fresh = await freshPlayer("playing");
+  fresh.usePlayer.getState().playTracks(songs("a", "b"), 0, "Album");
+  nativeSays(0);
+  globalThis.__native.length = 0;
+  smallerCopyFails();
+  const said = globalThis.__native.map((c) => c[0]);
+  assert.ok(said.includes("replaceCurrent"));
+  assert.ok(said.includes("play"));
+});
+
+test("started with the service away: the others hear of it when it's back", () => {
+  let connected = false;
+  linkDevices({
+    self: "phone",
+    send: async (id, command) => {
+      sent.push(command);
+      return true;
+    },
+    sendList: async () => true,
+    handOver: async () => true,
+    look: () => undefined,
+    presence: () => undefined,
+    connected: () => connected,
+  });
+  player().playTracks(songs("a", "b"), 0, "Album");
+  nativeSays(0);
+  assert.equal(sent.filter((c) => c.action === "yield").length, 0, "nobody to tell");
+  connected = true;
+  hearDevices([pc("x")]);
+  assert.deepEqual(sent.filter((c) => c.action === "yield"), [{ action: "yield", to: "phone" }], "back, it says the music is here");
+  hearDevices([pc("x")]);
+  assert.equal(sent.filter((c) => c.action === "yield").length, 1, "once");
 });

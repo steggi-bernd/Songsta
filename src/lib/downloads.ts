@@ -1,4 +1,4 @@
-/** Download orchestration on the renderer side. */
+/** Offline copies of server songs, on the renderer's side. */
 import { useLibrary, type DownloadItem } from "../stores/library";
 import { useSettings } from "../stores/settings";
 import { useUI } from "../stores/ui";
@@ -11,16 +11,12 @@ export function getDownload(id: string): DownloadItem | undefined {
   return useLibrary.getState().downloads[id];
 }
 
-export function isDownloaded(id: string): boolean {
-  return useLibrary.getState().downloads[id]?.status === "done";
-}
-
 export async function startDownload(track: Track, dirOverride?: string): Promise<void> {
   const lib = useLibrary.getState();
   const existing = lib.downloads[track.id];
   if (existing?.status === "downloading" || existing?.status === "queued") return;
   if (existing?.status === "done") {
-    useUI.getState().toast(T("Already downloaded — see the Downloads view"), "info");
+    useUI.getState().toast(T("Already downloaded"), "info");
     return;
   }
 
@@ -34,11 +30,9 @@ export async function startDownload(track: Track, dirOverride?: string): Promise
   });
 
   try {
-    const s = useSettings.getState();
-    // A server song's copy goes to its offline library folder unless a folder was chosen for it.
-    const dir = dirOverride ?? (SERVER_SONG.test(track.id) ? undefined : (s.downloadDir ?? undefined));
+    // The copy goes to its offline library folder unless a folder was chosen for it.
     // The main process queues it; lifecycle arrives over download:event.
-    await requireBridge().startDownload(track, dir, s.downloadQuality, s.exportDownloads);
+    await requireBridge().startDownload(track, dirOverride);
   } catch (err) {
     useLibrary.getState().patchDownload(track.id, { status: "failed", progress: 0 });
     useUI.getState().toast(
@@ -187,29 +181,18 @@ export function listenForDownloadProgress(): () => void {
         downloaded: 0,
         total: 0,
       });
-      if (SERVER_SONG.test(e.id)) {
-        offlineReady += 1;
-        scheduleOfflineScan();
-      } else {
-        useUI.getState().toast(T("Download finished"), "success");
-      }
+      offlineReady += 1;
+      scheduleOfflineScan();
     } else if (e.type === "failed") {
       buffer.flush(e.id);
       lib.patchDownload(e.id, { status: "failed", progress: 0 });
       useUI.getState().toast(T("Download failed: {value}", { value: e.reason ?? T("unknown error") }), "error");
-      if (SERVER_SONG.test(e.id)) scheduleOfflineScan();
+      scheduleOfflineScan();
     } else if (e.type === "cancelled") {
       buffer.flush(e.id);
       lib.patchDownload(e.id, { status: "failed", progress: 0 });
-      if (SERVER_SONG.test(e.id)) scheduleOfflineScan();
+      scheduleOfflineScan();
     }
   });
-  // Legacy channel (kept for older event payloads).
-  const offProgress = window.bytune.onDownloadProgress(({ id, downloaded, total }) => {
-    buffer.push(id, downloaded, total);
-  });
-  return () => {
-    offEvent?.();
-    offProgress();
-  };
+  return () => offEvent?.();
 }

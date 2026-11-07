@@ -1,9 +1,9 @@
 /**
- * Download manager — a real queue:
+ * Offline copies of server songs — a real queue:
  *
  *   - enqueue(): one door into the queue; a track already saved, queued or
  *     running is left alone rather than duplicated
- *   - concurrency capped at 2 so the stream proxy and the network stay healthy
+ *   - concurrency capped at 2 so the server and the network stay healthy
  *   - cancel() aborts an in-flight transfer (partial file removed) or dequeues
  *   - progress + lifecycle events stream to the renderer over download:event
  *
@@ -15,7 +15,6 @@ import * as fs from "fs";
 import * as path from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
-import { resolveStream } from "./music-service";
 import * as jellyfin from "./jellyfin";
 import * as subsonic from "./subsonic";
 import type { Track } from "../src/types";
@@ -40,9 +39,6 @@ function serverExt(res: Response): string | null {
   return /^\.[a-z0-9]{2,5}$/.test(ext) ? ext : null;
 }
 
-const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-
 const MAX_CONCURRENT = 2;
 
 type QueueState =
@@ -50,7 +46,7 @@ type QueueState =
   | { phase: "running"; downloaded: number; total: number }
   | { phase: "failed"; reason: string };
 
-const queue: { track: Track; dir?: string; maxKbps?: number; exportCompat?: boolean }[] = [];
+const queue: { track: Track; dir?: string }[] = [];
 const state = new Map<string, QueueState>();
 const controllers = new Map<string, AbortController>();
 let active = 0;
@@ -69,17 +65,6 @@ export function resetDownloads(): Promise<void> {
   for (const ctrl of controllers.values()) ctrl.abort();
   for (const item of queued) emit({ type: "cancelled", id: item.track.id });
   return resetTask;
-}
-
-// Stream resolution has no AbortSignal API. Stop waiting immediately on reset;
-// its eventual resolution/rejection is consumed, with no download side effects.
-function abortable<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const abort = (): void => reject(new Error("cancelled"));
-    signal.addEventListener("abort", abort, { once: true });
-    work.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
-    if (signal.aborted) abort();
-  });
 }
 
 export interface DownloadEvent {
@@ -119,19 +104,6 @@ export function queueSnapshot(): { id: string; phase: string; downloaded?: numbe
   return out;
 }
 
-export async function defaultDownloadDir(): Promise<string> {
-  return path.join(app.getPath("downloads"), "Songsta");
-}
-
-/**
- * Export-compatible location: the OS music library, so other players and
- * the user can reach the files — the desktop equivalent of mobile's shared
- * `Music/BitChord` (vs the app download folder above).
- */
-export function exportDownloadDir(): string {
-  return path.join(app.getPath("music"), "Songsta");
-}
-
 /** Exported for security regression tests — the production path is internal. */
 export function sanitizeFilename(name: string): string {
   // Bidi/format controls (U+202A–U+202E etc.) would let a hostile title
@@ -165,10 +137,11 @@ export function addDownloadListener(fn: Listener): () => void {
  * Queue a track. Throws when it is already saved, queued or running — the
  * caller decides what that means for its own UI.
  */
-export function enqueueDownload(track: Track, dirOverride?: string, maxKbps?: number, exportCompat?: boolean): "queued" {
+export function enqueueDownload(track: Track, dirOverride?: string): "queued" {
   if (resetTask) throw new Error("Downloads reset in progress");
+  if (!SERVER_SONG.test(track.id)) throw new Error("Only songs on a server can be downloaded");
   if (isDownloading(track.id)) throw new Error("Already downloading this track");
-  queue.push({ track, dir: dirOverride, maxKbps, exportCompat: exportCompat === true });
+  queue.push({ track, dir: dirOverride });
   state.set(track.id, { phase: "queued" });
   emit({ type: "queued", id: track.id });
   void drain();
@@ -197,7 +170,7 @@ async function drain(): Promise<void> {
     const next = queue.shift();
     if (!next) break;
     active++;
-    const worker = runDownload(next.track, next.dir, next.maxKbps, next.exportCompat)
+    const worker = runDownload(next.track, next.dir)
       .catch((err: unknown) => {
         const reason = err instanceof Error ? err.message : String(err);
         if (reason !== "cancelled") {
@@ -219,48 +192,31 @@ async function drain(): Promise<void> {
   }
 }
 
-async function runDownload(track: Track, dirOverride?: string, maxKbps?: number, exportCompat?: boolean): Promise<void> {
+async function runDownload(track: Track, dirOverride?: string): Promise<void> {
   const ctrl = new AbortController();
   controllers.set(track.id, ctrl);
   let dest = "";
   let ownsPartial = false;
   const checkCancelled = (): void => { if (ctrl.signal.aborted) throw new Error("cancelled"); };
   try {
-    const server = SERVER_SONG.test(track.id);
     const chosen = dirOverride && dirOverride.trim() ? dirOverride : null;
-    const dir = server ? (chosen ?? offlineDir()) : exportCompat ? exportDownloadDir() : (chosen ?? (await defaultDownloadDir()));
+    const dir = chosen ?? offlineDir();
     checkCancelled();
     await fs.promises.mkdir(dir, { recursive: true });
     checkCancelled();
 
-    let res: Response;
-    if (server) {
-      // The original file, named and filed the way a music library is: <artist>/<album>/<no> <title>.
-      const original = track.id.startsWith("jf:") ? jellyfin.originalFile(track.id.slice(3)) : subsonic.originalFile(track.id.slice(3));
-      res = await fetch(original.url, { headers: original.headers, signal: ctrl.signal });
-      if (!res.ok || !res.body) throw new Error(`The server answered HTTP ${res.status}`);
-      const albumDir = path.join(
-        dir,
-        sanitizeFilename(track.albumArtist || track.artist || "Unknown artist"),
-        sanitizeFilename(track.album || "Unknown album")
-      );
-      await fs.promises.mkdir(albumDir, { recursive: true });
-      const no = track.trackNo ? `${String(track.trackNo).padStart(2, "0")} ` : "";
-      dest = uniquePath(albumDir, `${sanitizeFilename(`${no}${track.title}`)}${serverExt(res) ?? original.ext}`);
-    } else {
-      // Downloads ask for an mp4/AAC rendition (the most portable container);
-      // the resolver still falls back to the best available if a track has none,
-      // so name the file from the mime it actually returned.
-      const stream = await abortable(resolveStream(track.id, false, maxKbps, true), ctrl.signal);
-      checkCancelled();
-      const ext = /webm|opus/i.test(stream.mime) ? ".webm" : ".m4a";
-      dest = uniquePath(dir, `${sanitizeFilename(`${track.artist} - ${track.title}`)}${ext}`);
-      res = await fetch(stream.url, {
-        headers: { "User-Agent": UA, Range: "bytes=0-" },
-        signal: ctrl.signal,
-      });
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-    }
+    // The original file, named and filed the way a music library is: <artist>/<album>/<no> <title>.
+    const original = track.id.startsWith("jf:") ? jellyfin.originalFile(track.id.slice(3)) : subsonic.originalFile(track.id.slice(3));
+    const res = await fetch(original.url, { headers: original.headers, signal: ctrl.signal });
+    if (!res.ok || !res.body) throw new Error(`The server answered HTTP ${res.status}`);
+    const albumDir = path.join(
+      dir,
+      sanitizeFilename(track.albumArtist || track.artist || "Unknown artist"),
+      sanitizeFilename(track.album || "Unknown album")
+    );
+    await fs.promises.mkdir(albumDir, { recursive: true });
+    const no = track.trackNo ? `${String(track.trackNo).padStart(2, "0")} ` : "";
+    dest = uniquePath(albumDir, `${sanitizeFilename(`${no}${track.title}`)}${serverExt(res) ?? original.ext}`);
     const total = Number(res.headers.get("content-length") ?? 0);
     checkCancelled();
     // Exclusive creation prevents a competing download/user file from being

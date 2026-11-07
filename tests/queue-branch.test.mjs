@@ -25,7 +25,7 @@ const out = await build({
         b.onLoad({ filter: /[\\/]lib[\\/]persist\.ts$/ }, () =>
           stub(`export const storage = { getItem: () => null, setItem: () => undefined, removeItem: () => undefined }; export const lazyJSONStorage = () => ({ getItem: () => null, setItem: () => undefined, removeItem: () => undefined });`)
         );
-        b.onLoad({ filter: /[\\/]stores[\\/]catalog\.ts$/ }, () => stub(`export const songKey = (id) => id; export const versionsOf = (t) => [t];`));
+        b.onLoad({ filter: /[\\/]stores[\\/]catalog\.ts$/ }, () => stub(`export const songKey = (id) => id; export const versionsOf = (t) => [t]; export const useCatalog = { getState: () => ({ tracks: [], loaded: false }), subscribe: () => () => undefined };`));
         b.onLoad({ filter: /[\\/]stores[\\/]ui\.ts$/ }, () =>
           stub(`export const useUI = { getState: () => ({ toast: (m) => globalThis.__toasts.push(m), openDialog() {}, navigate() {} }) };`)
         );
@@ -33,7 +33,7 @@ const out = await build({
           stub(`export const useLibrary = { getState: () => ({ isLiked: () => false, playlists: [], toggleLike() {}, addToPlaylist() {} }) };`)
         );
         b.onLoad({ filter: /[\\/]lib[\\/]downloads\.ts$/ }, () =>
-          stub(`export const SERVER_SONG = /^(jf|ss):/; export const downloadForOffline = () => 0; export const startDownload = async () => {};`)
+          stub(`export const SERVER_SONG = /^(jf|ss):/; export const downloadForOffline = () => 0; export const startDownload = async () => {}; export const getDownload = () => undefined;`)
         );
         // The "Play on" submenu: no devices around in this test.
         b.onLoad({ filter: /[\\/]lib[\\/]cast\.ts$/ }, () => stub(`export const useCast = { getState: () => ({ devices: [] }) };`));

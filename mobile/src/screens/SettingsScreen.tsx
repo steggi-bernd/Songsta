@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Check, ChevronLeft, ChevronRight, FolderPlus, Link2, LogOut, RefreshCw, Server, SlidersHorizontal, Trash2, X } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { APP_VERSION, installPhoneUpdate, lookNow, openReleasePage, updatePhone, useNewerVersion, usePhoneUpdate } from "../newVersion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Reach } from "../addresses";
 import Player from "../../modules/media3-player";
@@ -23,8 +24,6 @@ import { LANGUAGES, type LanguageChoice } from "../shared";
 import { syncAddress, useSync } from "../sync";
 import { colors, PAGE_END } from "../theme";
 import { T } from "../shared";
-
-const APP_VERSION = "1.3.0";
 
 const SYNC_LINE: Record<SyncStatus, string> = {
   off: T("Off"),
@@ -51,6 +50,46 @@ const FADES = [0, 3, 6, 9, 12];
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
 
 /** A switch with what it's about. */
+/** What there is to do about a new version, depending on how far it's come. */
+function UpdateRows({ newer }: { newer: string | null }) {
+  const update = usePhoneUpdate();
+  const version = update.version || newer;
+  if (!version) return null;
+  const accent = [styles.rowTitle, { color: colors.accent }];
+  return (
+    <>
+      {update.phase === "ready" ? (
+        <Pressable onPress={installPhoneUpdate} style={styles.row}>
+          <Text style={accent}>{T("Songsta {version} is ready", { version })}</Text>
+          <Text style={styles.rowSub}>{T("Press to install. Android asks once more.")}</Text>
+        </Pressable>
+      ) : update.phase === "downloading" ? (
+        <View style={styles.row}>
+          <Text style={styles.rowTitle}>{T("Downloading Songsta {version}", { version })}</Text>
+          <Text style={styles.rowSub}>{T("{percent}% downloaded", { percent: update.percent })}</Text>
+        </View>
+      ) : update.phase === "failed" ? (
+        <>
+          <Pressable onPress={() => void updatePhone()} style={styles.row}>
+            <Text style={styles.rowTitle}>{T("Couldn't update to Songsta {version}", { version })}</Text>
+            <Text style={styles.rowSub}>{T("Press to try again.")}</Text>
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable onPress={openReleasePage} style={styles.row}>
+            <Text style={styles.rowTitle}>{T("Download page")}</Text>
+          </Pressable>
+        </>
+      ) : (
+        <Pressable onPress={() => void updatePhone()} style={styles.row}>
+          <Text style={accent}>{T("Songsta {version} is out", { version })}</Text>
+          <Text style={styles.rowSub}>{T("You have {version}. Press to update.", { version: APP_VERSION })}</Text>
+        </Pressable>
+      )}
+      <View style={styles.divider} />
+    </>
+  );
+}
+
 function SwitchRow({ title, line, value, onChange }: { title: string; line?: string; value: boolean; onChange: (on: boolean) => void }) {
   return (
     <View style={styles.switchRow}>
@@ -104,11 +143,13 @@ export function SettingsScreen() {
   const loadingCount = useDownloads((s) => Object.values(s.loading).filter((song) => !song.failed).length);
   const settings = useSettings();
   const change = settings.change;
+  const newer = useNewerVersion();
   const streaming = usePlayer((s) => s.quality);
   const folders = useLocalMusic((s) => s.folders);
   const onPhone = useLibrary((s) => s.data.tracks.filter((t) => t.localPath).length);
   const inFolders = useLocalMusic((s) => s.files.length);
   const scanning = useLocalMusic((s) => s.scanning);
+  const [lookingForUpdates, setLookingForUpdates] = useState(false);
   const [editingSync, setEditingSync] = useState(false);
   const [editingServer, setEditingServer] = useState<"home" | "away" | null>(null);
 
@@ -319,6 +360,8 @@ export function SettingsScreen() {
           <Text style={styles.rowSub}>{T("The pitch stays where it is")}</Text>
         </View>
         <View style={styles.divider} />
+        <SwitchRow title={T("Switch receivers off afterwards")} line={T("Denon and Marantz go off 30 seconds after the music has left them, unless you stop it or they're doing something else")} value={settings.switchOffDevices} onChange={(switchOffDevices) => change({ switchOffDevices })} />
+        <View style={styles.divider} />
         <SwitchRow title={T("Skipping ends repeat one")} line={T("Go to another song while one is on repeat, and the whole list repeats from there")} value={settings.skipEndsRepeatOne} onChange={(skipEndsRepeatOne) => change({ skipEndsRepeatOne })} />
         <View style={styles.divider} />
         <SwitchRow title={T("Autoplay")} line={T("Keep the music going when the queue ends")} value={settings.autoplay} onChange={(autoplay) => change({ autoplay })} />
@@ -489,6 +532,23 @@ export function SettingsScreen() {
           <Text style={styles.rowTitle}>{T("Songsta {APP_VERSION}", { APP_VERSION })}</Text>
           <Text style={styles.rowSub}>{T("Your data stays on your devices and your own server.")}</Text>
         </View>
+        <View style={styles.divider} />
+        <UpdateRows newer={newer} />
+        <Pressable
+          disabled={lookingForUpdates}
+          onPress={() => {
+            setLookingForUpdates(true);
+            void lookNow().finally(() => setLookingForUpdates(false));
+          }}
+          style={styles.row}
+        >
+          <Text style={styles.rowTitle}>{T("Look for updates")}</Text>
+          <Text style={styles.rowSub}>{lookingForUpdates ? T("Looking…") : T("You have Songsta {version}", { version: APP_VERSION })}</Text>
+        </Pressable>
+        <View style={styles.divider} />
+        <SwitchRow title={T("Automatic updates")} line={T("Fetches new versions on Wi-Fi. Android asks you before one goes in.")} value={settings.autoUpdate} onChange={(autoUpdate) => change({ autoUpdate })} />
+        <View style={styles.divider} />
+        <SwitchRow title={T("Tell me about new versions")} line={T("A short note and a dot on the settings button when one is out")} value={settings.checkNewVersion} onChange={(checkNewVersion) => change({ checkNewVersion })} />
         <View style={styles.divider} />
         <Pressable onPress={resetEverything} style={styles.action}>
           <Trash2 size={20} color="#FF9D9D" />

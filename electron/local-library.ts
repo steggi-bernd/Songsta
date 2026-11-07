@@ -590,8 +590,8 @@ export async function scanLibrary(
   /**
    * Tag duration in whole seconds. `music-metadata` reports NaN (not
    * undefined) for files with damaged or absent headers, and `?? 0` does not
-   * catch NaN — a NaN duration serializes to JSON `null`, which made the whole
-   * cloud library row unreadable and broke every sync and restore.
+   * catch NaN — a NaN duration serializes to JSON `null`, which would make
+   * the song unreadable wherever it travels.
    */
   const parsedDuration = (value: number | undefined): number =>
     typeof value === "number" && Number.isFinite(value) ? Math.round(value) : 0;

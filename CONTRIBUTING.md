@@ -29,7 +29,7 @@ npm run dev
 | `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
 | `npm run build` | Typecheck + build renderer and main process |
 | `npm run dist` | Full build + package for the current platform |
-| `npm run dist:win` | NSIS installer into `release/` (Windows) |
+| `npm run dist:win` | NSIS installer into `release/` (Windows). A release also carries `latest.yml` and the `.blockmap` from there: the app's updater reads them |
 | `npm run dist:mac` | DMG + ZIP, arm64 and x64, into `release/` (needs macOS) |
 
 Before opening a pull request, please make sure `npm run typecheck` and `npm test` pass.
@@ -44,7 +44,7 @@ Open a [GitHub issue](https://github.com/steggi-bernd/Songsta/issues) and includ
 - The Songsta version (Settings → About, or the release tag)
 - Your OS and version (Windows 10/11, or macOS 11+ on Apple Silicon/Intel)
 
-Playback issues are often upstream changes on YouTube's side — mention whether playback fails for everything or just some tracks.
+For playback issues, mention whether playback fails for everything or just some tracks, and where those songs live (a folder, Jellyfin, Navidrome).
 
 ## Proposing features
 

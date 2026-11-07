@@ -6,6 +6,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { CloudOff, Settings, Speaker } from "lucide-react-native";
+import { useNewerVersion } from "../newVersion";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -53,6 +54,7 @@ function ArtistCard({ name, thumb, plays }: { name: string; thumb: string; plays
 }
 
 export function HomeScreen() {
+  const newer = useNewerVersion();
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<Filter>("all");
@@ -150,8 +152,13 @@ export function HomeScreen() {
         <Pressable onPress={() => nav.navigate("Devices")} accessibilityLabel={T("Devices")} style={styles.headerButton}>
           <Speaker size={23} color={colors.ink} />
         </Pressable>
-        <Pressable onPress={() => nav.navigate("Settings")} accessibilityLabel={T("Settings")} style={styles.headerButton}>
+        <Pressable
+          onPress={() => nav.navigate("Settings")}
+          accessibilityLabel={newer ? T("Settings — Songsta {version} is out", { version: newer }) : T("Settings")}
+          style={styles.headerButton}
+        >
           <Settings size={23} color={colors.ink} />
+          {!!newer && <View style={styles.newVersionDot} />}
         </Pressable>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -226,6 +233,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 8, paddingBottom: 8 },
   greeting: { flex: 1, color: colors.ink, fontSize: 26, fontWeight: "800", letterSpacing: -0.7 },
   headerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  newVersionDot: { position: "absolute", right: 9, bottom: 9, width: 9, height: 9, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.base },
   chips: { gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
   error: { color: "#FF9D9D", fontSize: 14, marginHorizontal: 16, marginTop: 12 },
   offline: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginTop: 12 },

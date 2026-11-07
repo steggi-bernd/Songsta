@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
+import javax.net.ssl.KeyManager
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.X509TrustManager
@@ -95,14 +96,15 @@ internal class LanSockets(private val context: Context, private val report: (Map
   private val open = ConcurrentHashMap<Int, Open>()
   private val nextId = AtomicInteger(1)
 
-  /** Blocks until connected. */
-  fun connect(host: String, port: Int): Int {
+  /** Blocks until connected. With `asThisApp` it shows this app's own certificate, for a TV's remote control. */
+  fun connect(host: String, port: Int, asThisApp: Boolean = false): Int {
     val address = InetAddress.getByName(host)
     require(address.isSiteLocalAddress || address.isLinkLocalAddress || address.isLoopbackAddress) { "That device isn't on the local network" }
     val raw = Socket()
     runCatching { LocalNet.lan(context)?.bindSocket(raw) }
     raw.connect(InetSocketAddress(address, port), CONNECT_MS)
-    val socket = anyCertificate().socketFactory.createSocket(raw, host, port, true) as SSLSocket
+    val context = if (asThisApp) anyCertificate(TvIdentity.keyManagers()) else anyCertificate()
+    val socket = context.socketFactory.createSocket(raw, host, port, true) as SSLSocket
     socket.soTimeout = 0
     socket.startHandshake()
     val id = nextId.getAndIncrement()
@@ -146,15 +148,21 @@ internal class LanSockets(private val context: Context, private val report: (Map
     open.keys.toList().forEach(::close)
   }
 
+  /** The key on the other side's certificate: a TV's pairing code is made of it. */
+  fun peerKey(id: Int): Map<String, String>? {
+    val socket = open[id]?.socket as? SSLSocket ?: return null
+    return TvIdentity.partsOf(socket.session.peerCertificates[0].publicKey)
+  }
+
   /** Cast devices carry certificates only Google's own apps check; this never leaves the local network (see connect). */
   @SuppressLint("CustomX509TrustManager", "TrustAllX509TrustManager")
-  private fun anyCertificate(): SSLContext {
+  private fun anyCertificate(keys: Array<KeyManager>? = null): SSLContext {
     val anyone = object : X509TrustManager {
       override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
       override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
       override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
     }
-    return SSLContext.getInstance("TLS").apply { init(null, arrayOf(anyone), SecureRandom()) }
+    return SSLContext.getInstance("TLS").apply { init(keys, arrayOf(anyone), SecureRandom()) }
   }
 
   private companion object {

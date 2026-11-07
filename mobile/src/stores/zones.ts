@@ -14,6 +14,23 @@ import Player, { type QueueItem } from "../../modules/media3-player";
 import { itemIdOf, streamUrl } from "../jellyfin";
 import { ORIGINAL } from "../quality";
 import {
+  bringToInput,
+  inputName,
+  isNetworkInput,
+  linksToFollow,
+  OWN_INPUT,
+  receiverInUse,
+  sendToReceiver,
+  TV_PAIRING_PORT,
+  TV_REMOTE_PORT,
+  TvCodeRefused,
+  TvPairing,
+  tvSecret,
+  tvState,
+  tvSwitchOff,
+  wentOffToo,
+  type DeviceLink,
+  canSwitchOff,
   castPlayer,
   describeRenderer,
   devicesFromMdns,
@@ -26,15 +43,19 @@ import {
   mimeOf,
   parseSsdp,
   readMdns,
+  readPower,
   SSDP_ADDRESS,
   SSDP_PORT,
   SSDP_SEARCH,
+  switchOffAt,
+  SwitchOffs,
   upnpPlayer,
   utf8Bytes,
   utf8Text,
   Zone,
   type CastSocket,
   type DevicePlayer,
+  type LeavingDevice,
   type MdnsService,
   type NetDevice,
   type Renderer,
@@ -47,8 +68,9 @@ import {
 import { readJson, writeJson } from "../storage";
 import { useLibrary } from "./library";
 import { outputChanged, setPlayHook, shuffled, switchOutput, toItem, usePlayer, zoneReport, type PlayerOutput } from "./player";
-import { toast } from "./popups";
+import { dropToast, toast } from "./popups";
 import { here, useSession } from "./session";
+import { useSettings } from "./settings";
 import { T } from "../shared";
 
 const FILE = "devices.json";
@@ -89,9 +111,11 @@ interface ZonesState {
   zones: ZoneView[];
   /** the device the next song asked for goes to */
   pickingFor: FoundDevice | null;
+  /** receivers the music has left, counting down */
+  switchingOff: LeavingDevice[];
 }
 
-export const useZones = create<ZonesState>(() => ({ found: [], scanning: false, noWifi: false, connecting: null, names: {}, zones: [], pickingFor: null }));
+export const useZones = create<ZonesState>(() => ({ found: [], scanning: false, noWifi: false, connecting: null, names: {}, zones: [], pickingFor: null, switchingOff: [] }));
 
 /** This phone as one of the devices of a group. */
 export const THIS_PHONE: FoundDevice = { id: "this-phone", kind: "upnp", name: T("This phone"), model: "", host: "", port: 0 };
@@ -254,7 +278,10 @@ function socketEntry(id: number): OpenSocket {
 }
 
 async function openCastSocket(host: string, port: number): Promise<CastSocket> {
-  const id = await Player.socketOpen(host, port);
+  return socketOn(await Player.socketOpen(host, port, false));
+}
+
+function socketOn(id: number): CastSocket {
   const entry = socketEntry(id);
   return {
     write: (bytes) => void Player.socketWrite(id, toBase64(bytes)).catch(() => undefined),
@@ -279,6 +306,15 @@ interface Running {
 }
 
 const running = new Map<string, Running>();
+
+/** A device set by hand to play further ahead or behind: its group is looked at again. */
+let aheadBefore = useSettings.getState().playAhead;
+useSettings.subscribe((s) => {
+  if (s.playAhead === aheadBefore) return;
+  const changed = new Set([...Object.keys(s.playAhead), ...Object.keys(aheadBefore)].filter((id) => s.playAhead[id] !== aheadBefore[id]));
+  aheadBefore = s.playAhead;
+  for (const r of running.values()) if (r.zone.members.some((m) => changed.has(m.deviceId))) r.zone.retune();
+});
 let nextZone = 1;
 /** songs of the zones with music of their own, which needn't be in the library's list */
 const songsKnown = new Map<string, Track>();
@@ -300,7 +336,7 @@ function whereToGet(song: ZoneSong): { url: string; mime: string; mark: string }
   return { url: streamUrl({ ...session, server: session.home ?? session.server }, track, ORIGINAL), mime: mimeOf(`.${ext}`), mark: itemIdOf(track) };
 }
 
-function driverFor(player: DevicePlayer): ZoneDriver {
+function driverFor(player: DevicePlayer, deviceId: string): ZoneDriver {
   const watch = new EndWatch();
   let playing: { song: ZoneSong; mark: string } | null = null;
   return {
@@ -330,6 +366,11 @@ function driverFor(player: DevicePlayer): ZoneDriver {
       const v = await player.getVolume();
       return v === null ? null : v / 100;
     },
+    async place() {
+      const at = await player.status();
+      return at.state === "PLAYING" ? at.position : null;
+    },
+    playAhead: () => (useSettings.getState().playAhead[deviceId] ?? 0) / 1000,
     close: () => player.close(),
   };
 }
@@ -365,6 +406,12 @@ function phoneMember(): ZoneMember {
     // Its volume is the phone's own, with its keys.
     setVolume: async () => undefined,
     getVolume: async () => null,
+    async place() {
+      const s = await Player.getState();
+      return s.isPlaying ? s.positionMs / 1000 : null;
+    },
+    nearby: true,
+    playAhead: () => (useSettings.getState().playAhead[THIS_PHONE.id] ?? 0) / 1000,
     close: () => undefined,
   };
   return { deviceId: THIS_PHONE.id, name: THIS_PHONE.name, driver, volume: null };
@@ -379,7 +426,7 @@ async function memberFor(d: FoundDevice): Promise<ZoneMember> {
     if (!renderer) throw new Error(T("{name} doesn't answer", { name: deviceName(d) }));
     player = upnpPlayer(renderer);
   } else throw new Error(`${deviceName(d)} can only be reached over Bluetooth`);
-  const driver = driverFor(player);
+  const driver = driverFor(player, d.id);
   // Its volume stays where it is: the slider shows it, and only moving the slider changes it.
   const volume = await driver.getVolume().catch(() => null);
   return { deviceId: d.id, name: deviceName(d), driver, volume };
@@ -448,9 +495,201 @@ function dropEmptyZones(): void {
   }
 }
 
+const hostOf = (id: string): string | undefined => useZones.getState().found.find((d) => d.id === id)?.host;
+
+function devicesWithMusic(): Set<string> {
+  const on = new Set<string>();
+  for (const r of running.values()) for (const m of r.zone.members) if (!isThisPhone({ id: m.deviceId })) on.add(m.deviceId);
+  return on;
+}
+
+/** The word that went out about each one that's counting: out of date once it stops. */
+const said = new Map<string, string>();
+
+const isPairedTv = (id: string): boolean => useSettings.getState().pairedTvs.includes(id);
+
+const tvRemoteAt = (host: string) => async (): Promise<CastSocket> => socketOn(await Player.socketOpen(host, TV_REMOTE_PORT, true));
+
+const offs = new SwitchOffs({
+  readPower: async (id) => {
+    const host = hostOf(id);
+    if (!host) return null;
+    if (!isPairedTv(id)) return readPower(host);
+    const state = await tvState(tvRemoteAt(host));
+    return state && { on: state.on, input: "", tv: true, busy: state.busy };
+  },
+  switchOff: async (id) => {
+    const host = hostOf(id);
+    if (!host) return false;
+    return isPairedTv(id) ? tvSwitchOff(tvRemoteAt(host)) : switchOffAt(host);
+  },
+  afterSwitchedOff: (id) => watchReceiverStaysOn(id),
+  inUse: (id) => receiverInUse(id, devicesWithMusic(), useSettings.getState().deviceLinks),
+  changed: (switchingOff) => {
+    useZones.setState({ switchingOff });
+    for (const [id, text] of said) {
+      if (switchingOff.some((d) => d.id === id)) continue;
+      said.delete(id);
+      dropToast(text);
+    }
+    keepAlive();
+  },
+  counting: (d) => {
+    const text = T("{name} switches off in 30 seconds", { name: d.name });
+    said.set(d.id, text);
+    toast(text, true, { label: T("Keep on"), run: () => offs.forget(d.id) }, 12_000);
+  },
+});
+
+export const keepDeviceOn = (id: string): void => offs.forget(id);
+
+/** By hand: its music stops first, if it has any. */
+export async function switchDeviceOff(d: FoundDevice): Promise<void> {
+  const asked = offs.switchOffNow(d.id);
+  const main = mainZone();
+  if (main?.zone.members.length === 1 && main.zone.members[0].deviceId === d.id) moveMusicHere();
+  else await freeDevice(d.id);
+  const name = deviceName(d);
+  say((await asked) ? T("{name} is switching off", { name }) : T("{name} didn't take that", { name }));
+}
+
+const comingAlong = new Set<string>();
+
+/** Music on a device that hangs on a receiver: the receiver comes along, on and on that input. */
+async function bringReceiverAlong(link: DeviceLink): Promise<void> {
+  const host = hostOf(link.receiver);
+  if (!host || comingAlong.has(link.receiver)) return;
+  comingAlong.add(link.receiver);
+  const receiver = useZones.getState().found.find((d) => d.id === link.receiver);
+  const words = { name: receiver ? deviceName(receiver) : link.receiver, input: inputName(link.input) };
+  const wanted = (): boolean => {
+    const now = devicesWithMusic();
+    return now.has(link.device) && !now.has(link.receiver);
+  };
+  try {
+    const there = await bringToInput({ read: () => readPower(host), send: (word) => sendToReceiver(host, word) }, link.input, wanted, { onSwitching: () => say(T("{name} is switching to {input}", words)) });
+    if (!there && wanted()) say(T("{name} didn't switch to {input}", words));
+  } finally {
+    comingAlong.delete(link.receiver);
+  }
+}
+
+/** This device hangs on that input from now on. With music on it already, the receiver follows right away. */
+export function plugInto(d: FoundDevice, receiver: FoundDevice, input: string): void {
+  const link = { device: d.id, receiver: receiver.id, input };
+  const { deviceLinks, change } = useSettings.getState();
+  change({ deviceLinks: [...deviceLinks.filter((l) => l.device !== d.id), link] });
+  say(T("{device} hangs on {name} now: {input}. It switches over with the music.", { device: deviceName(d), name: deviceName(receiver), input: inputName(input) }));
+  if (linksToFollow(devicesWithMusic(), new Set(), [link]).length) {
+    offs.forget(receiver.id);
+    void bringReceiverAlong(link);
+  }
+}
+
+/** The input the receiver stands on right now: for when nobody knows what it's called. */
+export async function plugIntoWhereItIs(d: FoundDevice, receiver: FoundDevice): Promise<void> {
+  const power = await readPower(receiver.host);
+  if (power?.input) plugInto(d, receiver, power.input);
+  else say(T("{name} doesn't say which input it's on", { name: deviceName(receiver) }));
+}
+
+export function unplug(id: string): void {
+  const { deviceLinks, change } = useSettings.getState();
+  change({ deviceLinks: deviceLinks.filter((l) => l.device !== id) });
+}
+
+/**
+ * A receiver handed a song goes to its own player by itself on the models tried so far: a moment
+ * for that, and then it's told, for any where that isn't so.
+ */
+const OWN_INPUT_AFTER_MS = 3000;
+
+async function backToOwnInput(id: string): Promise<void> {
+  const d = useZones.getState().found.find((f) => f.id === id);
+  if (!d?.host || !canSwitchOff(d.model) || comingAlong.has(id)) return;
+  const host = d.host;
+  await new Promise((done) => setTimeout(done, OWN_INPUT_AFTER_MS));
+  await bringToInput({ read: () => readPower(host), send: (word) => sendToReceiver(host, word) }, OWN_INPUT, () => devicesWithMusic().has(id), { accept: isNetworkInput, noWaking: true });
+}
+
+/** The TV is off and the receiver has music: over HDMI it can go off along with it. */
+function watchReceiverStaysOn(tv: string): void {
+  const link = useSettings.getState().deviceLinks.find((l) => l.device === tv);
+  const host = link && hostOf(link.receiver);
+  if (!link || !host || !devicesWithMusic().has(link.receiver)) return;
+  const receiver = useZones.getState().found.find((d) => d.id === link.receiver);
+  void wentOffToo(() => readPower(host), () => devicesWithMusic().has(link.receiver)).then((went) => {
+    if (!went) return;
+    void sendToReceiver(host, "PWON");
+    toast(T("{name} went off along with the TV. Set \"Pow.Off Control\" to \"Video\" in its HDMI setup, and it stays on with its music.", { name: receiver ? deviceName(receiver) : link.receiver }), true, undefined, 15_000);
+  });
+}
+
+/** The one pairing that can be under way: the TV shows its code once it has started. */
+let pairing: { tv: TvPairing; socketId: number; device: FoundDevice } | null = null;
+
+export function cancelPairing(): void {
+  pairing?.tv.close();
+  pairing = null;
+}
+
+export async function startPairing(d: FoundDevice): Promise<boolean> {
+  cancelPairing();
+  try {
+    const socketId = await Player.socketOpen(d.host, TV_PAIRING_PORT, true);
+    const tv = new TvPairing(socketOn(socketId), "Songsta");
+    pairing = { tv, socketId, device: d };
+    await tv.start();
+    return true;
+  } catch {
+    cancelPairing();
+    say(T("{name} doesn't answer to that. It has to be switched on, and be a Google TV or Android TV.", { name: deviceName(d) }));
+    return false;
+  }
+}
+
+/** Answers whether to ask again: the code was mistyped, and the TV still shows it. */
+export async function finishPairing(code: string): Promise<boolean> {
+  if (!pairing) return false;
+  const { tv, socketId, device } = pairing;
+  const name = deviceName(device);
+  const [own, theirs] = await Promise.all([Player.tvOwnKey().catch(() => null), Player.socketPeerKey(socketId).catch(() => null)]);
+  const secret = own && theirs ? tvSecret(own, theirs, code) : null;
+  if (!secret) return true;
+  try {
+    await tv.finish(secret);
+    const { pairedTvs, change } = useSettings.getState();
+    change({ pairedTvs: [...pairedTvs.filter((id) => id !== device.id), device.id] });
+    say(T("{name} can be switched off from here now", { name }));
+  } catch (err) {
+    say(err instanceof TvCodeRefused ? T("{name} didn't take that code. Start again for a new one.", { name }) : T("{name} doesn't answer to that. It has to be switched on, and be a Google TV or Android TV.", { name }));
+  }
+  cancelPairing();
+  return false;
+}
+
+let onDevices = new Set<string>();
+
+function seeDevices(): void {
+  const now = devicesWithMusic();
+  const { found, names } = useZones.getState();
+  const wanted = useSettings.getState().switchOffDevices;
+  offs.sawDevices(now, onDevices, (id) => {
+    const d = found.find((f) => f.id === id);
+    return d ? { name: names[id] ?? d.name, canSwitchOff: wanted && (canSwitchOff(d.model) || isPairedTv(id)) } : null;
+  }, useSettings.getState().deviceLinks);
+  for (const id of now) if (!onDevices.has(id)) void backToOwnInput(id);
+  for (const link of linksToFollow(now, onDevices, useSettings.getState().deviceLinks)) {
+    offs.forget(link.receiver);
+    void bringReceiverAlong(link);
+  }
+  onDevices = now;
+}
+
 function publish(): void {
   dropEmptyZones();
   useZones.setState({ zones: [...running.values()].map(view) });
+  seeDevices();
   const main = mainZone();
   if (main) reportMain(main);
   keepAlive();
@@ -471,6 +710,15 @@ function keysSetVolume(r: Running, level: number): void {
 
 function keepAlive(): void {
   const all = [...running.values()];
+  // Nothing plays any more, but a receiver waits to go off: somebody has to be awake for that.
+  const leaving = useZones.getState().switchingOff[0];
+  if (!all.length && leaving) {
+    const text = T("{name} switches off in 30 seconds", { name: leaving.name });
+    if (lastKeep === text) return;
+    lastKeep = text;
+    void Player.zonesWatch(true, true, "Songsta", text, false, -1).catch(() => undefined);
+    return;
+  }
   const on = all.filter(isOn);
   if (on.length) pausedSince = 0;
   else if (!pausedSince) pausedSince = Date.now();

@@ -5,7 +5,6 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { prefetchLyrics, LyricsCenter } from "./components/LyricsCenter";
 import { NowPlaying } from "./components/NowPlaying";
 import { PageScrollbar } from "./components/PageScrollbar";
-import { Onboarding } from "./views/OnboardingView";
 import { PlayerBar } from "./components/PlayerBar";
 import { RightRail } from "./components/RightRail";
 import { Sidebar } from "./components/Sidebar";
@@ -16,6 +15,10 @@ import { setAmbientFromArtwork } from "./lib/ambient";
 import { watchDiscordPresence } from "./lib/discordPresence";
 import { watchHomeSync } from "./lib/homeSync";
 import { watchMutedSongs } from "./lib/mutedSongs";
+import { watchNewVersion } from "./lib/newVersionWatch";
+import { watchDevicesLeaving } from "./lib/deviceSwitchOff";
+import { watchKeptLists } from "./lib/keptListsWatch";
+import { watchPlayAhead } from "./lib/playAhead";
 import { watchServerSync } from "./lib/serverSync";
 import { watchArchiveDrops } from "./lib/archiveImport";
 import { volumeTarget } from "./lib/cast";
@@ -24,8 +27,6 @@ import { watchLibraryEnrichment } from "./lib/libraryEnrichment";
 import { watchMenuCommands } from "./lib/menuCommands";
 import { usePanelDrop } from "./lib/panelDrop";
 import { useArtworkPalette } from "./lib/palette";
-import { watchSession, useSession } from "./lib/session";
-import { watchSyncRestores } from "./lib/syncRestore";
 import { startPipSync } from "./pip/pipSync";
 import { usePlayer } from "./stores/player";
 import { useLibrary } from "./stores/library";
@@ -56,6 +57,7 @@ import { LibraryCheckView } from "./views/LibraryCheckView";
 import { GenreView } from "./views/GenreView";
 import { PlaylistView } from "./views/PlaylistView";
 import { ReplayView } from "./views/ReplayView";
+import { SetupPages } from "./components/SetupPages";
 import { SettingsView } from "./views/SettingsView";
 
 /**
@@ -314,7 +316,6 @@ export default function App() {
   const pendingScroll = useUI((s) => s.pendingScroll);
   const lyricsCenter = useUI((s) => s.lyricsCenter);
   const shellRef = useRef<HTMLDivElement | null>(null);
-  const session = useSession();
   const panelDrop = usePanelDrop();
 
   // Back/forward land the user at the scroll they left the view at. Runs as a
@@ -327,14 +328,6 @@ export default function App() {
     if (el) el.scrollTop = pendingScroll;
     useUI.getState().clearPendingScroll();
   }, [pendingScroll, viewName, viewReloadNonce]);
-
-  // Session gate: onboarding until the user picks a mode (or straight in for
-  // an existing guest/account). watchSession refreshes on auth:changed.
-  useEffect(() => watchSession(), []);
-
-  // Cloud restores land on disk from the main process — rehydrate the
-  // zustand stores so the UI picks them up live.
-  useEffect(() => watchSyncRestores(), []);
 
   useEffect(() => {
     const unsubscribe = listenForDownloadProgress();
@@ -358,6 +351,10 @@ export default function App() {
   useEffect(() => watchHomeSync(), []);
   useEffect(() => watchMutedSongs(), []);
   useEffect(() => watchArchiveDrops(), []);
+  useEffect(() => watchNewVersion(), []);
+  useEffect(() => watchDevicesLeaving(), []);
+  useEffect(() => watchKeptLists(), []);
+  useEffect(() => watchPlayAhead(), []);
 
   // The mouse's back and forward buttons walk the views like the top bar's arrows (back closes
   // the full-screen player first). They come as mouse buttons 3 and 4 and, on Windows, also as
@@ -402,18 +399,6 @@ export default function App() {
   useEffect(() => {
     void window.bytune?.setFolderWatch(watchFolders);
   }, [watchFolders]);
-
-  // No account needed for a local player: the first launch (or a reinstall
-  // that found an old guest profile) goes straight in as a guest instead of
-  // stopping at the sign-in screen.
-  const needsGuest = session.loaded && (session.mode === null || (session.mode === "guest" && session.freshInstall));
-  useEffect(() => {
-    if (!needsGuest) return;
-    void window.bytune
-      ?.authContinueGuest()
-      .catch(() => undefined)
-      .then(() => useSession.getState().refresh());
-  }, [needsGuest]);
 
   // Native miniplayer bridge: push playback snapshots to the PiP window and
   // execute transport commands coming back from it.
@@ -474,11 +459,6 @@ export default function App() {
   useKeyboardShortcuts();
   useAmbient();
   useAppearance();
-
-  // First run / reinstall gate — no shell is rendered until a mode is chosen.
-  if (!session.loaded || needsGuest) return <div className="h-screen bg-canvas" />;
-  // A fresh Google user must choose their username before entering.
-  if (session.mode === "account" && session.needsUsername) return <Onboarding initial="pickusername" />;
 
   return (
     <div
@@ -542,6 +522,7 @@ export default function App() {
       </div>
       <PlayerBar />
       <NowPlaying />
+      <SetupPages />
       <Dialog />
       <SmartPlaylistEditorHost />
       <ContextMenu />

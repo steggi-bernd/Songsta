@@ -14,6 +14,7 @@ import { useUI } from "../stores/ui";
 import type { Track } from "../types";
 import { requireBridge } from "./bridge";
 import { leaveCast, useCast, type CastDevice } from "./cast";
+import { offerFirewall } from "./deviceFirewall";
 import { ipcErrorText } from "./ipcError";
 import { playableVersions } from "./librarySource";
 import { Zone, type ZoneDriver, type ZoneSong, type ZoneState } from "./zoneEngine";
@@ -70,6 +71,7 @@ function listen(): void {
     if (!r) return;
     r.status = st;
     if (st.ended) r.ended = true;
+    if (st.unreachable) void offerFirewall(st.unreachable.name);
     if (st.notStarted) {
       // Others left: it just went from the group.
       if (st.members.some((m) => m.id !== st.notStarted?.id)) useUI.getState().toast(T("{name} didn't start. Is it switched on?", { name: st.notStarted.name }), "error");

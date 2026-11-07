@@ -1,4 +1,4 @@
-/** First start: the user's Jellyfin server. The music stays where it is. */
+/** A server on top of the music on this phone, asked for in Settings. The first start has its own pages (SetupScreen). */
 import { useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -42,7 +42,6 @@ function Field({
 }
 
 export function ConnectScreen() {
-  const adding = useLocalMusic((s) => s.addingServer);
   const insets = useSafeAreaInsets();
   const signIn = useSession((s) => s.signIn);
   const [server, setServer] = useState("");
@@ -78,22 +77,9 @@ export function ConnectScreen() {
         <Pressable onPress={() => void connect()} disabled={busy} style={[styles.button, busy && { opacity: 0.6 }]}>
           {busy ? <ActivityIndicator color={colors.base} /> : <Text style={styles.buttonText}>{T("Continue")}</Text>}
         </Pressable>
-        {adding ? (
-          <Pressable onPress={() => useLocalMusic.getState().setAddingServer(false)} style={styles.other}>
-            <Text style={styles.otherText}>{T("Back")}</Text>
-          </Pressable>
-        ) : (
-          <Pressable
-            onPress={() => {
-              void useLocalMusic.getState().addFolder().then((picked) => {
-                if (picked) useLocalMusic.getState().setWithoutServer(true);
-              });
-            }}
-            style={styles.other}
-          >
-            <Text style={styles.otherText}>{T("No server: just the music on this phone")}</Text>
-          </Pressable>
-        )}
+        <Pressable onPress={() => useLocalMusic.getState().setAddingServer(false)} style={styles.other}>
+          <Text style={styles.otherText}>{T("Back")}</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );

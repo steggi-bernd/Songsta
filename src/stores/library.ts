@@ -95,8 +95,6 @@ interface LibraryState {
   setPlaylistFolder(playlistId: string, folderId: string | null): void;
   pushHistory(track: Track): void;
   clearHistory(): void;
-  followArtist(artist: { id: string; name: string; thumb?: string }): boolean;
-  unfollowArtist(id: string): void;
   setDownload(id: string, item: DownloadItem): void;
   patchDownload(id: string, patch: Partial<DownloadItem>): void;
   removeDownload(id: string): void;
@@ -338,24 +336,7 @@ export const useLibrary = create<LibraryState>()(
         withChanges(set, get, { history: [] }, [{ kind: "clear", group: "history" }]);
       },
 
-      followArtist(artist) {
-    if (!artist.id) return false;
-    if (get().followedArtists.some((a) => a.id === artist.id)) return false;
-    withChanges(set, get, {
-      followedArtists: [
-        { id: artist.id, name: artist.name, thumb: artist.thumb, followedAt: Date.now() },
-        ...get().followedArtists,
-      ],
-    }, [{ kind: "add", group: "followedArtists", id: artist.id }]);
-    return true;
-  },
-
-  unfollowArtist(id) {
-    withChanges(set, get, { followedArtists: get().followedArtists.filter((a) => a.id !== id) },
-      [{ kind: "delete", group: "followedArtists", id }]);
-  },
-
-  setDownload(id, item) {
+      setDownload(id, item) {
         set({ downloads: { ...get().downloads, [id]: item } });
       },
 

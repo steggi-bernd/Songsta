@@ -4,13 +4,11 @@
  * "PLAYLIST • N TRACKS • ABOUT 3:2X" metadata line, circular glass controls,
  * then the playlist's own numbered track rows.
  */
-import { Download, FileDown, Heart, ListMusic, ListPlus, MoreHorizontal, Play } from "lucide-react";
+import { FileDown, Heart, ListMusic, ListPlus, MoreHorizontal, Play } from "lucide-react";
 import { exportM3uPlaylist } from "../lib/playlistFiles";
-import { downloadForOffline, SERVER_SONG } from "../lib/downloads";
-import { versionsOf } from "../stores/catalog";
 import { PlaylistHero } from "../components/PlaylistHero";
 import { FileButton } from "../components/TrackList";
-import { Artwork, EmptyState, EqBars, ExplicitBadge } from "../components/primitives";
+import { Artwork, EmptyState, EqBars } from "../components/primitives";
 import { playlistHeaderItems, playlistMenuItems } from "../lib/trackActions";
 import { useDrag } from "../lib/dnd";
 import { fmtTime, plural } from "../lib/format";
@@ -27,7 +25,6 @@ import { T } from "../lib/i18n";
 
 export function PlaylistView({ playlistId }: { playlistId: string }) {
   const playlist = useLibrary((s) => s.playlists.find((p) => p.id === playlistId) ?? null);
-  const playQueue = usePlayer((s) => s.playQueue);
   const openContextMenu = useUI((s) => s.openContextMenu);
   const toast = useUI((s) => s.toast);
   const stillMissing = useStillMissing(playlistId);
@@ -88,17 +85,6 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
       ...(tracks.length
         ? [
             { label: T("Export as M3U…"), icon: FileDown, action: () => void exportM3uPlaylist(playlist.name, tracks) },
-            {
-              label: T("Download for offline"),
-              icon: Download,
-              action: () => {
-                const servers = tracks
-                  .filter((t) => !versionsOf(t).some((v) => v.localPath))
-                  .map((t) => versionsOf(t).find((v) => SERVER_SONG.test(v.id)))
-                  .filter((t): t is NonNullable<typeof t> => !!t);
-                if (!downloadForOffline(servers)) toast(T("Every song here is already on this device"));
-              },
-            },
           ]
         : []),
       { ...renameItem, separatorBefore: true },
@@ -111,7 +97,7 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
       <PlaylistHero
         art={
           coverThumb ? (
-            <img src={upgradeArtwork(coverThumb, 1200)} alt="" className="w-full h-full object-cover" />
+            <img src={upgradeArtwork(coverThumb)} alt="" className="w-full h-full object-cover" />
           ) : (
             /* Default cover — ByTune violet gradient with a big soft note
                watermark, Spotify's default-playlist-cover model. The hero's
@@ -239,7 +225,7 @@ function PlaylistTrackRow({
       } ${drag.dragging ? "opacity-40" : muted ? "opacity-60" : ""}`}
     >
       {/* The playlist's own running order — numbered rows, play on hover. */}
-      <div className="w-7 shrink-0 grid place-items-center text-[13px] text-ink-faint tabular-nums">
+      <div className="row-number w-7 shrink-0 grid place-items-center text-[13px] text-ink-faint tabular-nums">
         {isCurrent && playing ? (
           <EqBars />
         ) : (
@@ -263,7 +249,6 @@ function PlaylistTrackRow({
       <Artwork src={track.thumb} className="w-[52px] h-[52px] rounded-lg shrink-0" iconClassName="w-4 h-4" alt="" />
       <div className="flex-1 min-w-0">
         <div className={`flex items-center gap-1.5 text-[16px] font-semibold tracking-[-0.2px] ${isCurrent ? "text-accent" : muted ? "text-red-300" : "text-ink-hi"}`}>
-          {track.explicit && <ExplicitBadge />}
           <span className="truncate">{track.title}</span>
           <BranchMark id={track.id} />
         </div>

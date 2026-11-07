@@ -84,6 +84,8 @@ type Events = {
   onState(state: PlaybackState): void;
   onError(error: { message: string; code?: string }): void;
   onNetwork(state: NetworkState): void;
+  /** how far a new version of the app has come, and how that ended */
+  onAppUpdate(news: { percent?: number; file?: string; problem?: string }): void;
   onOutput(output: SoundOutput): void;
   /** bytes from a connection to a device, or that it's gone */
   onSocket(news: { id: number; data?: string; closed?: boolean }): void;
@@ -106,9 +108,13 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   /** One question (base64) to the local network and its answers within the time; null without Wi-Fi or a cable. */
   netAsk(address: string, port: number, question: string, waitMs: number): Promise<{ from: string; data: string }[] | null>;
   /** An encrypted connection to a device on the local network. */
-  socketOpen(host: string, port: number): Promise<number>;
+  socketOpen(host: string, port: number, asThisApp: boolean): Promise<number>;
   socketWrite(id: number, data: string): Promise<void>;
   socketClose(id: number): Promise<void>;
+  /** The key on the certificate of the device at the other end, in hex. */
+  socketPeerKey(id: number): Promise<{ modulus: string; exponent: string } | null>;
+  /** This app's own key for a TV's remote control, in hex; made the first time. */
+  tvOwnKey(): Promise<{ modulus: string; exponent: string } | null>;
   /** `volume` is the lead device's, 0–100; below 0 when it can't be set from here. */
   zonesWatch(ticking: boolean, keepAwake: boolean, title: string, text: string, playing: boolean, volume: number): Promise<void>;
   /** Android's folder picker; null when somebody changed their mind. */
@@ -128,6 +134,15 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   setMediaVolume(level: number): Promise<void>;
   /** While steering another device, in front: the volume keys send "volume:N" to onZoneControl. Below 0: they're this phone's again. */
   followVolumeKeys(level: number): Promise<void>;
+  /** Fetches a new version of the app; onAppUpdate says how it goes. */
+  appUpdateFetch(url: string, fileName: string, sha256: string, size: number): Promise<void>;
+  /** Hands it to Android, which asks before it installs. */
+  appUpdateInstall(file: string): Promise<void>;
+  appUpdateClear(): Promise<void>;
+  /** Whether Android lets this app hand it something to install. */
+  appUpdateAllowed(): Promise<boolean>;
+  /** Android's page for that. */
+  appUpdateAskToAllow(): Promise<void>;
   downloadStart(url: string, headers: Record<string, string>, fileName: string, wifiOnly: boolean): Promise<number>;
   downloadQuery(jobs: number[]): Promise<DownloadJob[]>;
   downloadFinish(job: number): Promise<{ file: string; bytes: number } | null>;

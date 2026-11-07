@@ -5,10 +5,14 @@
  * here too, and the other computers and phones running Songsta, with what they play.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { Bluetooth, Check, Headphones, Laptop, ListChecks, Loader2, MoreHorizontal, Pause, Play, Plus, RefreshCw, SkipForward, Smartphone, Speaker, Split, Tv, Volume2, X, Pencil } from "lucide-react";
+import { Bluetooth, Cable, Check, Headphones, Laptop, ListChecks, Loader2, MoreHorizontal, Pause, Play, Plus, Power, RefreshCw, SkipForward, Smartphone, Speaker, Split, Timer, Tv, Volume2, X, Pencil } from "lucide-react";
 import { listOutputDevices } from "../lib/audio";
 import type { OutputDeviceChoice } from "../lib/audio-output";
 import { castTo, joinCast, leaveCast, searchCastDevices, setCastVolume, setMemberVolume, stopCasting, useCast, type CastDevice } from "../lib/cast";
+import { canSwitchOff, inputName, looksLikeTv } from "../lib/devicePower";
+import { keepDeviceOn, pairTv, switchDeviceOff, useSwitchOffs } from "../lib/deviceSwitchOff";
+import { PlugDialog } from "./PlugDialog";
+import { playAheadText, TimingDialog } from "./TimingDialog";
 import { isAround, otherDevices, useHomeSync } from "../lib/homeSync";
 import { pickMusicFor, useZones, zoneJoin, zoneLeave, zoneNext, zoneStop, zoneToggle, zoneVolume, type ZoneView } from "../lib/zones";
 import { useDeviceNames } from "../stores/deviceNames";
@@ -140,6 +144,28 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** A receiver the music has left, counting down to switching off. */
+function SwitchingOff() {
+  const pending = useSwitchOffs((s) => s.pending);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!pending.length) return;
+    const timer = window.setInterval(() => tick((n) => n + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [pending.length]);
+  return (
+    <>
+      {pending.map((d) => (
+        <div key={d.id} className="mx-1 mt-2 flex items-center gap-2 rounded-xl bg-ink-hi/[0.08] px-3 py-2 text-[13px] text-ink-hi">
+          <Power className="h-4 w-4 shrink-0 opacity-70" />
+          <span className="min-w-0 flex-1 [text-wrap:balance]">{T("{name} switches off in {seconds} s", { name: d.name, seconds: Math.max(0, Math.ceil((d.at - Date.now()) / 1000)) })}</span>
+          <button className="shrink-0 font-semibold underline" onClick={() => keepDeviceOn(d.id)}>{T("Keep on")}</button>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function zoneLine(zone: ZoneView): string {
   const song = zone.state.queue[zone.state.index];
   if (zone.state.error) return zone.state.error;
@@ -189,6 +215,19 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
 
   const nameOf = (d: CastDevice): string => names[d.id] ?? d.name;
   const playable = devices.filter((d) => d.kind === "upnp" || d.kind === "cast");
+  const receivers = playable.filter((d) => canSwitchOff(d.model));
+  const deviceLinks = useSettings((s) => s.deviceLinks);
+  const pairedTvs = useSettings((s) => s.pairedTvs);
+  const [plugging, setPlugging] = useState<CastDevice | null>(null);
+  const [timing, setTiming] = useState<CastDevice | null>(null);
+  const playAhead = useSettings((s) => s.playAhead);
+  /** "On Den Receiver · Media Player", for what's plugged into one. */
+  const plugLine = (id: string): string | null => {
+    const link = deviceLinks.find((l) => l.device === id);
+    if (!link) return null;
+    const receiver = devices.find((d) => d.id === link.receiver);
+    return T("On {name} · {input}", { name: receiver ? nameOf(receiver) : T("the receiver"), input: inputName(link.input) });
+  };
   const pairOnly = devices.filter((d) => d.kind === "echo" || d.kind === "firetv");
   const around = others.filter(isAround);
   const here = !active && !followed;
@@ -232,7 +271,11 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
     const items: MenuItem[] = [
       { label: T("Play something else here"), icon: Play, action: () => pickMusicFor(d) },
       { label: T("Choose several devices"), icon: ListChecks, action: () => setChoosing(new Set([d.id])) },
+      { label: playAhead[d.id] ? T("Timing: {value}", { value: playAheadText(playAhead[d.id]) }) : T("Fine-tune timing…"), icon: Timer, action: () => setTiming(d) },
       ...(zone ? [{ label: T("Stop the music here"), icon: X, action: () => void zoneStop(zone.id) }] : []),
+      ...(canSwitchOff(d.model) || pairedTvs.includes(d.id) ? [{ label: T("Switch off"), icon: Power, action: () => void switchDeviceOff(d) }] : []),
+      ...(!canSwitchOff(d.model) && receivers.length ? [{ label: plugLine(d.id) ?? T("Plugged into a receiver"), icon: Cable, action: () => setPlugging(d) }] : []),
+      ...(looksLikeTv(d) && !pairedTvs.includes(d.id) && !receivers.length ? [{ label: T("Pair to switch it off"), icon: Power, action: () => void pairTv(d) }] : []),
       ...zones
         .filter((z) => !z.members.some((m) => m.id === d.id))
         .map((z): MenuItem => ({ label: T("Play along with {value}", { value: names[z.device.id] ?? z.device.name }), icon: Plus, action: () => void zoneJoin(z.id, d) })),
@@ -297,6 +340,8 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
             <button className="shrink-0 font-semibold underline" onClick={() => pickMusicFor(null)}>{T("Cancel")}</button>
           </div>
         )}
+
+        <SwitchingOff />
 
         <Section title={T("This computer")}>
           <Tile
@@ -377,7 +422,7 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
             const zone = zoneOn(d.id);
             const isMain = inGroup(d.id) || active?.id === d.id;
             const Icon = kindIcon(d);
-            const line = isMain ? (track ? `${connecting === d.id ? T("Waiting for it to start · ") : playing ? "" : T("Paused · ")}${track.title}` : T("Ready")) : zone ? zoneLine(zone) + withOthers(zone, d.id) : d.model || T("Ready");
+            const line = isMain ? (track ? `${connecting === d.id ? T("Waiting for it to start · ") : playing ? "" : T("Paused · ")}${track.title}` : T("Ready")) : zone ? zoneLine(zone) + withOthers(zone, d.id) : plugLine(d.id) ?? (d.model || T("Ready"));
             return (
               <Tile
                 key={d.id}
@@ -479,6 +524,8 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       )}
+      {plugging && <PlugDialog device={plugging} devices={playable} nameOf={nameOf} onClose={() => setPlugging(null)} />}
+      {timing && <TimingDialog device={timing} name={nameOf(timing)} onClose={() => setTiming(null)} />}
     </div>
   );
 }

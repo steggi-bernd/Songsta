@@ -16,6 +16,7 @@ import { useUI } from "../stores/ui";
 import type { Track } from "../types";
 import { castHeard, castTrackEnded, handOverToCast, takeBackFromCast } from "./audio";
 import { requireBridge } from "./bridge";
+import { offerFirewall } from "./deviceFirewall";
 import { ipcErrorText } from "./ipcError";
 import { playableVersions } from "./librarySource";
 import { T } from "./i18n";
@@ -183,6 +184,7 @@ function onStatus(st: CastStatus): void {
   }
   if (st.volume !== cast.volume || st.muted !== cast.muted) useCast.setState({ volume: st.volume, muted: st.muted });
   if (st.members && JSON.stringify(st.members) !== JSON.stringify(cast.members)) useCast.setState({ members: st.members });
+  if (st.unreachable) void offerFirewall(st.unreachable.name);
   if (st.notStarted) {
     // Handed a song and, after all that time, it plays nothing. With others left it just went from the group.
     if (st.members.some((m) => m.id !== st.notStarted?.id)) {
@@ -192,7 +194,11 @@ function onStatus(st: CastStatus): void {
     const { name } = st.notStarted;
     const title = usePlayer.getState().queue[usePlayer.getState().index]?.title ?? "";
     toast(
-      st.fetched ? T("{name} fetched \"{title}\" but didn't start it. It may not play this kind of file. The music is back on this computer, paused", { name, title }) : T("{name} didn't start. It may be off, or a firewall keeps it from this computer: let Songsta through for private networks. The music is back here, paused", { name }),
+      st.fetched
+        ? T("{name} fetched \"{title}\" but didn't start it. It may not play this kind of file. The music is back on this computer, paused", { name, title })
+        : st.through
+          ? T("{name} didn't start. It may be off, or a firewall keeps it from this computer: let Songsta through for private networks. The music is back here, paused", { name })
+          : T("{name} didn't start. It may be off. The music is back here, paused", { name }),
       "error"
     );
     void stopCasting(false);

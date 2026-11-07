@@ -83,8 +83,8 @@ export function ReplayView() {
     };
   }, [period, nonce]);
 
-  // Artist photos come from the (cloud-synced) identity cache; names it
-  // doesn't know yet are resolved once and cached for the whole app.
+  // Artist photos come from the identity cache; names it doesn't know yet
+  // are resolved once and cached for the whole app.
   useEffect(() => {
     if (!data) return;
     let alive = true;
@@ -109,8 +109,8 @@ export function ReplayView() {
   // listener's own library already knows what those albums look like.
   //
   // Local-file covers (localart://) point at extracted art on THIS machine —
-  // a data reset deletes that folder and a cloud restore can never bring it
-  // back, so such a reference is used only after the file is confirmed present.
+  // a data reset deletes that folder and a backup can never bring it back,
+  // so such a reference is used only after the file is confirmed present.
   // Trusting it blindly left every restored local-music album rendering as a
   // permanently broken image.
   const albumCandidates = useMemo(() => {

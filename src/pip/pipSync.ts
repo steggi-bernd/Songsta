@@ -101,7 +101,7 @@ export function startPipSync(): () => void {
     if (open) push(true);
   }) ?? (() => {});
   void bridge.pipIsOpen?.().then((open) => {
-    // Covers a PiP that survived a main-window reload (sign-in/out).
+    // Covers a PiP that survived a main-window reload.
     pipOpen = open;
     if (open) push(true);
   });

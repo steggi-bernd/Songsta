@@ -21,10 +21,16 @@ export interface DialogRequest {
   cancelable: boolean;
 }
 
+/** one button on a short word; it goes after that */
+export interface ToastAction {
+  label: string;
+  run(): void;
+}
+
 interface PopupState {
   /** what's asked now, then what waits its turn */
   dialogs: DialogRequest[];
-  message: { text: string; long: boolean; at: number } | null;
+  message: { text: string; long: boolean; at: number; action?: ToastAction; ms?: number } | null;
   closeDialog(): void;
 }
 
@@ -42,6 +48,11 @@ export function showDialog(title: string, message?: string, buttons?: DialogButt
 }
 
 /** A short word above the player, gone by itself. */
-export function toast(text: string, long = false): void {
-  usePopups.setState({ message: { text, long, at: Date.now() } });
+export function toast(text: string, long = false, action?: ToastAction, ms?: number): void {
+  usePopups.setState({ message: { text, long, at: Date.now(), action, ms } });
+}
+
+/** That word is out of date before its time. */
+export function dropToast(text: string): void {
+  if (usePopups.getState().message?.text === text) usePopups.setState({ message: null });
 }

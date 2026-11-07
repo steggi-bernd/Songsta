@@ -22,9 +22,7 @@
  * Retention mirrors mobile: 36 monthly buckets, 600 tracks / 400 artists+albums
  * per bucket, lowest-listened entries pruned first.
  *
- * Because Replay lives in a synced store it follows the account (not the
- * machine): switching accounts swaps Replay, and a wiped device or a
- * reinstall restores it from the cloud like the rest of the library.
+ * Replay is one store next to the library's: a backup carries it along.
  */
 import { app } from "electron";
 import * as fs from "fs";
@@ -79,9 +77,6 @@ export const KEEP_MONTHS = 36;
 const MAX_TRACKS = 600;
 const MAX_NAMES = 400;
 const FLUSH_EVERY_MS = 5000;
-
-/** Cloud rows are capped at 8 MiB; keep a margin for envelope overhead. */
-export const SYNC_BUDGET_BYTES = 6 * 1024 * 1024;
 
 export const HISTORY_STORE = "listening-history";
 
@@ -154,7 +149,7 @@ function coerceBucket(raw: any): MonthBucket | null {
   };
 }
 
-/** Read the persisted bucket set once (account-scoped store). */
+/** Read the persisted bucket set once. */
 function loadAll(): void {
   if (loaded) return;
   loaded = true;
@@ -186,27 +181,6 @@ function pruneOldBuckets(): void {
 
 function markDirty(): void { dirty = true; }
 
-/**
- * Called after this module writes the store, so the sync engine learns the
- * change. Replay is written by the main process — unlike the renderer stores
- * it flows through no IPC write handler — so without this hook its changes
- * would upload once on sign-in and then never again.
- */
-let notifyWrite: (() => void) | null = null;
-
-/** Wire the sync engine (main.ts) so Replay changes schedule a cloud push. */
-export function onStoreWrite(fn: () => void): void {
-  notifyWrite = fn;
-}
-
-function storeWritten(): void {
-  try {
-    notifyWrite?.();
-  } catch {
-    /* a broken listener must never break recording */
-  }
-}
-
 function scheduleFlush(): void {
   if (flushTimer) return;
   flushTimer = setTimeout(() => {
@@ -229,7 +203,6 @@ async function flush(): Promise<void> {
 async function writeStore(): Promise<void> {
   try {
     await persist.writeData(HISTORY_STORE, envelopePayload());
-    storeWritten();
   } catch (err) {
     console.warn("[bytune] stats flush failed:", err instanceof Error ? err.message : err);
   }
@@ -247,23 +220,6 @@ export function resetStats(): void {
   ruleCounted.clear();
 }
 
-/**
- * Drop the in-memory bucket cache and re-read the store. Called whenever
- * something outside this module replaces the file — a cloud restore or an
- * account switch — so the next flush can never write a stale copy back over
- * freshly restored data.
- */
-export function reloadStore(): void {
-  if (flushTimer) clearTimeout(flushTimer);
-  flushTimer = null;
-  dirty = false;
-  open.clear();
-  loaded = false;
-  ruleMs.clear();
-  ruleCounted.clear();
-  loadAll();
-}
-
 export function initStats(): void {
   if (ready) return;
   ready = true;
@@ -273,9 +229,8 @@ export function initStats(): void {
 
 /**
  * One-time import of the pre-store monthly files. Replay used to live in
- * loose `data/stats/<YYYY-MM>.json` files that never synced, so a device
- * reset or a reinstall threw a history away that the cloud never saw. Any
- * such files still on disk are folded into the synced store here.
+ * loose `data/stats/<YYYY-MM>.json` files. Any such files still on disk are
+ * folded into the store here.
  *
  * The directory is consumed after a successful import: a "Reset app data"
  * empties the store, and an unconsumed legacy copy would then resurrect the
@@ -311,14 +266,10 @@ function migrateLegacyStats(): void {
     }
     if (imported === 0) continue;
     dirty = true;
-    // Synchronous, and before the legacy dir is removed: the boot sequence
-    // signs in right after this and a cloud restore calls reloadStore(), which
-    // re-reads this file. An async write here could lose the recovered months
-    // to that reload — and the dir would already be gone.
+    // Synchronous, and before the legacy dir is removed.
     try {
       persist.writeDataSync(HISTORY_STORE, envelopePayload());
       dirty = false;
-      storeWritten();
     } catch (err) {
       console.warn("[bytune] stats recovery flush failed:", err instanceof Error ? err.message : err);
     }
@@ -354,9 +305,6 @@ export function recordListening(track: Track, listenedMs: number, at = new Date(
   const a = (b.artists[key] ??= { name: track.artist || "Unknown artist", ms: 0, plays: 0 });
   a.name = track.artist || "Unknown artist";
   a.ms += listenedMs;
-  // The artist's own photo, when the track carries one — Replay's Top artists
-  // would otherwise only ever show a generic icon.
-  if (!a.thumb && track.artistImage) a.thumb = track.artistImage;
 
   if (track.album) {
     const ak = `${track.album.toLowerCase()}|${key}`;
@@ -488,7 +436,6 @@ export function flushSync(): void {
   dirty = false;
   try {
     persist.writeDataSync(HISTORY_STORE, envelopePayload());
-    storeWritten();
   } catch (err) {
     console.warn("[bytune] stats flush failed:", err instanceof Error ? err.message : err);
   }
@@ -509,13 +456,13 @@ function pruneBucket(b: MonthBucket): void {
   trim(b.albums, MAX_NAMES, (a) => a.ms);
 }
 
-/** Read every monthly bucket (for backup export + cloud push). */
+/** Read every monthly bucket (for backup export). */
 export function exportAll(): MonthBucket[] {
   if (!ready) initStats();
   return [...open.values()].sort((a, b) => (a.month < b.month ? -1 : 1));
 }
 
-/** Replace all monthly buckets (backup import / cloud restore — caller validates). */
+/** Replace all monthly buckets (backup import — caller validates). */
 export function importAll(buckets: MonthBucket[]): void {
   if (!ready) initStats();
   open.clear();
@@ -531,20 +478,4 @@ export function importAll(buckets: MonthBucket[]): void {
   pruneOldBuckets();
   dirty = true;
   void writeStore();
-}
-
-/**
- * Bound the cloud copy for upload: the payload cap is 8 MiB and a full
- * 36-month history could exceed it, so oldest months are dropped first until
- * the envelope fits. Local retention is untouched — only what travels is cut.
- */
-export function fitForSync(payload: unknown): unknown {
-  const buckets = (payload as { state?: { buckets?: unknown } } | null)?.state?.buckets;
-  if (!Array.isArray(buckets)) return payload;
-  let out = buckets;
-  while (out.length > 0 && Buffer.byteLength(JSON.stringify({ state: { buckets: out }, version: 1 })) > SYNC_BUDGET_BYTES) {
-    out = out.slice(1);
-  }
-  if (out === buckets) return payload;
-  return { ...(payload as object), state: { buckets: out } };
 }

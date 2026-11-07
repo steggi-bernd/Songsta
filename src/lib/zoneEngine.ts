@@ -1,3 +1,4 @@
+import { GroupSync, type SyncMember } from "./groupSync";
 import { T } from "./i18n";
 /**
  * A zone: music on one network device or a group of them, with a queue of its
@@ -6,10 +7,10 @@ import { T } from "./i18n";
  * driver's business. Somebody has to call tick() about once a second: that's what
  * notices a song's end and moves the zone on.
  *
- * A group plays the same song on each member, started together. It isn't sample
- * exact: each device fetches and buffers on its own, which you can hear between
- * two speakers in one room. A Cast group made in Google's own app is exact, and
- * is one device here.
+ * A group plays the same song on each member, started together and brought close
+ * afterwards (lib/groupSync.ts). It isn't sample exact: each device fetches and buffers
+ * on its own, which you can hear between two speakers in one room. A Cast group made in
+ * Google's own app is exact, and is one device here.
  */
 
 export interface ZoneSong {
@@ -47,6 +48,12 @@ export interface ZoneDriver {
   close(): void;
   /** It was handed a song to play and hasn't started it yet: its status() has to be asked for, leader or not. */
   starting?(): boolean;
+  /** Where it stands by its own word, for bringing a group together; null when it isn't playing. */
+  place?(): Promise<number | null>;
+  /** This device's own player: seeks are cheap and exact. */
+  nearby?: boolean;
+  /** Seconds it's set to play ahead of the others, by hand (lib/groupSync.ts). */
+  playAhead?(): number;
 }
 
 export interface ZoneMember {
@@ -83,6 +90,14 @@ export class Zone {
   private tickingSince = 0;
   /** A song that was asked to play and hasn't started yet: since when. */
   private startingSince: number | null = null;
+  private sync = new GroupSync();
+  /** Goes up with everything that can put a group out of step. */
+  private commands = 0;
+  private alignedAt = -1;
+  /** How the last song was handed out: what to learn from, once it has started. */
+  private handedWith: ReadonlyMap<string, number> | null = null;
+  /** A setting was changed by hand: the next look is a close one. */
+  private retuned = false;
   state: ZoneState = { queue: [], index: 0, state: "idle", position: 0, duration: 0, repeat: "off", error: null };
 
   constructor(
@@ -104,6 +119,8 @@ export class Zone {
 
   private all(action: (member: ZoneMember) => Promise<unknown>): Promise<void> {
     this.lastCommandAt = Date.now();
+    this.commands += 1;
+    this.handedWith = null;
     return Promise.allSettled(this.members.map(action)).then((results) => {
       const failed = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
       if (failed && results.every((r) => r.status === "rejected")) {
@@ -118,7 +135,14 @@ export class Zone {
     const seq = ++this.loadSeq;
     this.startingSince = play ? Date.now() : null;
     this.set({ state: "loading", position, duration: song.duration, error: null, ranOut: false });
-    await this.all((m) => m.driver.load(song, position, play));
+    const delays = play && this.members.length > 1 ? this.sync.startDelays(this.members.map((m) => m.deviceId)) : null;
+    const handing = this.all(async (m) => {
+      const delay = delays?.get(m.deviceId) ?? 0;
+      if (delay > 0) await new Promise((done) => setTimeout(done, delay));
+      if (seq === this.loadSeq) await m.driver.load(song, position, play);
+    });
+    this.handedWith = delays;
+    await handing;
     if (seq !== this.loadSeq) return;
     this.lastCommandAt = Date.now();
     // Playing once the device says so: it may be only waking up (see tick).
@@ -221,6 +245,9 @@ export class Zone {
   async join(member: ZoneMember): Promise<void> {
     if (this.members.some((m) => m.deviceId === member.deviceId)) return;
     this.members = [...this.members, member];
+    this.lastCommandAt = Date.now();
+    this.commands += 1;
+    this.handedWith = null;
     member.volume = await member.driver.getVolume().catch(() => null);
     const song = this.current;
     if (song && this.state.state !== "stopped" && this.state.state !== "idle") {
@@ -259,6 +286,37 @@ export class Zone {
     await Promise.allSettled(members.map((m) => m.driver.stop()));
     for (const m of members) m.driver.close();
     this.set({ state: "stopped" });
+  }
+
+  /** How far ahead one plays was changed by hand: the group is looked at again once things settle. */
+  retune(): void {
+    if (this.members.length < 2) return;
+    this.retuned = true;
+    this.lastCommandAt = Date.now();
+    this.commands += 1;
+    this.handedWith = null;
+  }
+
+  /** All of them playing: are they together? Once per song, seek and pause. */
+  private bringTogether(): void {
+    const members = this.members.filter((m) => m.driver.place);
+    if (members.length < 2 || this.members.some((m) => m.driver.starting?.())) return;
+    this.alignedAt = this.commands;
+    const at = this.commands;
+    const song = this.current;
+    const delays = this.handedWith;
+    this.handedWith = null;
+    const closely = this.retuned;
+    this.retuned = false;
+    const those: SyncMember[] = members.map((m) => ({
+      id: m.deviceId,
+      nearby: m.driver.nearby,
+      offset: m.driver.playAhead?.() ?? 0,
+      place: m.driver.place as () => Promise<number | null>,
+      seek: (sec) => m.driver.seek(sec),
+    }));
+    const wanted = (): boolean => at === this.commands && song === this.current && this.state.state === "playing";
+    void this.sync.align(those, wanted, this.state.duration, delays, closely).catch(() => undefined);
   }
 
   /** Handed a song and never started it. */
@@ -321,7 +379,10 @@ export class Zone {
         await this.next(false);
         return;
       }
-      if (status.state === "playing") this.startingSince = null;
+      if (status.state === "playing") {
+        this.startingSince = null;
+        if (this.members.length > 1 && this.alignedAt !== this.commands && Date.now() - this.lastCommandAt > SETTLE_MS) this.bringTogether();
+      }
       if (status.state === "loading") return;
       // Asleep when it was first asked, it can tell its volume now.
       if (waking && !leader.driver.starting?.() && leader.volume === null) {

@@ -7,6 +7,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tinted } from "../color";
 import { DownloadButton } from "../components/SongMenu";
+import { albumListKey } from "../shared";
 import { Cover, TrackRow } from "../components/ui";
 import { describePlayback, formatLine, fmtLength, plural, RELEASE_LABEL } from "../shared";
 import { useArtistPhoto, useCoverColor, useLibrary } from "../stores/library";
@@ -78,7 +79,7 @@ export function AlbumScreen() {
             )}
           </View>
           <View style={styles.actions}>
-            {album.tracks.some((t) => !t.localPath) ? <DownloadButton tracks={album.tracks} style={styles.download} /> : <View style={styles.download} />}
+            {album.tracks.some((t) => !t.localPath) ? <DownloadButton tracks={album.tracks} list={albumListKey(album.key)} style={styles.download} /> : <View style={styles.download} />}
             <Pressable
               accessibilityLabel={T("Shuffle")}
               onPress={() => usePlayer.getState().playAll(album.tracks, album.title, true)}

@@ -383,6 +383,17 @@ body.bytune-dragging * {
   scroll-behavior: smooth;
 }
 
+/* A list row's number and its play button take turns on hover. The spot keeps
+   its size whichever shows, and it never serves as the browser's scroll anchor.
+   A number and an icon differ in height, so a hover moved the centred spot by a
+   hair; with the row at the top of the panel the browser "corrected" the scroll
+   position for that, which put the pointer on the next row, whose hover moved it
+   back: the whole list shaking, every frame, with the mouse standing still. */
+.row-number {
+  height: 1.25rem;
+  overflow-anchor: none;
+}
+
 /* The main content scroller. It carries no background of its own (the rounded
    panel behind it is the only surface) and no native scrollbar: that would
    take its width out of the page, and nothing could reach the panel's edge
@@ -668,18 +679,9 @@ input[type="range"].slider.mp-slider:active::-webkit-slider-thumb {
   transform: scale(1);
 }
 
-/* ---------- equalizer bars (now-playing indicator) ---------- */
-@keyframes eq {
-  0%,
-  100% {
-    transform: scaleY(0.35);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
+/* ---------- equalizer bars (now-playing indicator): moved by EqBars in primitives.tsx ---------- */
 .eq-bar {
-  animation: eq 0.9s ease-in-out infinite;
+  transform: scaleY(0.6);
   transform-origin: bottom;
 }
 
@@ -918,16 +920,14 @@ html.reduce-blur .glass-strong,
 html.reduce-blur .glass-pill,
 html.reduce-blur .toast-beacon,
 html.reduce-blur .player-glass,
-html.reduce-blur .chrome-glass,
-html.reduce-blur .ob-card {
+html.reduce-blur .chrome-glass {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 html.reduce-blur .glass,
 html.reduce-blur .glass-strong,
 html.reduce-blur .glass-pill,
-html.reduce-blur .toast-beacon,
-html.reduce-blur .ob-card {
+html.reduce-blur .toast-beacon {
   background: #121212;
 }
 html.reduce-blur .player-glass,
@@ -944,8 +944,7 @@ html.reduce-blur .top-fade {
    Same chrome, no refraction: solid fills keep hierarchy without blur. */
 html.noglass .glass,
 html.noglass .glass-strong,
-html.noglass .glass-pill,
-html.noglass .ob-card {
+html.noglass .glass-pill {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   background: rgb(var(--panel));
@@ -1070,222 +1069,6 @@ html.noglass .chrome-glass {
 }
 .animate-rise-in {
   animation: rise-in var(--motion-small) var(--ease-enter);
-}
-
-/* ---------- onboarding stage ----------
-   One centered column: brand lockup, one-line message, then a single auth
-   card holding the active step. The atmosphere stays out of the way: a slow
-   light field, film grain, a vignette, and the app's now-playing equalizer
-   redrawn as a fine soundwave on the horizon. */
-
-/* Screen swap: one short direction-aware enter for the card's content, no
-   exits. The card content is keyed by the screen name so each swap replays. */
-@keyframes ob-fwd {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes ob-back {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes ob-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-.ob-screen {
-  animation: ob-fwd 0.2s var(--ease-enter) both;
-}
-.ob-screen.ob-back {
-  animation-name: ob-back;
-}
-/* Inline notes (errors) — a plain fade, no movement. */
-.ob-note {
-  animation: ob-fade 0.18s var(--ease-enter) both;
-}
-
-@keyframes ob-rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-.ob-item {
-  opacity: 0;
-  animation: ob-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: var(--ob-delay, 0ms);
-}
-
-/* Page column — brand, message, card. margin:auto centers it in the scroll
-   host and collapses to plain flow (scrollable) on short windows. */
-.ob-page {
-  width: 100%;
-  max-width: 480px;
-  margin: auto;
-  padding: 24px 24px 108px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-/* Hero lockup — the product mark, page-scale. */
-.ob-lockup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 11px;
-}
-.ob-lockup-logo {
-  height: 44px;
-  width: auto;
-}
-.ob-lockup-text {
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.ob-headline {
-  margin-top: 22px;
-  font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-size: clamp(26px, 2.2vw, 30px);
-  line-height: 1.15;
-  color: rgb(var(--ink-hi));
-  text-wrap: balance;
-}
-.ob-tagline {
-  margin-top: 9px;
-  font-size: 14px;
-  line-height: 1.55;
-  color: rgb(var(--ink-dim));
-  max-width: 44ch;
-}
-
-/* The auth card — the only surface on the page. The app's glass recipe,
-   dialed quiet: panel tint over the canvas, hairline. */
-.ob-card {
-  width: 100%;
-  margin-top: 26px;
-  padding: 26px;
-  border-radius: calc(20px * var(--radius-scale));
-  text-align: left;
-  background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015) 55%),
-    rgb(var(--panel) / 0.62);
-  border: 1px solid rgb(var(--hairline) / var(--hairline-alpha));
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  box-shadow: 0 24px 64px -24px rgba(0, 0, 0, 0.8);
-}
-
-/* Focus: the shell drops focus rings app-wide; onboarding re-adds a visible
-   one for its buttons. Inputs are covered by their own focus treatment. */
-.ob-root .ob-btn:focus-visible {
-  outline: 2px solid rgb(var(--ink-hi) / 0.65);
-  outline-offset: 2px;
-}
-
-/* Atmosphere — one light field above the column, one answering glow low and
-   off to the side. Slow drifts, barely-there alpha. */
-@keyframes ob-drift-a {
-  0%, 100% { transform: none; }
-  50% { transform: translate3d(2.5%, 3%, 0) scale(1.05); }
-}
-@keyframes ob-drift-b {
-  0%, 100% { transform: none; }
-  50% { transform: translate3d(-3%, -3%, 0) scale(1.04); }
-}
-.ob-light {
-  position: absolute;
-  top: -240px;
-  left: calc(50% - 450px);
-  width: 900px;
-  height: 640px;
-  background: radial-gradient(ellipse at center, rgb(var(--primary) / 0.075), transparent 62%);
-  filter: blur(40px);
-  animation: ob-drift-a 38s ease-in-out infinite;
-  will-change: transform;
-}
-.ob-light-b {
-  top: auto;
-  left: auto;
-  bottom: -260px;
-  right: -220px;
-  width: 760px;
-  height: 560px;
-  background: radial-gradient(ellipse at center, rgb(var(--primary) / 0.05), transparent 62%);
-  animation: ob-drift-b 44s ease-in-out infinite;
-}
-
-/* Film grain for depth — pure texture, near-invisible. */
-.ob-grain {
-  position: absolute;
-  inset: 0;
-  opacity: 0.032;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.ob-vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 40%, transparent 52%, rgba(0, 0, 0, 0.6) 100%);
-}
-
-/* Soundwave horizon — the app's now-playing bars, edge-faded so they read
-   as atmosphere rather than a control. */
-.ob-eq-strip {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(760px, 78vw);
-  height: 42px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
-  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
-}
-.ob-eq-bar {
-  width: 2px;
-  border-radius: 1px;
-  background: rgb(var(--ink-hi) / 0.12);
-  height: 100%;
-  transform-origin: bottom;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ob-item,
-  .ob-screen,
-  .ob-note {
-    opacity: 1;
-    animation: none;
-  }
-  .ob-light {
-    animation: none;
-  }
 }
 
 /* ---------- fullscreen (NowPlaying) cinematic transition ----------
@@ -1436,7 +1219,4 @@ html.platform-mac .font-display {
 }
 html.platform-mac body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-}
-html.platform-mac .ob-headline {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", system-ui, sans-serif;
 }

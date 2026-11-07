@@ -452,6 +452,6 @@ test("a device's model doesn't say its maker twice", async () => {
     `<root><device><friendlyName>Player</friendlyName><manufacturer>${maker}</manufacturer><modelName>${model}</modelName><UDN>uuid:1</UDN>` +
     `<serviceList><service><serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType><controlURL>/c</controlURL></service></serviceList></device></root>`;
   const at = "http://192.168.1.5:1234/d.xml";
-  assert.equal(parseDescription(xml("Denon", "Denon AVR-S660H"), at).model, "Denon AVR-S660H");
+  assert.equal(parseDescription(xml("Denon", "Denon AVR-X1700H"), at).model, "Denon AVR-X1700H");
   assert.equal(parseDescription(xml("Sonos", "Play:1"), at).model, "Sonos Play:1");
 });

@@ -7,15 +7,14 @@
  * "Recently played" tab, not in the library.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Download, FileDown, FileUp, Folder, FolderOpen, Heart, Library, ListMusic, Music2, Pin, PinOff, Play, Shuffle, Trash2, Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, FileDown, FileUp, Folder, FolderOpen, Heart, ListMusic, Music2, Pin, PinOff, Play, Shuffle, Trash2, Pencil } from "lucide-react";
 import { TrackList } from "../components/TrackList";
 import { Btn, EmptyState, Pills, PlayOverlay } from "../components/primitives";
 import { CreateMenu } from "../components/CreateMenu";
 import { useLibrary, type LibraryFolder, type Playlist } from "../stores/library";
 import { usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
-import { dragHasAlbum, dragHasPlaylist, readAlbum, readPlaylist, useDrag } from "../lib/dnd";
-import { requireBridge } from "../lib/bridge";
+import { dragHasPlaylist, readPlaylist, useDrag } from "../lib/dnd";
 import { playlistFolderItems, playlistHeaderItems } from "../lib/trackActions";
 import { plural } from "../lib/format";
 import { upgradeArtwork } from "../lib/artwork";
@@ -183,7 +182,7 @@ function FolderSection({
   const [dropHover, setDropHover] = useState(false);
 
   const onFolderDragOver = (e: React.DragEvent): void => {
-    if (!dragHasPlaylist(e) && !dragHasAlbum(e)) return;
+    if (!dragHasPlaylist(e)) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "copy";
@@ -193,63 +192,15 @@ function FolderSection({
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropHover(false);
   };
   const onFolderDrop = (e: React.DragEvent): void => {
-    if (!dragHasPlaylist(e) && !dragHasAlbum(e)) return;
+    if (!dragHasPlaylist(e)) return;
     e.preventDefault();
     e.stopPropagation();
     setDropHover(false);
     const lib = useLibrary.getState();
-    const ui = useUI.getState();
-    // Local playlists are filed; YouTube collections are imported.
-    if (dragHasPlaylist(e)) {
-      const pl = readPlaylist(e);
-      if (!pl) return;
-      if (lib.playlists.some((p) => p.id === pl.id)) {
-        lib.setPlaylistFolder(pl.id, folder.id);
-        ui.toast(T("Moved “{title}” into “{name}”", { title: pl.title, name: folder.name }), "success");
-        return;
-      }
-      ui.toast(T("Importing “{title}”…", { title: pl.title }));
-      void requireBridge()
-        .getPlaylist(pl.id)
-        .then((page) => {
-          const name = (page.title || pl.title).trim() || T("Imported playlist");
-          const seen = new Set<string>();
-          const tracks = (page.tracks ?? []).filter((t: Track) =>
-            seen.has(t.id) ? false : (seen.add(t.id), true)
-          );
-          if (!tracks.length) throw new Error("no tracks");
-          const created = lib.createPlaylist(name);
-          useLibrary.setState((s) => ({
-            playlists: s.playlists.map((p) =>
-              p.id === created.id ? { ...p, tracks, folderId: folder.id } : p
-            ),
-          }));
-          ui.toast(T("“{name}” · {count} songs added to “{name2}”", { name, count: tracks.length, name2: folder.name }), "success");
-        })
-        .catch(() => ui.toast(T("Couldn't import “{title}”", { title: pl.title }), "error"));
-      return;
-    }
-    const al = readAlbum(e);
-    if (!al) return;
-    ui.toast(T("Importing “{title}”…", { title: al.title }));
-    void requireBridge()
-      .getAlbum(al.id)
-      .then((page) => {
-        const name = (page.album?.title || al.title).trim() || T("Imported album");
-        const seen = new Set<string>();
-        const tracks = (page.tracks ?? []).filter((t: Track) =>
-          seen.has(t.id) ? false : (seen.add(t.id), true)
-        );
-        if (!tracks.length) throw new Error("no tracks");
-        const created = lib.createPlaylist(name);
-        useLibrary.setState((s) => ({
-          playlists: s.playlists.map((p) =>
-            p.id === created.id ? { ...p, tracks, folderId: folder.id } : p
-          ),
-        }));
-        ui.toast(T("“{name}” · {count} songs added to “{name2}”", { name, count: tracks.length, name2: folder.name }), "success");
-      })
-      .catch(() => ui.toast(T("Couldn't import “{title}”", { title: al.title }), "error"));
+    const pl = readPlaylist(e);
+    if (!pl || !lib.playlists.some((p) => p.id === pl.id)) return;
+    lib.setPlaylistFolder(pl.id, folder.id);
+    useUI.getState().toast(T("Moved “{title}” into “{name}”", { title: pl.title, name: folder.name }), "success");
   };
 
   return (
@@ -390,7 +341,6 @@ export function LibraryView() {
   const downloads = useLibrary((s) => s.downloads);
   const pinnedSingles = useLibrary((s) => s.pinnedSingles);
   const togglePinSingle = useLibrary((s) => s.togglePinSingle);
-  const playQueue = usePlayer((s) => s.playQueue);
 
   const [tab, setTab] = useState<LibTab>(() => tabFromParam(useUI.getState().view.param));
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -479,7 +429,7 @@ export function LibraryView() {
                         subtitle={plural(downloadedTracks.length, T("song"), T("songs"))}
                         pinned={pinned}
                         onTogglePin={() => togglePinSingle("downloads")}
-                        onOpen={() => navigate({ name: "downloads" })}
+                        onOpen={() => setTab("downloaded")}
                         artClassName="from-emerald-400/25 to-emerald-400/[0.05]"
                         art={
                           <Download

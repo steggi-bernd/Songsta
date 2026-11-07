@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NameDialog } from "../components/PlaylistSheets";
 import { MenuSheet } from "../components/Sheet";
 import { DownloadButton, useSongMenu } from "../components/SongMenu";
+import { LIKED_LIST, playlistListKey } from "../shared";
 import { CoverGrid, picture as pictureSource, SearchField, TrackRow } from "../components/ui";
 import { artistTracks, fmtTime, matchesQuery, plural, type Track } from "../shared";
 import { sizeLine, useDownloads } from "../stores/downloads";
@@ -156,7 +157,7 @@ export function CollectionScreen() {
             </Text>
             <Text style={styles.meta}>{meta}</Text>
             <View style={styles.controls}>
-              {params.kind !== "downloads" && tracks.some((t) => !t.localPath) && <DownloadButton tracks={tracks} size={20} style={styles.roundWide} />}
+              {params.kind !== "downloads" && tracks.some((t) => !t.localPath) && <DownloadButton tracks={tracks} list={params.kind === "playlist" ? playlistListKey(params.id) : params.kind === "liked" ? LIKED_LIST : undefined} size={20} style={styles.roundWide} />}
               <Pressable
                 accessibilityLabel={T("Shuffle")}
                 onPress={() => playAll(tracks, title, true)}

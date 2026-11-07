@@ -53,14 +53,13 @@ test("listening lands in the listening-history store, not loose stats files", as
   } finally { h.close(); }
 });
 
-test("Replay survives a reload and follows the account-scoped store", async () => {
+test("Replay survives a reload", async () => {
   const h = await loadStats();
   try {
     h.api.initStats();
     h.api.recordListening(track("x"), 45_000);
     h.api.flushSync();
-    // A fresh module instance over the same userData — what an account switch
-    // or app restart sees.
+    // A fresh module instance over the same userData — what an app restart sees.
     const again = await loadStats(h.dir);
     try {
       again.api.initStats();
@@ -70,24 +69,7 @@ test("Replay survives a reload and follows the account-scoped store", async () =
   } finally { h.close(); }
 });
 
-test("reloadStore drops the in-memory copy so a restore can never be overwritten", async () => {
-  const h = await loadStats();
-  try {
-    h.api.initStats();
-    h.api.recordListening(track("local"), 10_000);
-    h.api.flushSync();
-    // A restore replaces the file behind the module's back…
-    fs.writeFileSync(h.storeFile(), JSON.stringify({ state: { buckets: [bucket("2099-01", 5_000)] }, version: 1 }));
-    h.api.reloadStore();
-    assert.equal(h.api.summary("all").totalMs, 5_000);
-    h.api.flushSync();
-    // …and the next flush must not write the stale copy back over it.
-    const raw = JSON.parse(fs.readFileSync(h.storeFile(), "utf-8"));
-    assert.deepEqual(raw.state.buckets.map((b) => b.month), ["2099-01"]);
-  } finally { h.close(); }
-});
-
-test("importAll (cloud restore / backup import) replaces every bucket", async () => {
+test("importAll (backup import) replaces every bucket", async () => {
   const h = await loadStats();
   try {
     h.api.initStats();
@@ -99,40 +81,6 @@ test("importAll (cloud restore / backup import) replaces every bucket", async ()
     assert.deepEqual(writtenMonths, ["2098-12"]);
   } finally { h.close(); }
 });
-test("fitForSync drops the oldest months until the payload fits the cloud cap", async () => {
-  const big = (month) => ({ ...bucket(month, 1), tracks: Object.fromEntries(
-    Array.from({ length: 400 }, (_, i) => [`t${i}`, { title: "x".repeat(2000), artist: "Artist", thumb: "", ms: 1, plays: 1, lastAt: 1 }])) });
-  const months = Array.from({ length: 36 }, (_, i) => `20${String(60 + i).padStart(2, "0")}-01`);
-  const payload = { state: { buckets: months.map(big) }, version: 1 };
-  assert.ok(Buffer.byteLength(JSON.stringify(payload)) > 6 * 1024 * 1024, "fixture must exceed the budget");
-  // fitForSync is pure — build it with persist stubbed out so no store is touched.
-  const { outputFiles } = await build({
-    entryPoints: [fileURLToPath(new URL("../electron/stats.ts", import.meta.url))],
-    bundle: true, platform: "node", format: "cjs", write: false,
-    plugins: [{ name: "stub-persist", setup(b) {
-      b.onResolve({ filter: /^\.\/persist$/ }, () => ({ path: "persist", namespace: "stub" }));
-      // fitForSync is pure; keep the electron import from resolving for real.
-      b.onResolve({ filter: /^electron$/ }, () => ({ path: "electron", namespace: "stub" }));
-      b.onLoad({ filter: /.*/, namespace: "stub" }, (a) => ({
-        contents: a.path === "electron"
-          ? 'export const app = { getPath: () => { throw new Error("no filesystem"); } };'
-          : 'export const readData = () => null; export const writeData = async () => {}; export const writeDataSync = () => {};',
-        loader: "js" }));
-    }}],
-  });
-  const module = { exports: {} };
-  vm.runInNewContext(outputFiles[0].text, {
-    module, exports: module.exports, console, Buffer, setTimeout, clearTimeout, require,
-    process: { env: {}, version: "v0" }, __dirname: "/", __filename: "/stats.cjs", global: {},
-  });
-  const out = module.exports.fitForSync(payload);
-  assert.ok(Buffer.byteLength(JSON.stringify(out)) <= 6 * 1024 * 1024);
-  const kept = out.state.buckets.map((b) => String(b.month));
-  assert.ok(kept.length < months.length, "something had to go");
-  // What remains is always the NEWEST suffix — the oldest months go first.
-  assert.deepEqual(kept, months.slice(-kept.length));
-});
-
 test("legacy monthly stats files are recovered into the store once, then consumed", async () => {
   const h = await loadStats();
   try {
@@ -147,8 +95,11 @@ test("legacy monthly stats files are recovered into the store once, then consume
     h.api.flushSync();
     // Consumed: a later reset that empties the store must not resurrect them.
     assert.equal(fs.existsSync(legacyDir), false);
-    h.api.reloadStore();
-    assert.equal(h.api.summary("all").totalMs, 12_345 + 6_789, "the store holds the recovered months");
+    const again = await loadStats(h.dir);
+    try {
+      again.api.initStats();
+      assert.equal(again.api.summary("all").totalMs, 12_345 + 6_789, "the store holds the recovered months");
+    } finally { again.close(); }
   } finally { h.close(); }
 });
 
@@ -185,52 +136,7 @@ test("a nested legacy snapshot from an older userData layout is recovered too", 
   } finally { h.close(); }
 });
 
-test("recovered months survive a reload racing in right after migration", async () => {
-  const h = await loadStats();
-  try {
-    const legacyDir = path.join(h.dir, "data", "stats");
-    fs.mkdirSync(legacyDir, { recursive: true });
-    fs.writeFileSync(path.join(legacyDir, "2026-09.json"), JSON.stringify(bucket("2026-09", 88_000)));
-    // initStats migrates; immediately afterwards the boot sync may restore a
-    // cloud row, which re-reads the store from disk.
-    h.api.initStats();
-    h.api.reloadStore();
-    assert.equal(h.api.summary("all").totalMs, 88_000, "the recovery landed on disk before any reload");
-    // And a later flush of new listening must not wipe the recovered month.
-    h.api.recordListening(track("fresh"), 5_000);
-    h.api.flushSync();
-    h.api.reloadStore();
-    assert.equal(h.api.summary("all").totalMs, 93_000);
-    // The fresh listening lands in the month it happens in — whatever month the test runs.
-    const now = new Date();
-    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    assert.deepEqual([...h.api.summary("all").months].map(String), ["2026-09", thisMonth]);
-  } finally { h.close(); }
-});
-
-test("recovered months are announced to the sync engine so they upload", async () => {
-  const h = await loadStats();
-  try {
-    const announced = [];
-    h.api.onStoreWrite(() => announced.push("write"));
-    const legacyDir = path.join(h.dir, "data", "stats");
-    fs.mkdirSync(legacyDir, { recursive: true });
-    fs.writeFileSync(path.join(legacyDir, "2026-09.json"), JSON.stringify(bucket("2026-09", 12_000)));
-    // The write hook is registered BEFORE initStats, exactly as main.ts does.
-    h.api.initStats();
-    assert.ok(announced.length > 0, "recovery must mark the store as changed");
-    // No announcement when there is nothing to recover.
-    const again = await loadStats(h.dir);
-    try {
-      const quiet = [];
-      again.api.onStoreWrite(() => quiet.push("write"));
-      again.api.initStats();
-      assert.equal(quiet.length, 0, "nothing to recover means nothing announced");
-    } finally { again.close(); }
-  } finally { h.close(); }
-});
-
-test("listening records cover art for albums and artist photos for artists", async () => {
+test("listening records cover art for albums", async () => {
   const h = await loadStats();
   try {
     h.api.initStats();
@@ -241,8 +147,7 @@ test("listening records cover art for albums and artist photos for artists", asy
     h.api.recordListening({ id: "s2", title: "S2", artist: "Adele", album: "30", duration: 60, thumb: "https://x/song2.jpg" }, 40_000);
     const all = h.api.summary("all");
     assert.equal(all.albums[0].thumb, "https://x/song.jpg", "first seen cover wins");
-    assert.equal(all.artists.find((a) => a.name === "Adele")?.thumb, "https://x/adele.jpg", "artist photo recorded");
-    // Round-trips through the store (what the cloud copy is built from).
+    // Round-trips through the store.
     h.api.flushSync();
     const again = await loadStats(h.dir);
     try {

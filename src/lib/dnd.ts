@@ -1,7 +1,7 @@
 /**
  * Drag-and-drop payloads for the library.
  *
- * Sources (track rows, playlist cards, artist cards — every list in the app)
+ * Sources (track rows and playlist cards — every list in the app)
  * write JSON payloads under private MIME types; targets (the sidebar's Liked
  * Songs, playlists, folders and the library panel itself) read them back —
  * the same model Spotify uses.
@@ -11,14 +11,12 @@
  * the `useDrag` hook every source spreads onto its root element.
  */
 import { useEffect, useRef, useState } from "react";
-import type { Album, Track } from "../types";
+import type { Track } from "../types";
 import { upgradeArtwork } from "./artwork";
 import { T } from "./i18n";
 
 export const TRACK_MIME = "application/x-bytune-track";
 export const PLAYLIST_MIME = "application/x-bytune-playlist";
-export const ARTIST_MIME = "application/x-bytune-artist";
-export const ALBUM_MIME = "application/x-bytune-album";
 /** A queue row's position, alongside its track payload — the queue reorders on it. */
 export const QUEUE_MIME = "application/x-bytune-queue-index";
 
@@ -45,24 +43,8 @@ export function readQueueIndex(e: React.DragEvent): number | null {
 }
 
 export interface PlaylistPayload {
-  /** YouTube playlist id (VL prefix optional) */
   id: string;
   title: string;
-  thumb?: string;
-}
-
-export interface ArtistPayload {
-  /** YouTube artist channel id */
-  id: string;
-  name: string;
-  thumb?: string;
-}
-
-export interface AlbumPayload {
-  /** YouTube album/playlist browse id */
-  id: string;
-  title: string;
-  artist?: string;
   thumb?: string;
 }
 
@@ -72,14 +54,6 @@ export function dragHasTrack(e: React.DragEvent): boolean {
 
 export function dragHasPlaylist(e: React.DragEvent): boolean {
   return e.dataTransfer.types.includes(PLAYLIST_MIME);
-}
-
-export function dragHasArtist(e: React.DragEvent): boolean {
-  return e.dataTransfer.types.includes(ARTIST_MIME);
-}
-
-export function dragHasAlbum(e: React.DragEvent): boolean {
-  return e.dataTransfer.types.includes(ALBUM_MIME);
 }
 
 export function readTrack(e: React.DragEvent): Track | null {
@@ -98,29 +72,6 @@ export function readPlaylist(e: React.DragEvent): PlaylistPayload | null {
   } catch {
     return null;
   }
-}
-
-export function readArtist(e: React.DragEvent): ArtistPayload | null {
-  try {
-    const raw = e.dataTransfer.getData(ARTIST_MIME);
-    return raw ? (JSON.parse(raw) as ArtistPayload) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function readAlbum(e: React.DragEvent): AlbumPayload | null {
-  try {
-    const raw = e.dataTransfer.getData(ALBUM_MIME);
-    return raw ? (JSON.parse(raw) as AlbumPayload) : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Build an album payload from an Album entity. */
-export function albumPayload(album: Pick<Album, "id" | "title" | "artist" | "thumb">): AlbumPayload {
-  return { id: album.id, title: album.title, artist: album.artist, thumb: album.thumb || undefined };
 }
 
 /** Chip the OS shows under the cursor — artwork + title, built off-screen. */
@@ -175,22 +126,6 @@ export function beginPlaylistDrag(e: React.DragEvent, playlist: PlaylistPayload)
   composeGhost(e, { thumb: playlist.thumb, title: playlist.title, sub: T("Playlist") });
 }
 
-/** Call from a card's onDragStart to make it an artist source. */
-export function beginArtistDrag(e: React.DragEvent, artist: ArtistPayload): void {
-  e.dataTransfer.effectAllowed = "copy";
-  e.dataTransfer.setData(ARTIST_MIME, JSON.stringify(artist));
-  e.dataTransfer.setData("text/plain", T("{name} — Artist", { name: artist.name }));
-  composeGhost(e, { thumb: artist.thumb, title: artist.name, sub: T("Artist") });
-}
-
-/** Call from a card's onDragStart to make it an album source. */
-export function beginAlbumDrag(e: React.DragEvent, album: AlbumPayload): void {
-  e.dataTransfer.effectAllowed = "copy";
-  e.dataTransfer.setData(ALBUM_MIME, JSON.stringify(album));
-  e.dataTransfer.setData("text/plain", T("{title} — Album", { title: album.title }));
-  composeGhost(e, { thumb: album.thumb, title: album.title, sub: album.artist || T("Album") });
-}
-
 /**
  * Elements whose activation must never become a parent drag (like/options/
  * play buttons, links, inputs). A press that starts inside one of these is
@@ -221,8 +156,8 @@ function dragStartedOnControl(target: EventTarget | null, root: HTMLElement | nu
 
 /**
  * Drop target for whole pages (an open playlist, the local folder view): only
- * TRACK drags are accepted — artists, playlists and albums pass straight
- * through and keep the OS "blocked" cursor. Attach `props` to the page root;
+ * TRACK drags are accepted — playlists pass straight through and keep the OS
+ * "blocked" cursor. Attach `props` to the page root;
  * `hovering` is true while a song is over the page (any child — the contains
  * check keeps child enter/leave pairs from flickering it off).
  *
@@ -314,8 +249,6 @@ export function useDrag(
         from?: TrackSource;
       }
     | { playlist: PlaylistPayload }
-    | { artist: ArtistPayload }
-    | { album: AlbumPayload }
 ): {
   dragging: boolean;
   props: {
@@ -379,9 +312,7 @@ export function useDrag(
             e.dataTransfer.setData(QUEUE_MIME, String(payload.queueIndex));
             e.dataTransfer.effectAllowed = "copyMove";
           }
-        } else if ("playlist" in payload) beginPlaylistDrag(e, payload.playlist);
-        else if ("artist" in payload) beginArtistDrag(e, payload.artist);
-        else beginAlbumDrag(e, payload.album);
+        } else beginPlaylistDrag(e, payload.playlist);
         suppressClick.current = true;
         document.body.classList.add("bytune-dragging");
         setDragging(true);

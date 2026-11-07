@@ -1,5 +1,5 @@
 import { Fragment, memo, useCallback } from "react";
-import { AlertCircle, ArrowDownCircle, Check, Download, FolderOpen, Heart, Loader2, MoreHorizontal, Pause, Play } from "lucide-react";
+import { AlertCircle, ArrowDownCircle, Check, FolderOpen, Heart, Loader2, MoreHorizontal, Pause, Play } from "lucide-react";
 import { sourceOf, useAvailabilityCheck } from "../stores/availability";
 import { sameSong, useCatalog, versionsOf } from "../stores/catalog";
 import { likedIdSet, useLibrary } from "../stores/library";
@@ -11,7 +11,7 @@ import { trackMenuItems } from "../lib/trackActions";
 import { downloadForOffline, SERVER_SONG } from "../lib/downloads";
 import { useDrag, type TrackSource } from "../lib/dnd";
 import { fmtTime } from "../lib/format";
-import { Artwork, EqBars, EmptyState, ExplicitBadge } from "./primitives";
+import { Artwork, EqBars, EmptyState } from "./primitives";
 import { ArtistLinks } from "./ArtistLinks";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
@@ -163,7 +163,7 @@ const TrackRow = memo(function TrackRow({
       } ${drag.dragging || !available ? "opacity-40" : muted ? "opacity-60" : ""}`}
     >
       {/* index (EQ bars while playing); on hover, play/pause at the same spot */}
-      <div className="w-7 shrink-0 grid place-items-center text-[13px] text-ink-faint tabular-nums">
+      <div className="row-number w-7 shrink-0 grid place-items-center text-[13px] text-ink-faint tabular-nums">
         <span className={available || isCurrent ? "group-hover:hidden" : ""}>
           {isCurrent && isPlaying ? <EqBars /> : <span className={isCurrent ? "text-accent font-medium" : ""}>{index + 1}</span>}
         </span>
@@ -195,7 +195,6 @@ const TrackRow = memo(function TrackRow({
           The floor keeps the title visible; the album column shrinks instead. */}
       <div className="flex-1 min-w-[120px]">
         <div className={`flex items-center gap-1.5 text-[16px] font-semibold tracking-[-0.2px] ${isCurrent ? "text-accent" : muted ? "text-red-300" : "text-ink-hi"}`}>
-          {track.explicit && <ExplicitBadge />}
           <span className="truncate">{track.title}</span>
           <BranchMark id={track.id} />
         </div>

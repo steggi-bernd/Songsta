@@ -24,7 +24,7 @@ function errorText(err: unknown): string {
   return msg.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "") || T("Couldn't connect");
 }
 
-function ConnectCard({ onConnected }: { onConnected: (s: JellyfinStatus) => void }) {
+export function ConnectCard({ onConnected, plain }: { onConnected: (s: JellyfinStatus) => void; plain?: boolean }) {
   const [server, setServer] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -52,11 +52,13 @@ function ConnectCard({ onConnected }: { onConnected: (s: JellyfinStatus) => void
   };
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="max-w-[440px] space-y-4 animate-slide-up">
-      <div>
-        <h1 className="font-display text-[34px] font-bold tracking-[-0.03em] text-ink-hi">{T("Jellyfin")}</h1>
-        <p className="text-[13px] text-ink-faint mt-1">{T("Play the music on your own Jellyfin server next to your local files.")}</p>
-      </div>
+    <form onSubmit={(e) => void submit(e)} className={`${plain ? "" : "max-w-[440px] "}space-y-4 animate-slide-up`}>
+      {!plain && (
+        <div>
+          <h1 className="font-display text-[34px] font-bold tracking-[-0.03em] text-ink-hi">{T("Jellyfin")}</h1>
+          <p className="text-[13px] text-ink-faint mt-1">{T("Play the music on your own Jellyfin server next to your local files.")}</p>
+        </div>
+      )}
       <label className="block space-y-1.5">
         <span className="text-[12.5px] font-semibold text-ink-dim">{T("Server address")}</span>
         <input

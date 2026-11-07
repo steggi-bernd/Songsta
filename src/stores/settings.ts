@@ -1,37 +1,17 @@
 /** User settings (persisted). Dark theme only — no theme switching. */
+import type { DeviceLink } from "../lib/devicePower";
 import { FLAT_PEQ, type ParametricEq } from "../lib/peq";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { storage } from "../lib/persist";
 import { DEFAULT_EXPLORE_SORTS, type ExploreSort, type ExploreTab } from "../lib/exploreRows";
-import { T } from "../lib/i18n";
+import { NO_VERSION_MEMORY, type NewVersionMemory } from "../lib/newVersion";
 export type { ExploreSort, ExploreTab };
 
-export type StreamQuality = "low" | "medium" | "high" | "lossless";
 export type LibraryOrder = "played" | "added" | "alpha" | "artist";
-export type DownloadQuality = "standard" | "high" | "lossless";
-
-export const STREAM_QUALITY_LABEL: Record<StreamQuality, string> = {
-  low: T("Low"),
-  medium: T("Medium"),
-  high: T("High"),
-  lossless: T("Lossless"),
-};
-
-export const DOWNLOAD_QUALITY_LABEL: Record<DownloadQuality, string> = {
-  standard: T("Standard"),
-  high: T("High"),
-  lossless: T("Lossless"),
-};
 
 interface SettingsState {
-  /* Downloads */
-  downloadDir: string | null;
-  downloadQuality: DownloadQuality;
-  exportDownloads: boolean;
-
   /* Playback */
-  streamingQuality: StreamQuality;
   crossfadeSeconds: number;
   smartFade: boolean;
   skipSilence: boolean;
@@ -77,6 +57,25 @@ interface SettingsState {
   /* Miscellaneous */
   dontRepeatSuggestions: boolean;
   hideVolumeBar: boolean;
+  /** a short note and a dot when a newer version is out (lib/newVersion.ts) */
+  checkNewVersion: boolean;
+  newVersion: NewVersionMemory;
+  /** the first start's pages were gone through, or weren't needed */
+  setupDone: boolean;
+  /** lists downloaded as a whole: they stay whole (lib/keptLists.ts) */
+  keptLists: string[];
+  /** which device hangs on which input of a receiver (lib/devicePower.ts) */
+  deviceLinks: DeviceLink[];
+  /** TVs that took this app's code: they can be switched off from here (lib/tvRemote.ts) */
+  pairedTvs: string[];
+  /** how far ahead a device plays in a group, in ms, set by hand; below zero behind (lib/groupSync.ts) */
+  playAhead: Record<string, number>;
+  /** a receiver goes off half a minute after the music has left it (lib/devicePower.ts) */
+  switchOffDevices: boolean;
+  /** where the app can replace itself: fetches a new version unasked, to install when it closes */
+  autoUpdate: boolean;
+  /** the version that ran last, for the note after an update */
+  lastVersion: string;
   /** the song playing now as the Discord status (needs the user's own Discord application) */
   discordPresence: boolean;
   /** that application's ID, from the Discord Developer Portal */
@@ -108,10 +107,6 @@ interface SettingsState {
   /** the shell's one colour: what plays, what's on, likes and the main buttons */
   accent: Accent;
 
-  setDownloadDir(dir: string | null): void;
-  setDownloadQuality(q: DownloadQuality): void;
-  setExportDownloads(v: boolean): void;
-  setStreamingQuality(q: StreamQuality): void;
   setCrossfadeSeconds(v: number): void;
   setSmartFade(v: boolean): void;
   setSkipSilence(v: boolean): void;
@@ -140,6 +135,16 @@ interface SettingsState {
   setFilterNonMusicAudio(v: boolean): void;
   setDontRepeatSuggestions(v: boolean): void;
   setHideVolumeBar(v: boolean): void;
+  setCheckNewVersion(v: boolean): void;
+  setNewVersion(v: NewVersionMemory): void;
+  setSetupDone(v: boolean): void;
+  setKeptLists(v: string[]): void;
+  setDeviceLinks(v: DeviceLink[]): void;
+  setPairedTvs(v: string[]): void;
+  setPlayAhead(id: string, ms: number): void;
+  setSwitchOffDevices(v: boolean): void;
+  setAutoUpdate(v: boolean): void;
+  setLastVersion(v: string): void;
   setDiscordPresence(v: boolean): void;
   setDiscordClientId(id: string): void;
   setServerSync(v: boolean): void;
@@ -164,11 +169,6 @@ export type Accent = "violet" | "blue" | "teal" | "green" | "amber" | "coral" | 
 export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
-      downloadDir: null,
-      downloadQuality: "lossless",
-      exportDownloads: false,
-
-      streamingQuality: "high",
       crossfadeSeconds: 0,
       smartFade: false,
       skipSilence: false,
@@ -200,6 +200,16 @@ export const useSettings = create<SettingsState>()(
 
       dontRepeatSuggestions: false,
       hideVolumeBar: false,
+      checkNewVersion: true,
+      newVersion: NO_VERSION_MEMORY,
+      setupDone: false,
+      keptLists: [],
+      deviceLinks: [],
+      pairedTvs: [],
+      playAhead: {},
+      switchOffDevices: true,
+      autoUpdate: true,
+      lastVersion: "",
       discordPresence: false,
       discordClientId: "",
       serverSync: true,
@@ -217,10 +227,6 @@ export const useSettings = create<SettingsState>()(
       corners: "soft",
       accent: "violet",
 
-      setDownloadDir: (downloadDir) => set({ downloadDir }),
-      setDownloadQuality: (downloadQuality) => set({ downloadQuality }),
-      setExportDownloads: (exportDownloads) => set({ exportDownloads }),
-      setStreamingQuality: (streamingQuality) => set({ streamingQuality }),
       setCrossfadeSeconds: (crossfadeSeconds) => set({ crossfadeSeconds }),
       setSmartFade: (smartFade) => set({ smartFade }),
       setSkipSilence: (skipSilence) => set({ skipSilence }),
@@ -249,6 +255,22 @@ export const useSettings = create<SettingsState>()(
       setFilterNonMusicAudio: (filterNonMusicAudio) => set({ filterNonMusicAudio }),
       setDontRepeatSuggestions: (dontRepeatSuggestions) => set({ dontRepeatSuggestions }),
       setHideVolumeBar: (hideVolumeBar) => set({ hideVolumeBar }),
+      setCheckNewVersion: (checkNewVersion) => set({ checkNewVersion }),
+      setNewVersion: (newVersion) => set({ newVersion }),
+      setSetupDone: (setupDone) => set({ setupDone }),
+      setKeptLists: (keptLists) => set({ keptLists }),
+      setDeviceLinks: (deviceLinks) => set({ deviceLinks }),
+      setPairedTvs: (pairedTvs) => set({ pairedTvs }),
+      setPlayAhead: (id, ms) =>
+        set((s) => {
+          const playAhead = { ...s.playAhead };
+          if (ms) playAhead[id] = ms;
+          else delete playAhead[id];
+          return { playAhead };
+        }),
+      setSwitchOffDevices: (switchOffDevices) => set({ switchOffDevices }),
+      setAutoUpdate: (autoUpdate) => set({ autoUpdate }),
+      setLastVersion: (lastVersion) => set({ lastVersion }),
       setDiscordPresence: (discordPresence) => set({ discordPresence }),
       // Only the digits survive a paste ("ID: 1234…", spaces, a trailing newline).
       setDiscordClientId: (id) => set({ discordClientId: id.replace(/\D/g, "").slice(0, 22) }),

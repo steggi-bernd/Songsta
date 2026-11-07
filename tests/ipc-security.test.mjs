@@ -28,17 +28,17 @@ async function harness({ legacyStores = false } = {}) {
         ipcMain: { handle: (n, fn) => handles.set(n, fn), on() {} },
       };
       if (name === "./pip") return { registerPipIpc() {}, isTrustedSender: e => e?.trusted === true };
-      if (name === "./downloads") return { addDownloadListener() {}, defaultDownloadDir: async () => path.join(root, "downloads"), exportDownloadDir: () => path.join(root, "exports") };
-      if (name === "./sync") return { noteLocalWrite() {} };
+      if (name === "./downloads") return { addDownloadListener() {} };
+      if (name === "./app-update") return { configureAppUpdate() {}, installUpdate() {}, latestKnown: async () => null, startUpdate: async () => {}, updateState: () => ({}) };
       if (name === "./folder-watch") return { syncFolderWatchers() {}, noteFilterNonMusic() {}, setFolderWatchEnabled() {}, configureFolderWatch() {} };
-      if (name === "./stats") return { onStoreWrite() {}, HISTORY_STORE: "listening-history" };
+      if (name === "./stats") return { HISTORY_STORE: "listening-history" };
       if (name === "./local-library") return {
         addLibraryFolders: (paths) => { calls.push(["addFolders", ...paths]); return Promise.resolve({ added: [], lib: { folders: [] } }); },
       };
       if (name === "./data-transition") return {
         serializeData: fn => Promise.resolve().then(fn),
         readForDocument: name => { calls.push(["read", name]); return null; },
-        writeForDocument: async name => { calls.push(["write", name]); return true; },
+        writeForDocument: async name => { calls.push(["write", name]); },
       };
       if (name.startsWith("./")) return {};
       return require(name);
@@ -54,7 +54,7 @@ test("reserved/noncanonical persistence names are rejected before storage on bot
     for (const channel of ["data:read", "data:write"]) await assert.rejects(h.invoke(channel, name), /Store not allowed/);
   }
   assert.equal(h.calls.length, 0);
-  for (const name of ["settings", "library", "player", "recent-searches", "listening-signals", "artist-meta-cache"]) {
+  for (const name of ["settings", "library", "player", "recent-searches", "album-edits", "muted"]) {
     await h.invoke("data:read", name);
     await h.invoke("data:write", name);
   }
@@ -72,7 +72,7 @@ test("library:addFolders cannot mint filesystem approvals from renderer input", 
   const h = await harness();
   // A renderer-supplied path that never went through the native picker is
   // rejected before reaching the local library — approvals are only minted
-  // by app:pickFolder / default download locations.
+  // by app:pickFolder and the library's own folders.
   await assert.rejects(h.invoke("library:addFolders", ["C:\\Users\\victim\\Documents"]), /Folder not approved/);
   await assert.rejects(h.invoke("library:addFolders", ["C:\\approved\\..\\..\\escape"]), /Folder not approved/);
   await assert.rejects(h.invoke("library:addFolders", new Array(12).fill("C:\\x")), /Invalid folder list|Folder not approved/);

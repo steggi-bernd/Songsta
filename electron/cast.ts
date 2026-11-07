@@ -8,7 +8,10 @@
  *    path that changes with every song — and closes when casting stops
  *  - local files are read with byte ranges (seeking works); songs on
  *    Jellyfin/Navidrome stream through it, so a player never sees a server's
- *    token
+ *    token. A Jellyfin at home that needs no login for a song is fetched from
+ *    directly, as from the phone: no firewall in the way, and no computer needed
+ *  - a player that never comes for a song going through this computer is
+ *    reported once, because that's what a firewall looks like from here
  *  - the first player's state and position are read once a second; a song that
  *    played to its end is reported once, so the queue can move on
  */
@@ -28,6 +31,9 @@ import * as locallib from "./local-library";
 import { castPlayer, EndWatch, mimeOf, upnpPlayer, type DevicePlayer as Player } from "./device-player";
 import { discover, type Renderer } from "./upnp";
 import type { CastSocket } from "../src/lib/castV2";
+import { canSwitchOff, readPower, sendToReceiver, switchOffAt, type DevicePower } from "../src/lib/devicePower";
+import { GroupSync, PLAY_AHEAD_MAX_MS } from "../src/lib/groupSync";
+import * as tv from "./tv-remote";
 import type { NetDevice, NetDeviceKind } from "../src/lib/netScan";
 
 export interface CastSong {
@@ -65,8 +71,12 @@ export interface CastStatus {
   muted: boolean;
   /** the song played to its end (set on the one status that says so) */
   ended?: boolean;
+  /** the song goes through this computer, so `fetched` says something */
+  through: boolean;
   /** this player was handed a song and never started it; if others are left it's out of the group (set on the one status that says so) */
   notStarted?: { id: string; name: string };
+  /** this player should have come for the song by now and hasn't (set on the one status that says so) */
+  unreachable?: { id: string; name: string };
   message?: string;
 }
 
@@ -79,6 +89,10 @@ export interface FoundDevice {
 
 const SONG_ID = /^(local|jf|ss):[\w.:-]{1,128}$/;
 const MAIN = "main";
+/** Long enough for a receiver to wake up and ask (they take about 20 seconds); after this it looks like a firewall. */
+const COME_FOR_IT_MS = 28_000;
+/** After a command a device's reports may still show the state before it. */
+const SETTLE_MS = 2500;
 
 function castSocketTo(host: string, port: number): Promise<CastSocket> {
   return new Promise((resolve, reject) => {
@@ -99,15 +113,63 @@ function castSocketTo(host: string, port: number): Promise<CastSocket> {
 
 let knownUpnp = new Map<string, Renderer>();
 let knownNet = new Map<string, NetDevice>();
+/** Where the receivers answer: kept when one misses a later search, fast asleep perhaps. */
+const powerHosts = new Map<string, string>();
+/** The same for anything that may have a remote control of its own (lib/tvRemote.ts). */
+const tvHosts = new Map<string, string>();
 
 export async function findDevices(): Promise<FoundDevice[]> {
   const [renderers, others] = await Promise.all([discover(), scanMdns().catch(() => [])]);
   knownUpnp = new Map(renderers.map((r) => [r.id, r]));
   knownNet = new Map(others.map((d) => [d.id, d]));
+  for (const r of renderers) {
+    const host = new URL(r.avTransport.url).hostname;
+    if (canSwitchOff(r.model)) powerHosts.set(r.id, host);
+    else tvHosts.set(r.id, host);
+  }
+  for (const d of others) tvHosts.set(d.id, d.host);
   return [
     ...renderers.map((r): FoundDevice => ({ id: r.id, name: r.name, model: r.model, kind: "upnp" })),
     ...others.map((d): FoundDevice => ({ id: d.id, name: d.name, model: d.model, kind: d.kind })),
   ];
+}
+
+const powerHost = (deviceId: string): string | null => powerHosts.get(deviceId) ?? null;
+
+export async function devicePower(deviceId: string): Promise<DevicePower | null> {
+  const host = powerHost(deviceId);
+  return host ? readPower(host) : null;
+}
+
+export async function deviceSwitchOff(deviceId: string): Promise<boolean> {
+  const host = powerHost(deviceId);
+  return host ? switchOffAt(host) : false;
+}
+
+export async function deviceCommand(deviceId: string, word: string): Promise<boolean> {
+  const host = powerHost(deviceId);
+  return host ? sendToReceiver(host, word) : false;
+}
+
+function tvHost(deviceId: string): string {
+  const host = tvHosts.get(deviceId);
+  if (!host) throw new Error("That device isn't on the network anymore — search again");
+  return host;
+}
+
+export const tvPairStart = (deviceId: string): Promise<void> => tv.startPairing(tvHost(deviceId));
+export const tvPairFinish = (code: string): ReturnType<typeof tv.finishPairing> => tv.finishPairing(code);
+export const tvPairCancel = (): void => tv.cancelPairing();
+
+export async function tvPower(deviceId: string): Promise<DevicePower | null> {
+  const host = tvHosts.get(deviceId);
+  const state = host ? await tv.readTv(host) : null;
+  return state && { on: state.on, input: "", tv: true, busy: state.busy };
+}
+
+export async function tvOff(deviceId: string): Promise<boolean> {
+  const host = tvHosts.get(deviceId);
+  return host ? tv.switchTvOff(host) : false;
 }
 
 async function playerFor(deviceId: string): Promise<Player> {
@@ -180,11 +242,30 @@ export function serverStreamExt(song: { id: string }): string {
 }
 
 class Session {
+  private sync = new GroupSync();
+  private commands = 0;
+  private alignedAt = -1;
+  private lastCommandAt = 0;
+  private handedWith: ReadonlyMap<string, number> | null = null;
+  /** A setting was changed by hand: the next look is a close one. */
+  private retuned = false;
   players: Player[] = [];
   private volumes = new Map<string, { volume: number | null; muted: boolean }>();
   private server: http.Server | null = null;
   private base = "";
-  private current: { song: CastSong; token: string; file: string | null } | null = null;
+  private current: {
+    song: CastSong;
+    token: string;
+    file: string | null;
+    /** where the player fetches it: this computer, or the server directly */
+    url: string;
+    /** what's in that address and no other song's */
+    mark: string;
+    ext: string;
+    handedAt: number;
+    /** nobody came for it, and that has been said */
+    saidUnreachable: boolean;
+  } | null = null;
   private poll: NodeJS.Timeout | null = null;
   private ticking = false;
   private endWatch = new EndWatch();
@@ -200,7 +281,7 @@ class Session {
   private set(next: Partial<CastStatus>): void {
     this.status = { ...this.status, ...next };
     this.emit(this.status);
-    if (this.status.ended || this.status.notStarted) this.status = { ...this.status, ended: false, notStarted: undefined };
+    if (this.status.ended || this.status.notStarted || this.status.unreachable) this.status = { ...this.status, ended: false, notStarted: undefined, unreachable: undefined };
   }
 
   private members(): Pick<CastStatus, "device" | "members" | "volume" | "muted"> {
@@ -278,14 +359,19 @@ class Session {
         await this.didNotStart(leader);
         return;
       }
+      if (this.status.through && !this.status.fetched && !playing.saidUnreachable && Date.now() - playing.handedAt > COME_FOR_IT_MS) {
+        playing.saidUnreachable = true;
+        this.set({ unreachable: { id: leader.id, name: leader.name } });
+      }
       // A report about the song before (players switch over in their own time) says nothing about this one.
-      if (at.uri && !at.uri.includes(playing.token)) return;
+      if (at.uri && !at.uri.includes(playing.mark)) return;
       // Asleep when it was first asked, it can tell its volume now.
       if (waking && !leader.starting() && this.volumes.get(leader.id)?.volume == null) {
         void this.readVolume(leader).then(() => this.set(this.members()));
       }
       const { state, position, duration, ended } = this.endWatch.see(at, playing.song.duration);
       this.set({ state, position, duration, ended, message: undefined });
+      if (state === "playing" && this.players.length > 1 && this.alignedAt !== this.commands && Date.now() - this.lastCommandAt > SETTLE_MS) this.bringTogether();
     } catch (err) {
       this.set({ message: err instanceof Error ? err.message : "The player doesn't answer" });
     } finally {
@@ -326,12 +412,24 @@ class Session {
     const file = song.id.startsWith("local:") ? locallib.localStreamPath(song.id) : null;
     if (song.id.startsWith("local:") && !file) throw new Error("That file can't be reached right now");
     const ext = file ? path.extname(file).toLowerCase() : serverStreamExt(song);
-    this.current = { song, token: randomBytes(16).toString("hex"), file };
+    const token = randomBytes(16).toString("hex");
+    const direct = song.id.startsWith("jf:") ? await jellyfin.deviceStreamUrl(song.id.slice(3), this.players[0].host).catch(() => null) : null;
+    const url = direct ?? `${this.base}/cast/${token}/song${ext}`;
+    this.current = { song, token, file, url, mark: direct ? song.id.slice(3) : token, ext, handedAt: Date.now(), saidUnreachable: false };
     this.endWatch.begin(positionSec);
-    this.set({ state: "loading", trackId: song.id, position: positionSec, duration: song.duration, fetched: false, ended: false });
-    const url = `${this.base}/cast/${this.current.token}/song${ext}`;
+    this.set({ state: "loading", trackId: song.id, position: positionSec, duration: song.duration, fetched: false, through: !direct, ended: false });
     const meta = { ...song, mime: mimeOf(ext) };
-    const results = await Promise.allSettled(this.players.map((p) => p.load(url, meta, positionSec, play)));
+    const handing = this.current;
+    const delays = play && this.players.length > 1 ? this.sync.startDelays(this.players.map((p) => p.id)) : null;
+    this.outOfStep();
+    this.handedWith = delays;
+    const results = await Promise.allSettled(
+      this.players.map(async (p) => {
+        const delay = delays?.get(p.id) ?? 0;
+        if (delay > 0) await new Promise((done) => setTimeout(done, delay));
+        if (this.current === handing) await p.load(url, meta, positionSec, play);
+      })
+    );
     const failed = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
     // The first player decides: a second one that can't follow doesn't stop the music.
     if (failed && results[0].status === "rejected") throw failed.reason;
@@ -343,8 +441,44 @@ class Session {
     return deviceId ? this.players.filter((p) => p.id === deviceId) : this.players;
   }
 
+  /** One of these was set by hand to play further ahead or behind. */
+  retune(changed: ReadonlySet<string>): void {
+    if (this.players.length < 2 || !this.players.some((p) => changed.has(p.id))) return;
+    this.retuned = true;
+    this.outOfStep();
+  }
+
+  /** Something happened that can put a group out of step: it gets looked at again. */
+  private outOfStep(): void {
+    this.commands += 1;
+    this.lastCommandAt = Date.now();
+    this.handedWith = null;
+  }
+
+  /** All of them playing: are they together? Once per song, seek and pause. */
+  private bringTogether(): void {
+    if (this.players.some((p) => p.starting())) return;
+    this.alignedAt = this.commands;
+    const at = this.commands;
+    const delays = this.handedWith;
+    this.handedWith = null;
+    const closely = this.retuned;
+    this.retuned = false;
+    const members = this.players.map((p) => ({
+      id: p.id,
+      offset: (playAhead.get(p.id) ?? 0) / 1000,
+      place: async () => {
+        const report = await p.status();
+        return report.state === "PLAYING" ? report.position : null;
+      },
+      seek: (sec: number) => p.seek(sec),
+    }));
+    void this.sync.align(members, () => at === this.commands && this.status.state === "playing", this.status.duration, delays, closely).catch(() => undefined);
+  }
+
   async control(action: string, value: number, deviceId?: string): Promise<void> {
     if (!this.players.length) throw new Error("Not casting");
+    if (action === "play" || action === "pause" || action === "seek") this.outOfStep();
     const each = (run: (p: Player) => Promise<unknown>): Promise<unknown[]> => Promise.all(this.players.map(run));
     if (action === "play") await each((p) => p.play());
     else if (action === "pause") await each((p) => p.pause());
@@ -370,15 +504,21 @@ class Session {
     void this.tick();
   }
 
+  /** The way to this computer may be open now: the song on its way once more, from the start of its patience. */
+  async again(): Promise<void> {
+    const current = this.current;
+    if (current && !this.status.fetched && this.status.through && this.status.state === "loading") await this.load(current.song, this.status.position, true);
+  }
+
   /** Another device plays along from here on, from where the others are. */
   async join(player: Player): Promise<void> {
     if (this.players.some((p) => p.id === player.id)) return;
     await this.readVolume(player);
     this.players = [...this.players, player];
+    this.outOfStep();
     if (this.current) {
-      const ext = this.current.file ? path.extname(this.current.file).toLowerCase() : serverStreamExt(this.current.song);
       await player
-        .load(`${this.base}/cast/${this.current.token}/song${ext}`, { ...this.current.song, mime: mimeOf(ext) }, this.status.position, this.status.state === "playing" || this.status.state === "loading")
+        .load(this.current.url, { ...this.current.song, mime: mimeOf(this.current.ext) }, this.status.position, this.status.state === "playing" || this.status.state === "loading")
         .catch((err: unknown) => {
           this.players = this.players.filter((p) => p !== player);
           player.close();
@@ -425,10 +565,27 @@ class Session {
 }
 
 function idleStatus(session: string): CastStatus {
-  return { session, device: null, members: [], state: "idle", trackId: null, position: 0, duration: 0, fetched: false, volume: null, muted: false };
+  return { session, device: null, members: [], state: "idle", trackId: null, position: 0, duration: 0, fetched: false, through: true, volume: null, muted: false };
 }
 
 const sessions = new Map<string, Session>();
+
+/** How far ahead each device plays in a group, in ms, as set by hand in the app (lib/groupSync.ts). */
+const playAhead = new Map<string, number>();
+
+export function setPlayAhead(input: unknown): void {
+  const next = new Map<string, number>();
+  if (input && typeof input === "object") {
+    for (const [id, ms] of Object.entries(input as Record<string, unknown>).slice(0, 500)) {
+      if (id.length > 300 || typeof ms !== "number" || !Number.isFinite(ms) || ms === 0) continue;
+      next.set(id, Math.max(-PLAY_AHEAD_MAX_MS, Math.min(PLAY_AHEAD_MAX_MS, Math.round(ms))));
+    }
+  }
+  const changed = new Set([...next.keys(), ...playAhead.keys()].filter((id) => next.get(id) !== playAhead.get(id)));
+  playAhead.clear();
+  for (const [id, ms] of next) playAhead.set(id, ms);
+  if (changed.size) for (const s of sessions.values()) s.retune(changed);
+}
 
 export async function start(deviceId: string, onStatus: (s: CastStatus) => void, sessionId = MAIN): Promise<CastStatus> {
   const player = await playerFor(deviceId);
@@ -474,6 +631,11 @@ export async function stop(sessionId = MAIN): Promise<void> {
   if (!session) return;
   sessions.delete(sessionId);
   await session.stop();
+}
+
+/** Every song still waiting to be fetched, handed over again. */
+export async function againAll(): Promise<void> {
+  await Promise.all([...sessions.values()].map((s) => s.again().catch(() => undefined)));
 }
 
 export async function stopAll(): Promise<void> {

@@ -1,5 +1,5 @@
 /**
- * Membership versions shared by the renderer and the pure cloud merge.
+ * Membership versions shared by the desktop, the phone and the merge of their playlists.
  *
  * Only explicit adds advance `adds`; renaming/pinning/moving uses `edits` and
  * cannot resurrect a deleted membership. A delete wins an equal-time add.
@@ -10,11 +10,11 @@
  * contribute only additions newer than the floor. Records already present in
  * a snapshot AT the floor are certified survivors, without fabricating newer
  * add times (which would incorrectly defeat concurrent deletes). Thus stale
- * cloud copies cannot resurrect compacted deletions. Trade-off: very old,
+ * copies cannot resurrect compacted deletions. Trade-off: very old,
  * unsynced additions below the floor must be explicitly added again. This is
  * not an indefinitely-offline CRDT; that requires device acknowledgements or
  * unbounded tombstones. Whole-store replacement/reset must retain or knowingly
- * discard this metadata along with its account data.
+ * discard this metadata along with the data.
  *
  * Metadata is O(live memberships + TOMBSTONE_LIMIT); clears have two fixed
  * slots. Clock values are monotonic within an observed snapshot, not a global

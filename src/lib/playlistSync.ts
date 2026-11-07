@@ -4,7 +4,7 @@
  * the desktop and the phone.
  *
  * What gets deleted or added follows the membership versions of
- * deletion-sync.ts, the same rules as the cloud backup. The order is kept: a
+ * deletion-sync.ts. The order is kept: a
  * playlist is a list somebody arranged, so it stays as on the side that last
  * edited it, and what only the other side has follows behind.
  */

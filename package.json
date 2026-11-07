@@ -11,10 +11,10 @@
     "dev": "concurrently -k -s first \"npm:dev:renderer\" \"npm:dev:app\"",
     "dev:renderer": "vite",
     "dev:app": "wait-on tcp:127.0.0.1:5173 && npm run build:electron && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .",
-    "build:electron": "esbuild electron/main.ts electron/preload.ts --bundle --platform=node --format=cjs --external:electron --external:jsdom --external:undici --outdir=dist-electron && esbuild electron/po-page.ts --bundle --format=iife --outfile=dist-electron/po-page.js && node -e \"require('fs').copyFileSync('electron/po.html','dist-electron/po.html')\" && node -e \"require('fs').cpSync('electron/assets','dist-electron/assets',{recursive:true})\"",
+    "build:electron": "esbuild electron/main.ts electron/preload.ts --bundle --platform=node --format=cjs --external:electron --external:electron-updater --external:node-html-parser --outdir=dist-electron && node -e \"require('fs').cpSync('electron/assets','dist-electron/assets',{recursive:true})\"",
     "icons:thumbar": "node scripts/gen-thumbar-icons.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "esbuild src/lib/account-validators.ts --bundle --format=esm --outfile=.test-build/account-validators.mjs && esbuild src/lib/config.ts --bundle --format=esm --outfile=.test-build/config.mjs && esbuild electron/sync-merge.ts --bundle --format=esm --outfile=.test-build/sync-merge.mjs && esbuild electron/audio-format.ts --bundle --format=esm --outfile=.test-build/audio-format.mjs && esbuild electron/backup-transfer.ts --bundle --format=esm --outfile=.test-build/backup-transfer.mjs && esbuild electron/market.ts --bundle --format=esm --outfile=.test-build/market.mjs && esbuild electron/ytm.ts --bundle --format=esm --outfile=.test-build/ytm.mjs && esbuild electron/local-paths.ts --bundle --format=esm --outfile=.test-build/local-paths.mjs && esbuild src/lib/deletion-sync.ts --bundle --format=esm --outfile=.test-build/deletion-sync.mjs && esbuild src/lib/download-reconcile.ts --bundle --format=esm --outfile=.test-build/download-reconcile.mjs && esbuild electron/mac-menu.ts --bundle --format=esm --outfile=.test-build/mac-menu.mjs && esbuild src/lib/media-key-tap.ts --bundle --format=esm --outfile=.test-build/media-key-tap.mjs && esbuild src/lib/audio-output.ts --bundle --format=esm --outfile=.test-build/audio-output.mjs && esbuild src/lib/duplicates.ts --bundle --format=esm --outfile=.test-build/duplicates.mjs && esbuild src/lib/releases.ts --bundle --format=esm --outfile=.test-build/releases.mjs && esbuild src/lib/playbackFormat.ts --bundle --format=esm --outfile=.test-build/playbackFormat.mjs && esbuild electron/jellyfin-stream.ts --bundle --format=esm --outfile=.test-build/jellyfin-stream.mjs && esbuild src/lib/libraryTracks.ts --bundle --format=esm --outfile=.test-build/libraryTracks.mjs && esbuild src/lib/spotifyImport.ts --bundle --format=esm --outfile=.test-build/spotifyImport.mjs && esbuild src/lib/albumEdits.ts --bundle --format=esm --outfile=.test-build/albumEdits.mjs && esbuild src/lib/catalogIndex.ts --bundle --format=esm --outfile=.test-build/catalogIndex.mjs && esbuild electron/discord.ts --bundle --platform=node --format=esm --outfile=.test-build/discord.mjs && esbuild electron/lyrics.ts --bundle --platform=node --format=esm --outfile=.test-build/lyrics.mjs && esbuild src/lib/favoriteSync.ts --bundle --format=esm --outfile=.test-build/favoriteSync.mjs && esbuild src/lib/storeLinks.ts --bundle --format=esm --outfile=.test-build/storeLinks.mjs && esbuild src/lib/transliterate.ts --bundle --format=esm --outfile=.test-build/transliterate.mjs && esbuild electron/m3u.ts --bundle --format=esm --outfile=.test-build/m3u.mjs && esbuild src/lib/m3uMatch.ts --bundle --format=esm --outfile=.test-build/m3uMatch.mjs && esbuild electron/archive-import.ts --bundle --platform=node --format=cjs --outfile=.test-build/archive-import.cjs && esbuild electron/release-date.ts --bundle --format=esm --outfile=.test-build/release-date.mjs && esbuild electron/data-folder.ts --bundle --platform=node --format=esm --outfile=.test-build/data-folder.mjs && esbuild mobile/src/quality.ts --bundle --format=esm --outfile=.test-build/phone-quality.mjs && esbuild mobile/src/addresses.ts --bundle --format=esm --outfile=.test-build/phone-addresses.mjs && esbuild src/lib/syncEngine.ts --bundle --format=esm --outfile=.test-build/syncEngine.mjs && esbuild src/lib/playlistSync.ts --bundle --format=esm --outfile=.test-build/playlistSync.mjs && esbuild src/lib/lrc.ts --bundle --format=esm --outfile=.test-build/lrc.mjs && node --test tests/*.test.mjs",
+    "test": "esbuild electron/backup-transfer.ts --bundle --format=esm --outfile=.test-build/backup-transfer.mjs && esbuild electron/local-paths.ts --bundle --format=esm --outfile=.test-build/local-paths.mjs && esbuild src/lib/deletion-sync.ts --bundle --format=esm --outfile=.test-build/deletion-sync.mjs && esbuild src/lib/download-reconcile.ts --bundle --format=esm --outfile=.test-build/download-reconcile.mjs && esbuild electron/mac-menu.ts --bundle --format=esm --outfile=.test-build/mac-menu.mjs && esbuild src/lib/media-key-tap.ts --bundle --format=esm --outfile=.test-build/media-key-tap.mjs && esbuild src/lib/audio-output.ts --bundle --format=esm --outfile=.test-build/audio-output.mjs && esbuild src/lib/duplicates.ts --bundle --format=esm --outfile=.test-build/duplicates.mjs && esbuild src/lib/releases.ts --bundle --format=esm --outfile=.test-build/releases.mjs && esbuild src/lib/playbackFormat.ts --bundle --format=esm --outfile=.test-build/playbackFormat.mjs && esbuild electron/jellyfin-stream.ts --bundle --format=esm --outfile=.test-build/jellyfin-stream.mjs && esbuild src/lib/libraryTracks.ts --bundle --format=esm --outfile=.test-build/libraryTracks.mjs && esbuild src/lib/spotifyImport.ts --bundle --format=esm --outfile=.test-build/spotifyImport.mjs && esbuild src/lib/albumEdits.ts --bundle --format=esm --outfile=.test-build/albumEdits.mjs && esbuild src/lib/catalogIndex.ts --bundle --format=esm --outfile=.test-build/catalogIndex.mjs && esbuild electron/discord.ts --bundle --platform=node --format=esm --outfile=.test-build/discord.mjs && esbuild electron/lyrics.ts --bundle --platform=node --format=esm --outfile=.test-build/lyrics.mjs && esbuild src/lib/favoriteSync.ts --bundle --format=esm --outfile=.test-build/favoriteSync.mjs && esbuild src/lib/storeLinks.ts --bundle --format=esm --outfile=.test-build/storeLinks.mjs && esbuild src/lib/transliterate.ts --bundle --format=esm --outfile=.test-build/transliterate.mjs && esbuild electron/m3u.ts --bundle --format=esm --outfile=.test-build/m3u.mjs && esbuild src/lib/m3uMatch.ts --bundle --format=esm --outfile=.test-build/m3uMatch.mjs && esbuild electron/archive-import.ts --bundle --platform=node --format=cjs --outfile=.test-build/archive-import.cjs && esbuild electron/release-date.ts --bundle --format=esm --outfile=.test-build/release-date.mjs && esbuild electron/data-folder.ts --bundle --platform=node --format=esm --outfile=.test-build/data-folder.mjs && esbuild mobile/src/quality.ts --bundle --format=esm --outfile=.test-build/phone-quality.mjs && esbuild mobile/src/addresses.ts --bundle --format=esm --outfile=.test-build/phone-addresses.mjs && esbuild src/lib/syncEngine.ts --bundle --format=esm --outfile=.test-build/syncEngine.mjs && esbuild src/lib/playlistSync.ts --bundle --format=esm --outfile=.test-build/playlistSync.mjs && esbuild src/lib/lrc.ts --bundle --format=esm --outfile=.test-build/lrc.mjs && node --test tests/*.test.mjs",
     "build": "npm run typecheck && npm run build:electron && vite build",
     "start": "electron .",
     "smoke": "node scripts/smoke.mjs",
@@ -30,6 +30,18 @@
   "build": {
     "appId": "com.bytune.local",
     "productName": "Songsta",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "steggi-bernd",
+        "repo": "Songsta"
+      }
+    ],
+    "electronLanguages": [
+      "en",
+      "en-US",
+      "de"
+    ],
     "directories": {
       "output": "release"
     },
@@ -128,24 +140,21 @@
       "afterInstall": "build/linux/after-install.tpl",
       "afterRemove": "build/linux/after-remove.tpl"
     },
-    "protocols": [
-      {
-        "name": "Songsta",
-        "schemes": [
-          "bytune"
-        ]
-      }
-    ],
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "oneClick": true,
+      "perMachine": false,
+      "include": "build/installer.nsh",
+      "multiLanguageInstaller": true,
+      "installerLanguages": [
+        "en_US",
+        "de_DE"
+      ],
       "deleteAppDataOnUninstall": false,
       "shortcutName": "Songsta"
     }
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
-    "@types/jsdom": "^30.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
@@ -165,14 +174,12 @@
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "wait-on": "^8.0.1",
-    "youtubei.js": "^18.0.0",
     "zustand": "^5.0.2"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.116.0",
-    "bgutils-js": "^4.0.3",
-    "jsdom": "^29.1.1",
+    "electron-updater": "^6.3.9",
     "music-metadata": "^11.15.0",
+    "node-html-parser": "^9.0.7",
     "yauzl": "^3.4.0"
   }
 }

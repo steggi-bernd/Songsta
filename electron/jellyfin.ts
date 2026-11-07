@@ -22,6 +22,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as persist from "./persist";
 import { jellyfinStreamPlan } from "./jellyfin-stream";
+import { isLanUrl } from "./upnp-control";
 import { openSecret, sealSecret } from "./secrets";
 import { jellyfinItemToTrack, type JellyfinTrack } from "../src/lib/jellyfinItem";
 
@@ -378,28 +379,59 @@ export function originalFile(itemId: string): { url: string; headers: Record<str
   };
 }
 
+/** Where on the server a song streams from, in its own format or one that plays. */
+function streamPath(itemId: string, deviceId: string): string {
+  const plan = jellyfinStreamPlan(readLibrary().tracks.find((t) => t.itemId === itemId));
+  const params = new URLSearchParams({ mediaSourceId: itemId, deviceId });
+  if (plan === "static") {
+    params.set("static", "true");
+    return `/Audio/${itemId}/stream?${params}`;
+  }
+  if (plan === "flac") {
+    params.set("audioCodec", "flac");
+    return `/Audio/${itemId}/stream.flac?${params}`;
+  }
+  params.set("audioCodec", "mp3");
+  params.set("audioBitRate", "320000");
+  return `/Audio/${itemId}/stream.mp3?${params}`;
+}
+
 /** Upstream audio for one item, honouring the media element's Range header. */
 export async function fetchStream(itemId: string, range: string | undefined): Promise<Response> {
   const cfg = readConfig();
   const token = openSecret(cfg?.token);
   if (!cfg || !token || !/^[a-f0-9-]{32,36}$/i.test(itemId)) return new Response(null, { status: 404 });
-  const plan = jellyfinStreamPlan(readLibrary().tracks.find((t) => t.itemId === itemId));
-  const params = new URLSearchParams({ mediaSourceId: itemId, deviceId: cfg.deviceId });
-  let route: string;
-  if (plan === "static") {
-    params.set("static", "true");
-    route = `/Audio/${itemId}/stream`;
-  } else if (plan === "flac") {
-    params.set("audioCodec", "flac");
-    route = `/Audio/${itemId}/stream.flac`;
-  } else {
-    params.set("audioCodec", "mp3");
-    params.set("audioBitRate", "320000");
-    route = `/Audio/${itemId}/stream.mp3`;
-  }
   const headers: Record<string, string> = { Authorization: authHeader(token, cfg.deviceId) };
   if (range) headers.Range = range;
-  return fetch(`${cfg.server}${route}?${params}`, { headers });
+  return fetch(`${cfg.server}${streamPath(itemId, cfg.deviceId)}`, { headers });
+}
+
+/** As far as their addresses can tell. */
+const sameNetwork = (a: string, b: string): boolean => a.split(".").slice(0, 3).join(".") === b.split(".").slice(0, 3).join(".");
+
+/** Whether the server hands a song to somebody without a login, as Jellyfin does for players like these. A no is asked again later. */
+const handsOutSongs = new Map<string, { yes: boolean; at: number }>();
+const ASK_AGAIN_MS = 5 * 60_000;
+
+/**
+ * Where a device on the network can fetch a song by itself, with this computer out of the way, as it
+ * does from the phone: nothing has to get through this computer's firewall, and the computer may sleep.
+ * Only for a server on that same network, and only when it needs no login: a device never sees a token.
+ * What lies elsewhere may only be reachable from here (a container's own network, a VPN, this very computer).
+ */
+export async function deviceStreamUrl(itemId: string, deviceHost: string): Promise<string | null> {
+  const cfg = readConfig();
+  if (!cfg || !/^[a-f0-9-]{32,36}$/i.test(itemId) || !isLanUrl(cfg.server)) return null;
+  if (!sameNetwork(new URL(cfg.server).hostname, deviceHost)) return null;
+  const known = handsOutSongs.get(cfg.server);
+  if (known?.yes || (known && Date.now() - known.at < ASK_AGAIN_MS)) return known.yes ? `${cfg.server}${streamPath(itemId, cfg.deviceId)}` : null;
+  const params = new URLSearchParams({ mediaSourceId: itemId, deviceId: cfg.deviceId, static: "true" });
+  const yes = await fetch(`${cfg.server}/Audio/${itemId}/stream?${params}`, { method: "HEAD", redirect: "error", signal: AbortSignal.timeout(2500) }).then(
+    (res) => res.ok,
+    () => false
+  );
+  handsOutSongs.set(cfg.server, { yes, at: Date.now() });
+  return yes ? `${cfg.server}${streamPath(itemId, cfg.deviceId)}` : null;
 }
 
 /**

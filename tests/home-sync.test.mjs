@@ -81,6 +81,7 @@ const service = {
     return { seq: this.seq, revs: { ...this.revs, devices: this.devicesRev }, inbox: (this.inbox[device] ?? []).length };
   },
   async request(method, path, body) {
+    if (this.down) throw new TypeError("Network request failed");
     const url = new URL(path, "http://service");
     const doc = /^\/v1\/docs\/(\w+)$/.exec(url.pathname)?.[1];
     const deviceMatch = /^\/v1\/devices(?:\/([^/]+)(\/commands)?)?$/.exec(url.pathname);
@@ -462,6 +463,28 @@ test("waiting for a speaker: taken from the phone without playing here", async (
   await until(() => phone.heard("yield").length > 0, `tells the phone: ${JSON.stringify(service.sent)}`);
   assert.equal(player().playing, false);
   assert.equal(useHomeSync.getState().followed, null);
+  phone.silent();
+  await wait(30);
+});
+
+test("started here with the service away: the others hear of it when it's back", async () => {
+  await playingHere(1);
+  usePlayer.setState({ playing: false });
+  await wait(40);
+  phone.say("c");
+  await wait(60);
+  assert.equal(useHomeSync.getState().followed, null, "just active here: it doesn't follow yet");
+  service.sent.length = 0;
+
+  service.down = true;
+  await until(() => useHomeSync.getState().status === "unreachable", "the service is gone", 2000);
+  usePlayer.setState({ playing: true });
+  await wait(60);
+  assert.equal(phone.heard("yield").length, 0, "nobody can hear of it now");
+
+  service.down = false;
+  await until(() => phone.heard("yield").length === 1, "back, it tells the phone: one stream", 8000);
+  assert.equal(player().playing, true, "and plays on");
   phone.silent();
   await wait(30);
 });

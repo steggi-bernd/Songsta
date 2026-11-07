@@ -43,7 +43,6 @@ export function LibraryHomeView() {
   const playCounts = useCatalog((s) => s.playCounts);
   const history = useLibrary((s) => s.history);
   const navigate = useUI((s) => s.navigate);
-  const playQueue = usePlayer((s) => s.playQueue);
   useFreshPlayCounts();
 
   const byId = useMemo(() => new Map(tracks.map((t) => [t.id, t])), [tracks]);

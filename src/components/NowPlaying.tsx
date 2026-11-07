@@ -67,7 +67,7 @@ function FsBackdropLayer({
       />
       {artwork && !legacy && (
         <img
-          src={upgradeArtwork(artwork, 1200)}
+          src={upgradeArtwork(artwork)}
           alt=""
           className="absolute inset-0 h-full w-full object-cover brightness-[0.78] saturate-[1.25] blur-[100px]"
           style={{ transform: "scale(1.4)", opacity: boost ? 0.65 : 0.48 }}
@@ -443,7 +443,7 @@ export function NowPlaying() {
                     {canvasUrl && animatedCanvas ? (
                       <>
                         {/* Still art underneath: if the video stalls, the cover stands. */}
-                        <img src={upgradeArtwork(track.thumb, 1200)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        <img src={upgradeArtwork(track.thumb)} alt="" className="absolute inset-0 w-full h-full object-cover" />
                         <video
                           key={canvasUrl}
                           ref={canvasVideoRef}
@@ -458,7 +458,7 @@ export function NowPlaying() {
                     ) : track.thumb ? (
                       <img
                         key={track.id}
-                        src={upgradeArtwork(track.thumb, 1200)}
+                        src={upgradeArtwork(track.thumb)}
                         alt=""
                         className="w-full h-full object-cover animate-art-in"
                       />

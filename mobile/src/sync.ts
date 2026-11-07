@@ -147,6 +147,7 @@ export async function startSync(): Promise<void> {
     sendList: (id, tracks, context, command) => created.sendList(id, tracks, context, command),
     handOver: (id) => created.handOver(id),
     look: () => void created.checkPlayback(),
+    connected: () => created.status() === "connected",
     presence: () => {
       if (AppState.currentState === "active") created.presenceChanged();
       else void created.presenceNow();

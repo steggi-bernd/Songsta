@@ -31,7 +31,7 @@ export function queryTitle(title: string): string {
   return base || cleanTitle(title);
 }
 
-/** Strip the noise YouTube titles carry: "(Official Video)", "[HD]" … */
+/** Strip the noise titles from the web carry: "(Official Video)", "[HD]" … */
 export function cleanTitle(title: string): string {
   return title
     .replace(/\((official\s+)?(music\s+)?(lyric[s]?\s+)?(video|audio|visualizer?|mv)\)/gi, "")

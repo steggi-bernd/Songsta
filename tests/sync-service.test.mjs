@@ -382,6 +382,59 @@ test("without the service the engine says so and keeps trying", async (t) => {
   await until(() => tries >= 2, "another try");
 });
 
+test("no word from the service for a while: nobody counts as around, until it answers again", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const settle = async () => {
+    for (let i = 0; i < 60; i++) await Promise.resolve();
+  };
+  let up = true;
+  let asked = 0;
+  let dropLongPoll = () => undefined;
+  const heard = [];
+  const engine = createSyncEngine({
+    deviceId: "d",
+    async request(method, url) {
+      if (!up) throw new TypeError("Network request failed");
+      if (url.startsWith("/v1/changes")) {
+        asked += 1;
+        if (asked % 2 === 1) return { status: 200, body: { seq: asked, revs: { devices: 1 }, inbox: 0 } };
+        return new Promise((_, reject) => {
+          dropLongPoll = reject;
+        });
+      }
+      if (url === "/v1/devices") return { status: 200, body: { now: Date.now(), devices: [{ id: "other", updatedAt: Date.now(), doc: { name: "Other" } }] } };
+      return { status: 200, body: { rev: 0, doc: null } };
+    },
+    readPlaylists: () => toPlaylistDoc(null),
+    applyPlaylists: () => undefined,
+    readPlayback: () => null,
+    wantsPlayback: () => false,
+    adoptPlayback: () => undefined,
+    readPresence: () => ({ name: "d", kind: "computer", playing: false, positionMs: 0, durationMs: 0, track: null }),
+    applyDevices: (list) => heard.push(list.map((d) => d.id)),
+  });
+  t.after(() => engine.stop());
+  engine.start();
+  await settle();
+  assert.deepEqual(heard.at(-1), ["other"], "the other device is known");
+  const before = heard.length;
+
+  up = false;
+  dropLongPoll(new TypeError("Network request failed"));
+  await settle();
+  t.mock.timers.tick(29_000);
+  await settle();
+  assert.equal(heard.length, before, "a bump in the road says nothing yet");
+  t.mock.timers.tick(1_500);
+  await settle();
+  assert.deepEqual(heard.at(-1), [], "from a while on, nobody is around");
+
+  up = true;
+  t.mock.timers.tick(60_000);
+  await settle();
+  assert.deepEqual(heard.at(-1), ["other"], "back, it says who is, whatever its revision says");
+});
+
 test("a refused login isn't asked again at once", async (t) => {
   const statuses = [];
   const engine = createSyncEngine({

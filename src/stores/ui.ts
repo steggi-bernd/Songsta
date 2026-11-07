@@ -1,7 +1,6 @@
 /** Transient UI state: navigation, panels, toasts, context menu, dialogs. */
 import type { LucideIcon } from "lucide-react";
 import { create } from "zustand";
-import type { SearchFilter } from "../types";
 
 export type ViewName =
   | "home"
@@ -11,11 +10,9 @@ export type ViewName =
   | "library"
   | "playlists"
   | "playlist"
-  | "ytplaylist"
   | "album"
   | "artist"
   | "artistliked"
-  | "downloads"
   | "local"
   | "jellyfin"
   | "subsonic"
@@ -89,6 +86,8 @@ export interface DialogRequest {
   cancelLabel?: string;
   danger?: boolean;
   onConfirm: (value: string) => void;
+  /** Left without an answer. */
+  onCancel?: () => void;
 }
 
 export interface UIState {
@@ -99,7 +98,6 @@ export interface UIState {
       render — set by goBack/goForward, consumed by App's layout effect. */
   pendingScroll: number | null;
   searchQuery: string;
-  searchFilter: SearchFilter;
   /** Right panel mode: song details (default), the Queue sheet or the devices. */
   rightPanel: "details" | "queue" | "devices";
   /** Synced lyrics rendered in the centre pane over the current view. */
@@ -115,9 +113,6 @@ export interface UIState {
   /** Artwork URL the pointer is hovering — drives the middle panel's wash.
       null = at rest, the wash wears the playing track's colour. */
   tintThumb: string | null;
-  /** Bumped by the TopBar refresh button — Home drops its caches and
-      re-orchestrates the feed (see lib/recs/feed + lib/recs/profile). */
-  homeReloadNonce: number;
   /** Bumped to re-run the CURRENT view's data lifecycle: App keys the view
       container on it, so a bump remounts the page and its fetch effects. */
   viewReloadNonce: number;
@@ -126,7 +121,6 @@ export interface UIState {
   goBack(): void;
   goForward(): void;
   setSearchQuery(q: string): void;
-  setSearchFilter(f: SearchFilter): void;
   toggleQueue(): void;
   toggleLyrics(): void;
   toggleNowPlaying(): void;
@@ -139,7 +133,6 @@ export interface UIState {
   closeContextMenu(): void;
   openDialog(req: DialogRequest): void;
   closeDialog(): void;
-  bumpHomeReload(): void;
   bumpViewReload(): void;
   clearPendingScroll(): void;
 }
@@ -204,7 +197,6 @@ export const useUI = create<UIState>((set, get) => ({
   navFuture: [],
   pendingScroll: null,
   searchQuery: "",
-  searchFilter: "all",
   rightPanel: "details" as "details" | "queue" | "devices",
   lyricsCenter: false,
   nowPlayingOpen: false,
@@ -213,7 +205,6 @@ export const useUI = create<UIState>((set, get) => ({
   contextMenu: null,
   dialog: null,
   tintThumb: null,
-  homeReloadNonce: 0,
   viewReloadNonce: 0,
 
   navigate(view) {
@@ -265,14 +256,6 @@ export const useUI = create<UIState>((set, get) => ({
 
   setSearchQuery(searchQuery) {
     set({ searchQuery });
-  },
-
-  setSearchFilter(searchFilter) {
-    // A filter flip replaces the result rows in place; the pointer can end up
-    // over a row that never sees a mouseenter (the DOM fires no mouseleave
-    // when the hovered row unmounts), so hand the wash back to the playing
-    // track here instead of leaving it stuck on a removed card's colour.
-    set({ searchFilter, tintThumb: null });
   },
 
   toggleQueue() {
@@ -327,10 +310,6 @@ export const useUI = create<UIState>((set, get) => ({
 
   closeDialog() {
     set({ dialog: null });
-  },
-
-  bumpHomeReload() {
-    set({ homeReloadNonce: get().homeReloadNonce + 1 });
   },
 
   bumpViewReload() {

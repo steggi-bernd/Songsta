@@ -5,8 +5,8 @@
  * (home, search, artist pages…) stays a non-target and keeps the OS
  * "blocked" cursor.
  *
- * Only TRACK drags are accepted — artist/playlist/album drags pass through
- * untouched (see useTrackDrop). The hovering flag drives the full-panel
+ * Only TRACK drags are accepted — playlist drags pass through untouched
+ * (see useTrackDrop). The hovering flag drives the full-panel
  * highlight App renders inside the main surface, same design as the
  * sidebar's row highlight (ring-accent/60 + ink tint).
  */
@@ -15,7 +15,7 @@ import { useSettings } from "../stores/settings";
 import { useUI } from "../stores/ui";
 import type { LocalFolderEntry } from "../../electron/local-library";
 import type { Track } from "../types";
-import { getDownload, startDownload } from "./downloads";
+import { getDownload, SERVER_SONG, startDownload } from "./downloads";
 import { useTrackDrop } from "./dnd";
 import { T } from "./i18n";
 
@@ -36,7 +36,7 @@ function likeTrack(track: Track): void {
   useUI.getState().toast(T("Added to Liked Songs"), "success");
 }
 
-/** A streamed song dropped on the folder page downloads straight into it. */
+/** A server song dropped on the folder page downloads straight into it. */
 function downloadIntoLocalFolder(track: Track, target?: string | null): void {
   void (async () => {
     const lib = await window.bytune?.localLibrary();
@@ -50,7 +50,7 @@ function downloadIntoLocalFolder(track: Track, target?: string | null): void {
       useUI.getState().toast(T("Set up a local folder first"), "info");
       return;
     }
-    if (track.localPath || track.id.startsWith("local:")) {
+    if (!SERVER_SONG.test(track.id)) {
       useUI.getState().toast(T("That song is already in your local library"), "info");
       return;
     }

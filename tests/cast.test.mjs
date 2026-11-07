@@ -22,7 +22,7 @@ const stubs = {
   name: "cast-stubs",
   setup(b) {
     b.onResolve({ filter: /^dgram$/ }, () => ({ path: "dgram", namespace: "stub" }));
-    b.onResolve({ filter: /^\.\/(jellyfin|subsonic|local-library)$/ }, (a) => ({ path: a.path.slice(2), namespace: "stub" }));
+    b.onResolve({ filter: /^\.\/(jellyfin|subsonic|local-library|tv-remote)$/ }, (a) => ({ path: a.path.slice(2), namespace: "stub" }));
     b.onLoad({ filter: /.*/, namespace: "stub" }, (a) => ({
       loader: "js",
       contents: {
@@ -46,6 +46,9 @@ const stubs = {
           export async function fetchStream(id, range) {
             globalThis.__streams.push({ server: "jellyfin", id, range });
             return new Response("JELLYFIN-AUDIO", { status: range ? 206 : 200, headers: { "content-type": "audio/flac", "content-length": "14", "accept-ranges": "bytes", "x-secret": "token" } });
+          }
+          export async function deviceStreamUrl() {
+            return globalThis.__direct ?? null;
           }`,
         subsonic: `export const SERVER_TRANSCODE = new Set(["wma", "alac"]);
           export const readLibrary = () => ({ tracks: [{ id: "ss:s1", suffix: "wma" }, { id: "ss:s2", suffix: "opus" }] });
@@ -54,6 +57,11 @@ const stubs = {
             return new Response("NAVIDROME", { status: 200, headers: { "content-type": "audio/mpeg" } });
           }`,
         "local-library": `export const localStreamPath = (id) => (id === "local:0123456789abcdef" ? globalThis.__songFile : null);`,
+        "tv-remote": `export const readTv = async () => null;
+          export const switchTvOff = async () => false;
+          export const startPairing = async () => undefined;
+          export const finishPairing = async () => "failed";
+          export const cancelPairing = () => undefined;`,
       }[a.path],
     }));
   },
@@ -95,7 +103,7 @@ const description = (port) => `<?xml version="1.0"?>
 </root>`;
 
 const calls = [];
-const player = { uri: "", state: "NO_MEDIA_PRESENT", position: 0, duration: 0, volume: 35, muted: false, fetched: [], reportUri: true };
+const player = { uri: "", state: "NO_MEDIA_PRESENT", position: 0, duration: 0, volume: 35, muted: false, fetched: [], reportUri: true, comesForIt: true, afterHanding: "STOPPED" };
 const field = (xml, name) => new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(xml)?.[1] ?? "";
 const unescape = (s) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
 const clock = (sec) => `${Math.floor(sec / 3600)}:${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
@@ -125,13 +133,13 @@ const renderer = http.createServer((req, res) => {
       case "SetAVTransportURI":
         player.uri = unescape(field(body, "CurrentURI"));
         player.meta = unescape(field(body, "CurrentURIMetaData"));
-        player.state = "STOPPED";
+        player.state = player.afterHanding;
         player.position = 0;
         // A real player fetches what it was given.
-        void fetch(player.uri, { headers: { Range: "bytes=4-13" } }).then(async (r) => player.fetched.push({ status: r.status, text: await r.text(), headers: Object.fromEntries(r.headers) }));
+        if (player.comesForIt) void fetch(player.uri, { headers: { Range: "bytes=4-13" } }).then(async (r) => player.fetched.push({ status: r.status, text: await r.text(), headers: Object.fromEntries(r.headers) })).catch(() => undefined);
         return reply("");
       case "Play":
-        player.state = "PLAYING";
+        player.state = player.comesForIt ? "PLAYING" : player.afterHanding;
         return reply("");
       case "Pause":
         player.state = "PAUSED_PLAYBACK";
@@ -435,6 +443,71 @@ test("a whole session: find, connect, play a file and a server song, steer, the 
   await assert.rejects(fetch(realUri), /fetch failed/);
   await assert.rejects(cast.load(cast.songFrom({ id: "local:0123456789abcdef", title: "x", duration: 1 }), 0, true), /Not casting/);
   await assert.rejects(cast.control("play", 0), /Not casting/);
+});
+
+test("a server song goes straight to a device that can fetch it; one that never comes for a song through here is told of once, and gets it again", { timeout: 20000 }, async () => {
+  globalThis.__ssdp.replies = [`HTTP/1.1 200 OK\r\nLOCATION: ${base}/desc.xml\r\nST: urn:schemas-upnp-org:device:MediaRenderer:1\r\n\r\n`];
+  await cast.findDevices();
+  const statuses = [];
+  await cast.start(UDN, (s) => statuses.push({ ...s }));
+  const song = cast.songFrom({ id: "jf:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Remote", artist: "Band", duration: 180 });
+  const handed = () => calls.filter((c) => c.action === "SetAVTransportURI").length;
+  const realNow = Date.now;
+  player.comesForIt = false;
+  player.afterHanding = "TRANSITIONING";
+  try {
+    // Straight from the server: there's nothing here to wait for, and nothing to hand again.
+    const direct = "http://192.168.1.20:8096/Audio/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/stream?static=true";
+    globalThis.__direct = direct;
+    await cast.load(song, 0, true);
+    assert.equal(player.uri, direct);
+    assert.equal(cast.castStatus().through, false);
+    Date.now = () => realNow() + 30_000;
+    await wait(1200);
+    assert.ok(!statuses.some((s) => s.unreachable), "a song straight from the server says nothing about this computer");
+    let before = handed();
+    await cast.againAll();
+    assert.equal(handed(), before);
+    Date.now = realNow;
+
+    // Its server out of the device's reach: through this computer, as before.
+    globalThis.__direct = null;
+    await cast.load(song, 0, true);
+    assert.match(player.uri, /\/cast\/[a-f0-9]{32}\/song\.flac$/);
+    assert.equal(cast.castStatus().through, true);
+    await wait(1200);
+    assert.ok(!statuses.some((s) => s.unreachable), "it has time to wake up first");
+
+    // It never came for it: said once.
+    Date.now = () => realNow() + 30_000;
+    await until(() => statuses.some((s) => s.unreachable));
+    assert.deepEqual(statuses.find((s) => s.unreachable).unreachable, { id: UDN, name: "Living Room & Kitchen" });
+    await wait(1200);
+    assert.equal(statuses.filter((s) => s.unreachable).length, 1);
+    Date.now = realNow;
+
+    // The way may be open now: the song once more, under a new address.
+    const old = player.uri;
+    before = handed();
+    await cast.againAll();
+    assert.equal(handed(), before + 1);
+    assert.notEqual(player.uri, old);
+
+    // Fetched: nothing to say and nothing to hand again.
+    player.comesForIt = true;
+    player.afterHanding = "STOPPED";
+    await cast.load(song, 0, true);
+    await until(() => cast.castStatus().fetched);
+    before = handed();
+    await cast.againAll();
+    assert.equal(handed(), before);
+  } finally {
+    Date.now = realNow;
+    globalThis.__direct = null;
+    player.comesForIt = true;
+    player.afterHanding = "STOPPED";
+    await cast.stop();
+  }
 });
 
 test("the computer's own addresses on its networks: not its loopback, not IPv6", async () => {

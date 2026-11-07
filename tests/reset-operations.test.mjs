@@ -18,7 +18,7 @@ async function load(name, dir, mocks = {}, globals = {}) {
   const { outputFiles } = await build({
     entryPoints: [fileURLToPath(new URL(`../electron/${name}.ts`, import.meta.url))],
     bundle: true, platform: "node", format: "cjs", write: false,
-    external: ["electron", "./music-service", "./persist", "./jellyfin", "./subsonic"],
+    external: ["electron", "./persist", "./jellyfin", "./subsonic"],
     plugins: [{ name: "metadata-mock", setup(build) {
       build.onResolve({ filter: /^music-metadata$/ }, () => ({ path: "metadata", namespace: "mock" }));
       build.onLoad({ filter: /.*/, namespace: "mock" }, () => ({ contents: "export const parseFile = (...args) => globalThis.__parseFile(...args);" }));
@@ -224,19 +224,16 @@ test("reset invalidates a paused metadata scan before artwork, save or progress"
 test("reset cancels an in-flight download, cleans only its partial file, and drops queued work", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bytune-reset-download-"));
   const progress = deferred();
-  const resolving = deferred();
   const events = [];
+  const fetched = [];
   const completed = path.join(dir, "completed.m4a");
   fs.writeFileSync(completed, "user's completed audio");
-  let fetchCount = 0;
   const downloads = await load("downloads", dir, {
-    "./music-service": { resolveStream: (id) => id === "waiting" ? resolving.promise : Promise.resolve({ mime: "audio/mp4", url: "https://example.invalid/audio" }) },
-    // Only stream songs are downloaded here; server songs never reach these.
-    "./jellyfin": { originalFile: () => { throw new Error("no server in this test"); } },
-    "./subsonic": { originalFile: () => { throw new Error("no server in this test"); } },
+    "./jellyfin": { originalFile: (id) => ({ url: "https://example.invalid/" + id, headers: {}, ext: ".flac" }) },
+    "./subsonic": { originalFile: () => { throw new Error("no Navidrome in this test"); } },
   }, {
-    fetch: async () => {
-      fetchCount++;
+    fetch: async (url) => {
+      fetched.push(url);
       return new Response(new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1, 2, 3])); } }));
     },
   });
@@ -244,24 +241,38 @@ test("reset cancels an in-flight download, cleans only its partial file, and dro
     events.push(event);
     if (event.type === "progress") progress.resolve();
   });
-  const track = (id) => ({ id, artist: "Artist", title: id });
+  const track = (id) => ({ id, artist: "Artist", title: id, album: "Album" });
+  const files = (at) => fs.readdirSync(at, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(path.join(at, e.name)) : [e.name]));
   try {
-    downloads.enqueueDownload(track("running"), dir);
-    downloads.enqueueDownload(track("waiting"), dir);
-    downloads.enqueueDownload(track("queued"), dir);
+    downloads.enqueueDownload(track("jf:running"), dir);
+    downloads.enqueueDownload(track("jf:second"), dir);
+    downloads.enqueueDownload(track("jf:queued"), dir);
     await progress.promise;
     // Exercise the actual reset API while the response body is still open.
     await downloads.resetDownloads();
-    resolving.resolve({ mime: "audio/mp4", url: "https://example.invalid/late" });
     await new Promise((r) => setImmediate(r));
     assert.equal(downloads.queueSnapshot().length, 0);
     assert.equal(fs.readFileSync(completed, "utf8"), "user's completed audio");
-    assert.deepEqual(fs.readdirSync(dir), ["completed.m4a"]);
-    assert.equal(fetchCount, 1, "late resolver and queued work must not fetch");
+    assert.deepEqual(files(dir), ["completed.m4a"], "no partial file stays behind");
+    assert.ok(!fetched.some((url) => url.includes("queued")), "queued work must not fetch");
     assert.equal(events.filter((e) => e.type === "done").length, 0);
     assert.equal(events.filter((e) => e.type === "cancelled").length, 3);
   } finally {
-    resolving.resolve({ mime: "audio/mp4", url: "https://example.invalid/late" });
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("only songs on a server can be downloaded", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bytune-reset-download-"));
+  const downloads = await load("downloads", dir, {
+    "./jellyfin": { originalFile: () => { throw new Error("no server in this test"); } },
+    "./subsonic": { originalFile: () => { throw new Error("no server in this test"); } },
+  });
+  try {
+    assert.throws(() => downloads.enqueueDownload({ id: "dQw4w9WgXcQ", title: "Old", artist: "A" }, dir), /Only songs on a server/);
+    assert.throws(() => downloads.enqueueDownload({ id: "local:abc", title: "Local", artist: "A" }, dir), /Only songs on a server/);
+    assert.equal(downloads.queueSnapshot().length, 0);
+  } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

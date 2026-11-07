@@ -21,8 +21,7 @@ async function bundle(entry, stubs, externals = []) {
       name: "sec-stub",
       setup(b) {
         // Intercept ALL relative imports: keys get their stub source, anything
-        // else (deep transitive deps like music-service) gets an empty module —
-        // heavy packages (jsdom/youtubei) must never enter these bundles.
+        // else gets an empty module, so nothing heavy enters these bundles.
         b.onResolve({ filter: /^\.\/|^\.\.\// }, (a) => ({ path: a.path, namespace: "stub" }));
         b.onLoad({ filter: /.*/, namespace: "stub" }, (a) => ({
           contents: a.path.endsWith("artwork")
@@ -52,7 +51,7 @@ test("canvas manifest URLs are https-only", async () => {
 test("artwork scheme gate: web/data/blob/localart only, hostile schemes collapse to empty", async () => {
   const outfile = await bundle("../src/lib/artwork.ts", {}, []);
   const { upgradeArtwork } = require(outfile);
-  const ok = "https://i.ytimg.com/vi/x/hqdefault.jpg";
+  const ok = "https://example.com/covers/x.jpg";
   assert.equal(upgradeArtwork(ok), ok);
   assert.equal(upgradeArtwork("localart://0123456789abcdef.jpg"), "localart://0123456789abcdef.jpg");
   assert.ok(upgradeArtwork("data:image/png;base64,AAAA").startsWith("data:image/"));
@@ -65,7 +64,7 @@ test("artwork scheme gate: web/data/blob/localart only, hostile schemes collapse
 });
 
 test("stream proxy: origins outside the app are refused; media/null/dev still allowed", async () => {
-  const outfile = await bundle("../electron/stream-proxy.ts", { "local-library": "export const localStreamPath = () => null;", "music-service": "export const resolveStream = async () => ({ url: 'https://x', mime: '', lufs: null });" }, []);
+  const outfile = await bundle("../electron/stream-proxy.ts", { "local-library": "export const localStreamPath = () => null;" }, []);
   const { originAllowed } = require(outfile);
   assert.equal(originAllowed(undefined, "127.0.0.1:5000"), true, "media element sends no Origin");
   assert.equal(originAllowed("null", "127.0.0.1:5000"), true, "packaged renderer fetch (file:// origin)");
@@ -79,8 +78,7 @@ test("stream proxy: origins outside the app are refused; media/null/dev still al
 test("download filenames: traversal, reserved names and bidi spoofing are neutralized", async () => {
   const outfile = await bundle("../electron/downloads.ts", {
     persist: "export const readData = () => null; export const writeData = async () => {}; export const writeDataSync = () => {}; export const drainWrites = async () => {}; export const resetAppData = async () => {};",
-    sync: "export const noteLocalWrite = () => {};",
-  }, ["electron", "music-metadata", "./stream-proxy", "./canvas", "./local-library", "./supabase"]);
+  }, ["electron", "music-metadata", "./stream-proxy", "./canvas", "./local-library"]);
   const { sanitizeFilename } = require(outfile);
   for (const hostile of ["../../etc/passwd", "C:\\Windows\\evil", "..", "CON", "NUL.mp3", "aux"]) {
     const s = sanitizeFilename(hostile);
@@ -90,28 +88,6 @@ test("download filenames: traversal, reserved names and bidi spoofing are neutra
   assert.equal(sanitizeFilename("Evil\u202Eexe.m4a").includes("\u202E"), false, "bidi override must be stripped");
   assert.equal(sanitizeFilename(""), "track", "empty names fall back");
   assert.ok(sanitizeFilename("x".repeat(5000)).length <= 120, "names are length-capped");
-});
-
-test("cloud validation strips scheme-unsafe thumbs and device-owned settings keys", async () => {
-  const outfile = await bundle("../electron/cloud-payload.ts", { config: "export const SYNCED_STORES = ['library','settings','player','recent-searches'];" }, []);
-  const { validateCloudPayload } = require(outfile);
-  const payload = {
-    version: 1,
-    state: {
-      liked: [{ id: "a", title: "T", artist: "A", thumb: "file://attacker.com/x.jpg", duration: 60 }],
-      playlists: [{ id: "p", name: "P", createdAt: 1, tracks: [{ id: "b", title: "T", artist: "A", thumb: "javascript:alert(1)", duration: 60 }] }],
-    },
-  };
-  validateCloudPayload("library", payload);
-  assert.equal(payload.state.liked[0].thumb, "", "file/UNC thumb must be stripped");
-  assert.equal(payload.state.playlists[0].tracks[0].thumb, "", "javascript: thumb must be stripped");
-  const good = { version: 1, state: { liked: [{ id: "a", title: "T", artist: "A", thumb: "https://i.ytimg.com/vi/x/hqdefault.jpg", duration: 60 }] } };
-  validateCloudPayload("library", good);
-  assert.ok(good.state.liked[0].thumb, "legit https thumbs survive");
-  const settings = { version: 1, state: { downloadDir: "C:\\hostile", downloadQuality: "high" } };
-  validateCloudPayload("settings", settings);
-  assert.equal(settings.state.downloadDir, undefined, "device-owned paths must be stripped from cloud data");
-  assert.equal(settings.state.downloadQuality, "high", "legit settings survive");
 });
 
 test("local-library scan bounds hostile tag strings and oversize artwork", async () => {

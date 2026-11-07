@@ -70,10 +70,6 @@ const INSET = 4; // frame gap around the artwork card (left/right)
  *  which renders the collapsed top frame a device pixel thinner than the
  *  sides — on Windows the top runs 1px larger so all three read equal. */
 const TOP_INSET = isWindows ? INSET + 1 : INSET;
-/** How far the cover eases down when the panel drops. Spotify's artwork
- *  barely shifts — its ambient card grows behind a FIXED cover — so the
- *  motion stays a hint (8px), not a half-cover slide. */
-const COVER_SLIDE = 8;
 const GRADIENT = "linear-gradient(rgba(18, 18, 18, 0.53) 0%, rgb(10, 10, 10) 100%)";
 
 /** like-burst confetti — flight target (--tx/--ty), spin (--rot), size and
@@ -90,16 +86,6 @@ const LIKE_CONFETTI = [
   { size: 3, color: "#1ed760", tx: -18, ty: -6, rot: 60, delay: 20 },
   { size: 3, color: "#169c46", tx: -11, ty: -14, rot: -45, delay: 0 },
 ];
-
-/** Copy-link glyph — Spotify's exact filled tray-arrow (16px grid). */
-function SpCopyLink({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" className={className} fill="currentColor" aria-hidden>
-      <path d="M1 5.75A.75.75 0 0 1 1.75 5H4v1.5H2.5v8h11v-8H12V5h2.25a.75.75 0 0 1 .75.75v9.5a.75.75 0 0 1-.75.75H1.75a.75.75 0 0 1-.75-.75z" />
-      <path d="M8 9.576a.75.75 0 0 0 .75-.75V2.903l1.454 1.454a.75.75 0 0 0 1.06-1.06L8 .03 4.735 3.296a.75.75 0 0 0 1.06 1.061L7.25 2.903v5.923c0 .414.336.75.75.75" />
-    </svg>
-  );
-}
 
 /** 6-dot drag grip — Spotify's exact 4×2 dot field (24px grid). */
 function SpGrip({ className }: { className?: string }) {
@@ -157,11 +143,6 @@ function IconBtn({
       )}
     </button>
   );
-}
-
-/** A track is sharable when its id is a YouTube video id (`local:…` file ids have no song link). */
-function sharableId(id: string | null | undefined): boolean {
-  return !!id && !id.includes(":") && !id.includes("/") && !id.includes("\\");
 }
 
 export function PipApp() {
@@ -305,7 +286,6 @@ export function PipApp() {
     send({ type: "seek", sec: Math.min(fraction * max, max) });
     setSeekValue(null);
   };
-  const canShare = sharableId(track?.id ?? null);
 
   const onCardFocus = (e: FocusEvent<HTMLDivElement>): void => {
     if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocusWithin(true);
@@ -328,28 +308,6 @@ export function PipApp() {
       volTimer.current = null;
       setVolOpen(false);
     }, 180);
-  };
-
-  /* copy the song link (clipboard API with a textarea fallback) */
-  const copyShareLink = async (): Promise<void> => {
-    if (!track || !canShare) return;
-    const url = `https://music.youtube.com/watch?v=${track.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = url;
-        ta.setAttribute("readonly", "");
-        ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        ta.remove();
-      } catch {
-        /* clipboard unavailable */
-      }
-    }
   };
 
   const reveal = (extra = ""): string =>
@@ -500,9 +458,6 @@ export function PipApp() {
                 disabled={!track}
               >
                 {snap?.repeat === "one" ? <SpRepeatOne /> : <SpRepeat />}
-              </IconBtn>
-              <IconBtn onClick={() => void copyShareLink()} disabled={!canShare} title={T("Copy link to Song")}>
-                <SpCopyLink className="h-4 w-4" />
               </IconBtn>
             </div>
           </div>

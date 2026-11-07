@@ -8,7 +8,9 @@ import { PopupHost } from "./src/components/PopupHost";
 import { SongMenu } from "./src/components/SongMenu";
 import { CoverKeeper } from "./src/components/ui";
 import { AppNavigation } from "./src/navigation";
+import { watchNewVersion } from "./src/newVersion";
 import { ConnectScreen } from "./src/screens/ConnectScreen";
+import { SetupScreen } from "./src/screens/SetupScreen";
 import { watchConnection } from "./src/stores/connection";
 import { useDownloads } from "./src/stores/downloads";
 import { useLibrary } from "./src/stores/library";
@@ -16,13 +18,17 @@ import { useLocalMusic } from "./src/stores/localMusic";
 import { usePlayer, watchPlayer } from "./src/stores/player";
 import { watchZones } from "./src/stores/zones";
 import { usePlaylists } from "./src/stores/playlists";
+import { watchKeptLists } from "./src/stores/keptLists";
 import { useSession } from "./src/stores/session";
+import { useSettings } from "./src/stores/settings";
 import { startSync, stopSync } from "./src/sync";
 import { colors } from "./src/theme";
 
 watchPlayer();
 watchZones();
 watchConnection();
+watchNewVersion();
+watchKeptLists();
 
 /** Keeps the clock and icons readable while a page scrolls under them. */
 function StatusScrim() {
@@ -44,6 +50,14 @@ export default function App() {
   const noServer = useLocalMusic((s) => s.withoutServer && !s.addingServer);
   // In the app with a server, or with just the music on this phone. A new login is somebody else's library.
   const inside = signedIn ?? (noServer ? "this phone" : null);
+  const adding = useLocalMusic((s) => s.addingServer);
+  const setupDone = useSettings((s) => s.setupDone);
+  // Music from before these pages existed: nothing to set up. Checked once, at the start, so the pages don't vanish halfway through.
+  const checked = useRef(false);
+  if (ready && localReady && !checked.current) {
+    checked.current = true;
+    if (inside && !setupDone) useSettings.getState().change({ setupDone: true });
+  }
   const loaded = useLibrary((s) => s.loaded);
   const queueRestored = useRef(false);
 
@@ -79,7 +93,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <View style={styles.root}>
-        {ready && localReady && (inside ? <AppNavigation /> : <ConnectScreen />)}
+        {ready && localReady && (!inside && adding ? <ConnectScreen /> : inside && setupDone ? <AppNavigation /> : <SetupScreen />)}
         <AddToPlaylistSheet />
         <SongMenu />
         {!!inside && <CoverKeeper />}

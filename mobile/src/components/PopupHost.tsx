@@ -92,28 +92,44 @@ function Dialogs() {
 function Toast() {
   const insets = useSafeAreaInsets();
   const message = usePopups((s) => s.message);
+  const action = message?.action;
   const [shown, setShown] = useState<string | null>(null);
   const showing = useRef(new Animated.Value(0, { useNativeDriver: true })).current;
   const lift = showing.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
   useEffect(() => {
-    if (!message) return;
+    if (!message) {
+      setShown(null);
+      return;
+    }
     setShown(message.text);
     Animated.timing(showing, { toValue: 1, duration: 170, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
     const timer = setTimeout(
       () => {
         Animated.timing(showing, { toValue: 0, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(({ finished }) => finished && setShown(null));
       },
-      message.long ? TOAST_LONG_MS : TOAST_MS
+      message.ms ?? (message.long ? TOAST_LONG_MS : TOAST_MS)
     );
     return () => clearTimeout(timer);
   }, [message, showing]);
   if (!shown) return null;
   return (
-    <View pointerEvents="none" style={[styles.toastPlace, { bottom: insets.bottom + TAB_BAR_HEIGHT + MINI_PLAYER_HEIGHT + 14 }]}>
-      <Animated.View accessibilityLiveRegion="polite" style={[styles.toast, { opacity: showing, transform: [{ translateY: lift }] }]}>
-        <Text numberOfLines={3} style={styles.toastText}>
+    <View pointerEvents="box-none" style={[styles.toastPlace, { bottom: insets.bottom + TAB_BAR_HEIGHT + MINI_PLAYER_HEIGHT + 14 }]}>
+      <Animated.View accessibilityLiveRegion="polite" pointerEvents={action ? "auto" : "none"} style={[styles.toast, action && styles.toastWithAction, { opacity: showing, transform: [{ translateY: lift }] }]}>
+        <Text numberOfLines={3} style={[styles.toastText, action && styles.toastTextWithAction]}>
           {shown}
         </Text>
+        {!!action && (
+          <Pressable
+            onPress={() => {
+              action.run();
+              usePopups.setState({ message: null });
+            }}
+            hitSlop={10}
+            accessibilityRole="button"
+          >
+            <Text style={styles.toastAction}>{action.label}</Text>
+          </Pressable>
+        )}
       </Animated.View>
     </View>
   );
@@ -144,5 +160,8 @@ const styles = StyleSheet.create({
   buttonTextDanger: { color: "#FFFFFF" },
   toastPlace: { position: "absolute", left: 18, right: 18, alignItems: "center" },
   toast: { backgroundColor: "#303034", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, elevation: 12 },
+  toastWithAction: { flexDirection: "row", alignItems: "center", gap: 14 },
   toastText: { color: colors.ink, fontSize: 14, fontWeight: "600", textAlign: "center" },
+  toastTextWithAction: { flexShrink: 1, textAlign: "left" },
+  toastAction: { color: colors.accent, fontSize: 14, fontWeight: "700" },
 });

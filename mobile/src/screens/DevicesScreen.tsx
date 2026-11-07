@@ -7,39 +7,47 @@
  * is Android's own list: no app can connect those by itself.
  */
 import { useNavigation } from "@react-navigation/native";
-import { Bluetooth, Check, ChevronDown, CircleStop, Headphones, Heart, Laptop, Link2, ListChecks, ListMusic, MoreHorizontal, Pause, Pencil, Play, Plus, RefreshCw, Search, SkipBack, SkipForward, Smartphone, Speaker, Split, Trash2, Tv, Volume2, X, type LucideIcon } from "lucide-react-native";
+import { Bluetooth, Cable, Check, ChevronDown, CircleStop, Crosshair, Headphones, Heart, Laptop, Link2, ListChecks, ListMusic, Minus, MoreHorizontal, Pause, Pencil, Play, Plus, Power, RefreshCw, Search, SkipBack, SkipForward, Smartphone, Speaker, Split, Timer, Trash2, Tv, Volume2, X, type LucideIcon } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
 import Player, { type SoundOutput } from "../../modules/media3-player";
 import { NameDialog } from "../components/PlaylistSheets";
-import { MenuSheet, type SheetRow } from "../components/Sheet";
+import { MenuSheet, SheetFrame, SheetHead, SheetRows, type SheetRow } from "../components/Sheet";
 import { Cover, CoverGrid, SearchField } from "../components/ui";
 import { VolumeBar } from "../components/VolumeBar";
-import { matchesQuery, plural, type RemoteDevice, type Track } from "../shared";
+import { canSwitchOff, inputCode, inputName, looksLikeATv, matchesQuery, PLAY_AHEAD_MAX_MS, PLAY_AHEAD_STEP_MS, plural, RECEIVER_INPUTS, type RemoteDevice, type Track } from "../shared";
 import { isAround, useDevices } from "../stores/devices";
 import { likedSongIds, useLibrary } from "../stores/library";
 import { endSecondStream, startSecondStream, usePlayer } from "../stores/player";
 import { playlistTracks, usePlaylists } from "../stores/playlists";
 import { showDialog, toast } from "../stores/popups";
-import { feel } from "../stores/settings";
+import { feel, useSettings } from "../stores/settings";
 import {
   addDeviceByAddress,
   canPlay,
+  cancelPairing,
   deviceName,
+  finishPairing,
   forgetDevice,
+  keepDeviceOn,
   looksLikeTv,
   moveMusicHere,
   moveMusicTo,
   moveMusicToMany,
   pickMusicFor,
   playAlong,
+  plugInto,
+  plugIntoWhereItIs,
   renameDevice,
   scanDevices,
   sendMusicToDevice,
+  startPairing,
   startOwnMusicOn,
   stopPlayingAlong,
+  switchDeviceOff,
   THIS_PHONE,
+  unplug,
   useZones,
   zoneNext,
   zonePrevious,
@@ -127,6 +135,30 @@ function Tile({
         {line}
       </Text>
     </Pressable>
+  );
+}
+
+/** A receiver the music has left, counting down to switching off. */
+function SwitchingOff() {
+  const pending = useZones((s) => s.switchingOff);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!pending.length) return;
+    const timer = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, [pending.length]);
+  return (
+    <>
+      {pending.map((d) => (
+        <View key={d.id} style={styles.switchingOff}>
+          <Power size={17} color={colors.ink} />
+          <Text style={styles.switchingOffText}>{T("{name} switches off in {seconds} s", { name: d.name, seconds: Math.max(0, Math.ceil((d.at - Date.now()) / 1000)) })}</Text>
+          <Pressable onPress={() => keepDeviceOn(d.id)} accessibilityRole="button" hitSlop={8}>
+            <Text style={styles.switchingOffKeep}>{T("Keep on")}</Text>
+          </Pressable>
+        </View>
+      ))}
+    </>
   );
 }
 
@@ -327,6 +359,90 @@ function outputLine(output: SoundOutput): string {
   return output.name || (output.kind === "bluetooth" ? T("Bluetooth") : output.kind === "wired" ? T("Headphones") : "TV");
 }
 
+/** Where a device is plugged in: which receiver, already chosen when there's only one, then which of its inputs. */
+function PlugSheet({ device, receivers, onPair, onClose }: { device: FoundDevice | null; receivers: FoundDevice[]; onPair: (d: FoundDevice) => void; onClose: () => void }) {
+  const names = useZones((s) => s.names);
+  const link = useSettings((s) => s.deviceLinks).find((l) => l.device === device?.id);
+  const paired = useSettings((s) => s.pairedTvs).includes(device?.id ?? "");
+  const [picked, setPicked] = useState<string | null>(null);
+  useEffect(() => setPicked(null), [device]);
+  const receiverId = picked ?? link?.receiver ?? receivers[0]?.id;
+  const receiver = receivers.find((r) => r.id === receiverId);
+  const chosen = link && link.receiver === receiverId ? inputCode(link.input) : null;
+  const rows: SheetRow[] = [];
+  if (device && receiver) {
+    rows.push({ label: T("The input it's on right now"), Icon: Crosshair, run: () => void plugIntoWhereItIs(device, receiver) });
+    for (const i of RECEIVER_INPUTS) rows.push({ label: i.name, active: chosen === i.code, run: () => plugInto(device, receiver, i.code) });
+    if (chosen && !RECEIVER_INPUTS.some((i) => i.code === chosen)) rows.push({ label: inputName(chosen), active: true, run: () => plugInto(device, receiver, chosen) });
+    if (looksLikeATv(device)) rows.push({ label: paired ? T("Pair again") : T("Pair {device} to switch it off", { device: deviceName(device, names) }), Icon: Power, run: () => onPair(device) });
+    if (link) rows.push({ label: T("Not plugged in there"), Icon: CircleStop, danger: true, run: () => unplug(device.id) });
+  }
+  return (
+    <SheetFrame visible={!!device} onClose={onClose}>
+      <SheetHead title={device ? T("Where is {device} plugged in?", { device: deviceName(device, names) }) : ""} />
+      <Text style={styles.plugLabel}>{T("Receiver")}</Text>
+      <View style={styles.plugChips}>
+        {receivers.map((r) => (
+          <Pressable key={r.id} onPress={() => setPicked(r.id)} accessibilityState={{ selected: r.id === receiverId }} style={[styles.plugChip, r.id === receiverId && styles.plugChipOn]}>
+            {r.id === receiverId && <Check size={15} color={colors.base} strokeWidth={3} />}
+            <Text style={[styles.plugChipText, r.id === receiverId && styles.plugChipTextOn]}>{deviceName(r, names)}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.plugLabel}>{T("Input")}</Text>
+      <SheetRows rows={rows} onClose={onClose} />
+    </SheetFrame>
+  );
+}
+
+function playAheadText(ms: number): string {
+  if (!ms) return T("On time");
+  return ms > 0 ? T("{ms} ms earlier", { ms }) : T("{ms} ms later", { ms: -ms });
+}
+
+/** How far ahead a device plays when several play together, set by hand: both ways, in steps. */
+function TimingSheet({ device, onClose }: { device: FoundDevice | null; onClose: () => void }) {
+  const names = useZones((s) => s.names);
+  const ms = useSettings((s) => (device ? (s.playAhead[device.id] ?? 0) : 0));
+  const name = device ? deviceName(device, names) : "";
+  const to = (value: number): void => {
+    if (!device) return;
+    feel("tick");
+    const { playAhead, change } = useSettings.getState();
+    const next = { ...playAhead };
+    const v = Math.max(-PLAY_AHEAD_MAX_MS, Math.min(PLAY_AHEAD_MAX_MS, value));
+    if (v) next[device.id] = v;
+    else delete next[device.id];
+    change({ playAhead: next });
+  };
+  return (
+    <SheetFrame visible={!!device} onClose={onClose}>
+      <SheetHead title={device ? T("Timing of {device}", { device: name }) : ""} />
+      <Text style={styles.timingText}>{T("When several devices play together and {device} sounds behind the others, play it earlier. If it's ahead, play it later.", { device: name })}</Text>
+      <View style={styles.timingRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel={T("Later")} disabled={ms <= -PLAY_AHEAD_MAX_MS} onPress={() => to(ms - PLAY_AHEAD_STEP_MS)} style={styles.timingStep}>
+          <Minus size={24} color={colors.ink} />
+        </Pressable>
+        <Text style={styles.timingValue} accessibilityLiveRegion="polite">
+          {playAheadText(ms)}
+        </Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={T("Earlier")} disabled={ms >= PLAY_AHEAD_MAX_MS} onPress={() => to(ms + PLAY_AHEAD_STEP_MS)} style={styles.timingStep}>
+          <Plus size={24} color={colors.ink} />
+        </Pressable>
+      </View>
+      <View style={styles.timingEnds} importantForAccessibility="no-hide-descendants">
+        <Text style={styles.timingEnd}>{T("Later")}</Text>
+        <Text style={styles.timingEnd}>{T("Earlier")}</Text>
+      </View>
+      <Text style={styles.timingNote}>{T("Once one device is set, Songsta keeps the group closer together, with a short gap on a device now and then.")}</Text>
+      {/* Always there: the sheet doesn't grow under the finger after the first step. */}
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: ms === 0 }} disabled={ms === 0} onPress={() => to(0)} style={[styles.timingReset, ms === 0 && styles.timingResetOff]}>
+        <Text style={styles.timingResetText}>{T("Back to on time")}</Text>
+      </Pressable>
+    </SheetFrame>
+  );
+}
+
 export function DevicesScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -337,6 +453,12 @@ export function DevicesScreen() {
   const busy = useZones((s) => s.connecting);
   const names = useZones((s) => s.names);
   const zones = useZones((s) => s.zones);
+  const deviceLinks = useSettings((s) => s.deviceLinks);
+  const pairedTvs = useSettings((s) => s.pairedTvs);
+  const [plugging, setPlugging] = useState<FoundDevice | null>(null);
+  const [timing, setTiming] = useState<FoundDevice | null>(null);
+  const playAhead = useSettings((s) => s.playAhead);
+  const timingRow = (d: FoundDevice): SheetRow => ({ label: playAhead[d.id] ? T("Timing: {value}", { value: playAheadText(playAhead[d.id]) }) : T("Fine-tune timing"), Icon: Timer, run: () => setTiming(d) });
   const others = useDevices((s) => s.others);
   const remote = usePlayer((s) => s.remote);
   const device = usePlayer((s) => s.device);
@@ -345,7 +467,7 @@ export function DevicesScreen() {
   const track = usePlayer((s) => s.queue[s.index]);
   const [output, setOutput] = useState<SoundOutput>({ kind: "phone", name: "" });
   const [menu, setMenu] = useState<{ title: string; rows: SheetRow[] } | null>(null);
-  const [asking, setAsking] = useState<{ title: string; hint: string; value: string; save: string; address?: boolean; run(value: string): void } | null>(null);
+  const [asking, setAsking] = useState<{ title: string; message?: string; hint: string; value: string; save: string; address?: boolean; onCancel?(): void; run(value: string): void } | null>(null);
   /** choosing several at once; a tap on a tile then only marks it */
   const [choosing, setChoosing] = useState<Set<string> | null>(null);
   const [musicFor, setMusicFor] = useState<FoundDevice[] | null>(null);
@@ -393,6 +515,33 @@ export function DevicesScreen() {
     run: () => setAsking({ title: T("Rename this device"), hint: d.name, value: deviceName(d, names), save: T("Save"), run: (value) => renameDevice(d, value) }),
   });
 
+  const receivers = found.filter((d) => canSwitchOff(d.model));
+  /** "On Den Receiver · Media Player", for what's plugged into one. */
+  const plugLine = (id: string): string | null => {
+    const link = deviceLinks.find((l) => l.device === id);
+    if (!link) return null;
+    const receiver = found.find((d) => d.id === link.receiver);
+    return T("On {name} · {input}", { name: receiver ? deviceName(receiver, names) : T("the receiver"), input: inputName(link.input) });
+  };
+  /** This app's code on the TV's screen, typed in: from then on it can be switched off from here. */
+  const askForCode = (d: FoundDevice, again = false): void =>
+    setAsking({
+      title: T("The code on {name}", { name: deviceName(d, names) }),
+      message: again ? T("That code doesn't fit, try again") : T("{name} shows a code now. Type it in here, and Songsta can switch it off from then on.", { name: deviceName(d, names) }),
+      hint: "A1B2C3",
+      value: "",
+      save: T("Pair"),
+      onCancel: cancelPairing,
+      run: (code) => {
+        void finishPairing(code).then((again) => {
+          if (again) askForCode(d, true);
+        });
+      },
+    });
+  const pair = async (d: FoundDevice): Promise<void> => {
+    if (await startPairing(d)) askForCode(d);
+  };
+
   const deviceMenu = (d: FoundDevice): void => {
     const rows: SheetRow[] = [];
     if (canPlay(d)) {
@@ -401,7 +550,11 @@ export function DevicesScreen() {
         if (!z.members.some((m) => m.id === d.id)) rows.push({ label: T("Play along with {join}", { join: z.members.map((m) => m.name).join(" + ") }), Icon: Link2, run: () => void playAlong(z.id, d) });
       }
       rows.push({ label: T("Choose several devices"), Icon: ListChecks, run: () => startChoosing(d.id) });
+      rows.push(timingRow(d));
     }
+    if (canSwitchOff(d.model) || pairedTvs.includes(d.id)) rows.push({ label: T("Switch off"), Icon: Power, run: () => void switchDeviceOff(d) });
+    if (!canSwitchOff(d.model) && canPlay(d) && receivers.length) rows.push({ label: plugLine(d.id) ?? T("Plugged into a receiver"), Icon: Cable, run: () => setPlugging(d) });
+    if (looksLikeATv(d) && !pairedTvs.includes(d.id) && !receivers.length) rows.push({ label: T("Pair to switch it off"), Icon: Power, run: () => void pair(d) });
     rows.push(renameRow(d));
     if (d.byHand) rows.push({ label: T("Remove from this list"), Icon: Trash2, danger: true, run: () => forgetDevice(d.id) });
     setMenu({ title: deviceName(d, names), rows });
@@ -422,6 +575,7 @@ export function DevicesScreen() {
     }
     if (secondStream) rows.push({ label: T("End the second stream"), Icon: CircleStop, run: endSecondStream });
     rows.push({ label: T("Choose several devices"), Icon: ListChecks, run: () => startChoosing(THIS_PHONE.id) });
+    rows.push(timingRow(THIS_PHONE));
     setMenu({ title: T("This phone"), rows });
   };
 
@@ -430,7 +584,18 @@ export function DevicesScreen() {
     const rows: SheetRow[] = [];
     if (first) {
       rows.push({ label: z.main ? T("Choose other music for this device") : T("Choose other music"), Icon: ListMusic, run: () => setMusicFor([first]) });
+      if (canSwitchOff(first.model)) rows.push({ label: T("Switch off"), Icon: Power, run: () => void switchDeviceOff(first) });
       rows.push(renameRow(first));
+    }
+    // While they play together their tiles are gone: the timing of each is here, where the group is heard.
+    if (z.members.length > 1) {
+      for (const m of z.members) {
+        const d = m.id === THIS_PHONE.id ? THIS_PHONE : found.find((f) => f.id === m.id);
+        if (!d) continue;
+        const name = deviceName(d, names);
+        const set = playAhead[d.id];
+        rows.push({ label: set ? T("Timing of {device}: {value}", { device: name, value: playAheadText(set) }) : T("Timing of {device}", { device: name }), Icon: Timer, run: () => setTiming(d) });
+      }
     }
     rows.push({ label: z.main ? T("Back to this phone") : T("Stop the music here"), Icon: z.main ? Smartphone : CircleStop, run: () => void zoneStop(z.id) });
     setMenu({ title: z.members.map((m) => m.name).join(" + "), rows });
@@ -468,6 +633,7 @@ export function DevicesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + (choosing ? 150 : 28) }} showsVerticalScrollIndicator={false}>
+        <SwitchingOff />
         {(zones.length > 0 || !!remote) && (
           <View style={styles.cards}>
             <FollowedCard />
@@ -542,7 +708,7 @@ export function DevicesScreen() {
               width={tileWidth}
               Icon={iconOf(d)}
               name={deviceName(d, names)}
-              line={d.model || T("Ready")}
+              line={plugLine(d.id) ?? (d.model || T("Ready"))}
               busy={busy === d.id}
               picked={choosing ? choosing.has(d.id) : undefined}
               onPress={() => (choosing ? toggleChosen(d.id) : void moveMusicTo(d))}
@@ -645,17 +811,23 @@ export function DevicesScreen() {
 
       {!!musicFor && <MusicSheet devices={musicFor} onClose={() => setMusicFor(null)} onBrowse={() => browseFor(musicFor)} />}
 
+      <TimingSheet device={timing} onClose={() => setTiming(null)} />
+      <PlugSheet device={plugging} receivers={receivers} onPair={(d) => void pair(d)} onClose={() => setPlugging(null)} />
       <MenuSheet visible={!!menu} title={menu?.title} rows={menu?.rows ?? []} onClose={() => setMenu(null)} />
 
       <NameDialog
         visible={!!asking}
         title={asking?.title ?? ""}
+        message={asking?.message}
         placeholder={asking?.hint ?? ""}
         initial={asking?.value ?? ""}
         action={asking?.save ?? ""}
         address={asking?.address}
         allowEmpty
-        onCancel={() => setAsking(null)}
+        onCancel={() => {
+          asking?.onCancel?.();
+          setAsking(null);
+        }}
         onDone={(value) => {
           asking?.run(value);
           setAsking(null);
@@ -666,11 +838,30 @@ export function DevicesScreen() {
 }
 
 const styles = StyleSheet.create({
+  plugLabel: { color: colors.dim, fontSize: 12, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", paddingHorizontal: 20, marginTop: 10, marginBottom: 8 },
+  plugChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 20, marginBottom: 6 },
+  plugChip: { flexDirection: "row", alignItems: "center", gap: 6, height: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.chip },
+  plugChipOn: { backgroundColor: colors.ink },
+  plugChipText: { color: colors.ink, fontSize: 14, fontWeight: "600" },
+  plugChipTextOn: { color: colors.base },
+  timingText: { color: colors.soft, fontSize: 14, lineHeight: 20, paddingHorizontal: 20, marginTop: 4 },
+  timingRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, marginTop: 22 },
+  timingStep: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: colors.chip },
+  timingValue: { flex: 1, textAlign: "center", color: colors.ink, fontSize: 19, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  timingEnds: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 24, marginTop: 8 },
+  timingEnd: { color: colors.dim, fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase" },
+  timingNote: { color: colors.dim, fontSize: 13, lineHeight: 18, paddingHorizontal: 20, marginTop: 18 },
+  timingReset: { marginHorizontal: 20, marginTop: 14, marginBottom: 12, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: colors.chip },
+  timingResetOff: { opacity: 0.35 },
+  timingResetText: { color: colors.ink, fontSize: 15, fontWeight: "600" },
   screen: { flex: 1, backgroundColor: colors.base },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, height: 48 },
   headerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   title: { flex: 1, textAlign: "center", color: colors.ink, fontSize: 16, fontWeight: "700" },
   cards: { paddingHorizontal: SIDE, gap: GAP, marginTop: 6 },
+  switchingOff: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.panel, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginTop: 8 },
+  switchingOffText: { flex: 1, color: colors.ink, fontSize: 14 },
+  switchingOffKeep: { color: colors.accent, fontSize: 14, fontWeight: "700" },
   card: { borderRadius: 18, padding: 14 },
   cardMain: { backgroundColor: colors.accent },
   cardOwn: { backgroundColor: colors.panel, borderWidth: 1.5, borderColor: colors.accent },

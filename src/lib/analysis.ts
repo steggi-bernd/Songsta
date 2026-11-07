@@ -34,14 +34,10 @@ function trimCache(): void {
 
 async function fetchAudio(trackId: string): Promise<ArrayBuffer | null> {
   try {
-    const { requireBridge } = await import("./bridge");
-    const { useSettings } = await import("../stores/settings");
+    if (!/^(local|jf|ss):/.test(trackId)) return null;
     const { resolveLibrarySource } = await import("./librarySource");
-    const bridge = requireBridge();
-    // Library songs analyse through the same proxy route (and copy) the element plays.
-    const url = /^(local|jf|ss):/.test(trackId)
-      ? (await resolveLibrarySource({ id: trackId, title: "", artist: "", duration: 0, thumb: "" }))?.url ?? null
-      : await bridge.getStreamUrl(trackId, false, useSettings.getState().streamingQuality);
+    // Analysed through the same proxy route (and copy) the element plays.
+    const url = (await resolveLibrarySource({ id: trackId, title: "", artist: "", duration: 0, thumb: "" }))?.url ?? null;
     if (!url) return null;
     const res = await fetch(url);
     if (!res.ok || !res.body) return null;
@@ -245,103 +241,4 @@ export async function detectEdgeSilence(buf: ArrayBuffer): Promise<{ head: numbe
     head: Math.max(0, (first - window) / sr),
     tail: Math.max(0, (audio.length - 1 - last - window) / sr),
   };
-}
-
-/* ============================ R128 loudness ============================ */
-
-/**
- * ITU-R BS.1770-4 integrated loudness (LKFS ≈ LUFS) — the same measurement
- * Spotify and YouTube use, so local files normalise on identical terms to
- * streams. K-weighting is two biquad stages whose coefficients are computed
- * from the standard's analogue parameters for the buffer's sample rate
- * (exactly how libebur128 does it); loudness is then the gated mean-square of
- * 400ms blocks with 75% overlap (absolute gate -70 LUFS, relative gate -10 LU).
- * Validated against synthetic signals: a 1 kHz sine at amplitude 0.2 measures
- * -14.2 LUFS (theoretical ≈ -14.2).
- */
-function highShelfCoefs(f0: number, dbGain: number, q: number, fs: number): number[] {
-  const A = Math.pow(10, dbGain / 40);
-  const w0 = (2 * Math.PI * f0) / fs;
-  const cw = Math.cos(w0);
-  const alpha = Math.sin(w0) / (2 * q);
-  const sq = 2 * Math.sqrt(A) * alpha;
-  const a0 = A + 1 - (A - 1) * cw + sq;
-  return [
-    (A * (A + 1 + (A - 1) * cw + sq)) / a0,
-    (-2 * A * (A - 1 + (A + 1) * cw)) / a0,
-    (A * (A + 1 + (A - 1) * cw - sq)) / a0,
-    (2 * (A - 1 - (A + 1) * cw)) / a0,
-    (A + 1 - (A - 1) * cw - sq) / a0,
-  ];
-}
-
-function highPassCoefs(f0: number, q: number, fs: number): number[] {
-  const w0 = (2 * Math.PI * f0) / fs;
-  const cw = Math.cos(w0);
-  const alpha = Math.sin(w0) / (2 * q);
-  const a0 = 1 + alpha;
-  return [(1 + cw) / 2 / a0, -(1 + cw) / a0, (1 + cw) / 2 / a0, (-2 * cw) / a0, (1 - alpha) / a0];
-}
-
-/** A ~5ms slice of samples between cooperative yields (250k @ 48k). */
-const DSP_CHUNK = 250_000;
-const yieldNow = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
-
-/**
- * Integrated loudness in LUFS, or null for empty/unmeasurable audio.
- * Async with periodic yields so a multi-minute decode never blocks the
- * audio thread long enough to stutter playback.
- */
-export async function measureIntegratedLoudness(audio: AudioBuffer): Promise<number | null> {
-  const sr = audio.sampleRate;
-  const nch = Math.min(2, audio.numberOfChannels);
-  if (sr < 8000 || audio.length < sr) return null;
-  const s1 = highShelfCoefs(1681.974450955533, 3.999843853973347, 0.7071752369554196, sr);
-  const s2 = highPassCoefs(38.13547087602444, 0.5003270373238773, sr);
-  const filt = async (x: ArrayLike<number>, c: number[]): Promise<Float64Array> => {
-    const y = new Float64Array(x.length);
-    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-    for (let i = 0; i < x.length; i++) {
-      const x0 = x[i];
-      const v = c[0] * x0 + c[1] * x1 + c[2] * x2 - c[3] * y1 - c[4] * y2;
-      x2 = x1; x1 = x0; y2 = y1; y1 = v;
-      y[i] = v;
-      if (i % DSP_CHUNK === DSP_CHUNK - 1) await yieldNow();
-    }
-    return y;
-  };
-  const chans: Float64Array[] = [];
-  for (let c = 0; c < nch; c++) chans.push(await filt(await filt(audio.getChannelData(c), s1), s2));
-  const block = Math.floor(0.4 * sr);
-  const hop = Math.floor(block / 4);
-  if (block < 1 || hop < 1) return null;
-  const loudness: number[] = [];
-  let sinceYield = 0;
-  for (let s = 0; s + block <= chans[0].length; s += hop) {
-    let sum = 0;
-    for (let c = 0; c < nch; c++) {
-      let e = 0;
-      const d = chans[c];
-      for (let i = 0; i < block; i++) { const v = d[s + i]; e += v * v; }
-      sum += e / block; // G = 1.0 for L/R
-    }
-    if (sum > 0) loudness.push(-0.691 + 10 * Math.log10(sum));
-    if (++sinceYield >= 200) { sinceYield = 0; await yieldNow(); }
-  }
-  if (!loudness.length) return null;
-  const abs = loudness.filter((l) => l > -70);
-  if (!abs.length) return null;
-  const z = 10 * Math.log10(abs.reduce((a, l) => a + Math.pow(10, l / 10), 0) / abs.length);
-  const gated = loudness.filter((l) => l > Math.max(-70, z - 10));
-  if (!gated.length) return null;
-  return 10 * Math.log10(gated.reduce((a, l) => a + Math.pow(10, l / 10), 0) / gated.length);
-}
-
-/** Decoded-audio R128 measurement for one track id (proxy-served bytes). */
-export async function measureLoudnessForTrack(trackId: string): Promise<number | null> {
-  const buf = await fetchAudio(trackId);
-  if (!buf) return null;
-  const audio = await decode(buf);
-  if (!audio) return null;
-  return measureIntegratedLoudness(audio);
 }

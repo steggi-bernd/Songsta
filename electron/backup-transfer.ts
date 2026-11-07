@@ -1,7 +1,7 @@
 /**
  * Pure transforms for the backup document (export/import) — kept free of
- * Electron imports so the round-trip is unit-testable directly, like
- * sync-merge.ts and audio-format.ts (see tests/backup-roundtrip.test.mjs).
+ * Electron imports so the round-trip is unit-testable directly (see
+ * tests/backup-roundtrip.test.mjs).
  *
  * The renderer's stores are persisted as zustand envelopes { state, version }
  * (see src/lib/persist.ts). The backup document, however, carries PORTABLE
@@ -12,20 +12,29 @@
  * Library and player stores already round-trip as envelopes untouched.
  */
 
-/** Device-local settings a backup must never carry or overwrite. */
-export const DEVICE_LOCAL_SETTINGS = new Set(["downloadDir", "localMusicFolder"]);
+/** Device-local settings a backup must never carry or overwrite: a folder, an output device, what this install has heard of. */
+export const DEVICE_LOCAL_SETTINGS = new Set(["localMusicFolder", "audioSinkId", "newVersion", "lastVersion", "keptLists", "setupDone", "pairedTvs"]);
 
-/** Known settings keys — junk in, junk never out. */
+/** Known settings keys — junk in, junk never out. Every setting of stores/settings.ts stands here (a test sees to that). */
 export const SETTINGS_KEYS = new Set([
-  "downloadDir",
-  "downloadQuality",
-  "exportDownloads",
-  "streamingQuality",
   "crossfadeSeconds",
   "smartFade",
+  "gapless",
+  "seamlessAlbums",
   "skipSilence",
   "autoplay",
+  "skipEndsRepeatOne",
   "playbackSpeed",
+  "audioSinkId",
+  "eqEnabled",
+  "eqGains",
+  "eqMode",
+  "peq",
+  "replayGainMode",
+  "replayGainTarget",
+  "sidebarCollapsed",
+  "libraryOrder",
+  "watchFolders",
   "reduceAnimation",
   "reduceDynamicBlur",
   "liquidGlass",
@@ -38,6 +47,30 @@ export const SETTINGS_KEYS = new Set([
   "filterNonMusicAudio",
   "dontRepeatSuggestions",
   "hideVolumeBar",
+  "checkNewVersion",
+  "newVersion",
+  "setupDone",
+  "keptLists",
+  "deviceLinks",
+  "pairedTvs",
+  "playAhead",
+  "switchOffDevices",
+  "autoUpdate",
+  "lastVersion",
+  "discordPresence",
+  "discordClientId",
+  "serverSync",
+  "syncPlaylists",
+  "serverPlays",
+  "storeLinks",
+  "lyricsLatin",
+  "soundAnalysis",
+  "exploreTab",
+  "exploreLayout",
+  "exploreSort",
+  "rightRailWidth",
+  "corners",
+  "accent",
 ]);
 
 /** Inner state of a persisted store: unwraps the envelope, or passes a bare map through. */

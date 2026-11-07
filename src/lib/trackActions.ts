@@ -9,8 +9,7 @@ import {
   ListMusic,
   ListStart,
   Pencil,
-  Play,
-  RotateCcw,
+  Play,
   Search,
   Split,
   Trash2,
@@ -20,13 +19,16 @@ import {
   VolumeX,
   Speaker,
 } from "lucide-react";
-import { downloadForOffline, SERVER_SONG, startDownload } from "./downloads";
+import { downloadForOffline, SERVER_SONG } from "./downloads";
+import { playlistListKey } from "./keptLists";
+import { toggleKeptList } from "./keptListsWatch";
 import type { TrackSource } from "./dnd";
 import { versionsOf } from "../stores/catalog";
 import { useCast } from "./cast";
 import { startZone } from "./zones";
 import { useDeviceNames } from "../stores/deviceNames";
 import { useLibrary, type Playlist } from "../stores/library";
+import { useSettings } from "../stores/settings";
 import { isMuted, useMuted } from "../stores/muted";
 import { usePlayer } from "../stores/player";
 import { useUI, type MenuItem } from "../stores/ui";
@@ -68,7 +70,6 @@ function isBranchChoice(track: Track, name: string): boolean {
 
 export function trackMenuItems(track: Track, from?: TrackSource): MenuItem[] {
   const lib = useLibrary.getState();
-  const ui = useUI.getState();
   const liked = lib.isLiked(track.id);
 
   const items: MenuItem[] = [
@@ -238,6 +239,9 @@ async function choosePlaylistPicture(playlist: Playlist): Promise<void> {
 }
 
 export function playlistHeaderItems(playlist: Playlist): MenuItem[] {
+  const keepKey = playlistListKey(playlist.id);
+  const keeping = useSettings.getState().keptLists.includes(keepKey);
+  const onServer = playlist.tracks.some((t) => versionsOf(t).some((v) => SERVER_SONG.test(v.id)) && !versionsOf(t).some((v) => v.localPath));
   return [
     {
       label: T("Rename"),
@@ -254,6 +258,15 @@ export function playlistHeaderItems(playlist: Playlist): MenuItem[] {
         });
       },
     },
+    ...(keeping || onServer
+      ? [
+          {
+            label: keeping ? T("Stop keeping offline") : T("Download for offline"),
+            icon: Download,
+            action: () => toggleKeptList(keepKey, playlist.tracks),
+          },
+        ]
+      : []),
     {
       label: playlist.cover ? T("Change picture…") : T("Choose a picture…"),
       icon: ImageIcon,
@@ -307,42 +320,4 @@ export function playlistFolderItems(playlist: Playlist): MenuItem[] {
     });
   }
   return items;
-}
-
-export function historyMenuItems(track: Track): MenuItem[] {
-  return [
-    {
-      label: T("Remove from history"),
-      icon: Trash2,
-      danger: true,
-      action: () => {
-        const lib = useLibrary.getState();
-        lib.clearHistory();
-        // Re-add everything except this track.
-        lib.history
-          .filter((t) => t.id !== track.id)
-          .slice()
-          .reverse()
-          .forEach((t) => lib.pushHistory(t));
-      },
-    },
-    ...trackMenuItems(track),
-  ];
-}
-
-export function downloadMenuItems(track: Track, path: string | null): MenuItem[] {
-  return [
-    {
-      label: T("Show in folder"),
-      icon: FolderOpen,
-      action: () => {
-        if (path) requireReveal(path);
-      },
-    },
-    {
-      label: T("Retry download"),
-      icon: RotateCcw,
-      action: () => void startDownload(track),
-    },
-  ];
 }

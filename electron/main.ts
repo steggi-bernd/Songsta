@@ -19,21 +19,20 @@ import { samePath } from "./local-paths";
 import * as homeSync from "./home-sync";
 import * as jellyfin from "./jellyfin";
 import * as subsonic from "./subsonic";
-import { indexLibraryLyrics, libraryLyrics } from "./library-lyrics";
+import { indexLibraryLyrics, libraryLyrics, type LyricsRequest } from "./library-lyrics";
 import { saveLyricsIndexSync, searchLyrics } from "./lyrics-index";
 import { analyseLibrarySound, configureSoundAnalysis, saveSoundIndexSync, setSoundAnalysisEnabled, soundFacts, soundStatus } from "./sound-library";
 import * as meta from "./metadata";
 import * as songInfo from "./song-info";
 import * as listens from "./listens";
-import * as music from "./music-service";
+import { configureAppUpdate, installUpdate, latestKnown, startUpdate, updateState } from "./app-update";
+import { addFirewallRule, firewallMatters, hasFirewallRule } from "./firewall";
 import { backupExport, backupImport } from "./backup";
 import * as locallib from "./local-library";
 import * as persist from "./persist";
 import * as pip from "./pip";
 import * as stats from "./stats";
-import { proxyUrlFor, proxyUrlForJellyfin, proxyUrlForLocalTrack, proxyUrlForSubsonic, startStreamProxy } from "./stream-proxy";
-import * as auth from "./supabase";
-import * as sync from "./sync";
+import { proxyUrlForJellyfin, proxyUrlForLocalTrack, proxyUrlForSubsonic, startStreamProxy } from "./stream-proxy";
 import * as transcode from "./transcode";
 import * as transition from "./data-transition";
 import { buildAppMenu, type MenuCommand, type MenuPlaybackState, type MenuWiring } from "./mac-menu";
@@ -53,8 +52,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "ssart", privileges: { standard: true, secure: true, supportFetchAPI: true } },
 ]);
 
-// Library internals (BotGuard VM, parser JIT) can throw asynchronously;
-// log and keep the app alive instead of dying.
+// What a library throws asynchronously is logged; the app stays alive.
 process.on("uncaughtException", (err) => {
   console.error("[bytune] uncaught exception:", err);
 });
@@ -365,44 +363,13 @@ function libraryFoldersChanged(lib: locallib.LocalLibrary): void {
   pushLibrary(lib);
 }
 
-/** googlevideo rejects media requests that carry a foreign Referer/Origin. */
-function stripMediaReferer(): void {
-  const cleanUA =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-  session.defaultSession.webRequest.onBeforeSendHeaders(
-    { urls: ["*://*.googlevideo.com/*", "*://*/*videoplayback*"] },
-    (details, callback) => {
-      const requestHeaders = { ...details.requestHeaders };
-      delete requestHeaders["Referer"];
-      delete requestHeaders["Origin"];
-      // A clean browser UA — Electron's own UA can get flagged.
-      requestHeaders["User-Agent"] = cleanUA;
-      callback({ requestHeaders });
-    }
-  );
-  session.defaultSession.webRequest.onCompleted(
-    { urls: ["*://*.googlevideo.com/*", "*://*/*videoplayback*"] },
-    (details) => {
-      if (details.statusCode >= 400) {
-        console.warn(
-          `[bytune] media request failed: HTTP ${details.statusCode} ${details.error ?? ""} ${details.url.slice(0, 110)}`
-        );
-      }
-    }
-  );
-}
-
 // Exact names used by renderer persistence; internal stores are main-only.
 const RENDERER_STORES = new Set([
   "settings",
   "library",
   "player",
   "recent-searches",
-  "listening-signals",
-  "artist-meta-cache",
-  "artist-bundle-cache",
   "artist-about-cache",
-  "home-market-cache",
   "smart-playlists",
   "spotify-import",
   "album-edits",
@@ -438,44 +405,14 @@ function registerIpc(): void {
     },
   };
   pip.registerPipIpc();
-  ipc.handle("music:search", (_e, query: string, light?: boolean) => music.searchAll(query, light === true));
-  ipc.handle("music:searchPage", (_e, query: string, filter: music.SearchFilter) =>
-    music.searchPage(String(query ?? ""), filter as music.SearchFilter)
-  );
-  ipc.handle("music:searchMore", (_e, token: string, filter: music.SearchFilter) =>
-    music.searchMore(String(token ?? ""), filter as music.SearchFilter)
-  );
-  ipc.handle("music:suggestions", (_e, query: string) => music.getSuggestions(query));
-  ipc.handle("music:artist", (_e, id: string) => music.getArtistPage(id));
-  ipc.handle("music:album", (_e, id: string) => music.getAlbum(id));
-  ipc.handle("music:playlist", (_e, id: string) => music.getPlaylist(id));
-  ipc.handle("music:playlistPage", (_e, id: string) => music.getPlaylistPage(String(id ?? "")));
-  ipc.handle("music:home", () => music.getHome());
-  ipc.handle("music:charts", () => music.getCharts());
-  ipc.handle("music:moods", () => music.getMoods());
-  ipc.handle("market:current", () => music.currentMarket());
   // Own lyrics first (.lrc, embedded tags, Jellyfin), then cache, then the open providers.
-  ipc.handle("music:lyrics", (_e, q: music.LyricsMeta) => libraryLyrics(q));
+  ipc.handle("music:lyrics", (_e, q: LyricsRequest) => libraryLyrics(q));
   // Songs by a line of their lyrics — only the lyrics already on this computer (lyrics-index.ts).
   ipc.handle("lyrics:search", (_e, q: unknown) => (typeof q === "string" ? searchLyrics(q) : []));
   // The sound analysis (sound-library.ts): progress for Settings, results for mixes, details and transitions.
   ipc.handle("sound:status", () => soundStatus());
   ipc.handle("sound:facts", () => soundFacts());
   ipc.handle("sound:enabled", (_e, on: unknown) => setSoundAnalysisEnabled(on !== false));
-  ipc.handle("music:enrich", (_e, ids: string[]) => music.enrichDurations(Array.isArray(ids) ? ids : []));
-  ipc.handle("music:stream", async (_e, id: string, forceRotate?: boolean, quality?: string) => {
-    // Hand the renderer a localhost proxy URL — the main process does the
-    // actual upstream traffic (see stream-proxy.ts). YouTube Music is the
-    // only catalogue: every id here is a bare YouTube video id.
-    //
-    // Quality mapping mirrors mobile's YouTube path (StreamResolver.rankByQuality):
-    // only LOW carries a real bitrate ceiling (64 kbps); medium/high/lossless
-    // differ on mobile by which *sources* may answer, which is meaningless
-    // with a single source — they all resolve the best available rendition.
-    await startStreamProxy();
-    const maxKbps = quality === "low" ? 64 : undefined;
-    return proxyUrlFor(String(id ?? ""), forceRotate === true, maxKbps);
-  });
 
   ipc.handle("library:get", () => locallib.readLocalLibrary());
   ipc.handle("art:save", (_e, bytes: unknown) => (bytes instanceof Uint8Array ? locallib.saveChosenArt(bytes) : null));
@@ -563,9 +500,6 @@ function registerIpc(): void {
 
   // Open metadata (MusicBrainz · Cover Art Archive · iTunes · Wikidata/Wikipedia).
   ipc.handle("meta:artist", (_e, name: string) => meta.lookupArtist(String(name ?? "")));
-  ipc.handle("meta:recording", (_e, title: string, artist: string, durationSec?: number) =>
-    meta.lookupRecording(String(title ?? ""), String(artist ?? ""), Number(durationSec) || 0)
-  );
   // About a song (story, credits) and an artist's photo and banner, from Genius (song-info.ts).
   ipc.handle("meta:song", (_e, title: unknown, artist: unknown) =>
     songInfo.songInfo(String(title ?? "").slice(0, 200), String(artist ?? "").slice(0, 200))
@@ -724,32 +658,27 @@ function registerIpc(): void {
   });
   ipc.handle("data:write", (_e, name: string, data: unknown, scope: string) => transition.serializeData(async () => {
     assertRendererStore(name);
-    if (await transition.writeForDocument(name, data, scope)) sync.noteLocalWrite(String(name ?? ""));
+    await transition.writeForDocument(name, data, scope);
   }));
   ipc.handle("app:resetData", () => transition.serializeData(async () => {
     dataResetActive = true;
     try {
       transition.invalidateResetDocuments();
-      sync.resetSyncState();
-      await auth.signOut();
       stats.resetStats();
       await listens.clearListens();
       await Promise.all([downloads.resetDownloads(), locallib.resetLocalLibrary()]);
       await persist.resetAppData();
-      // Approvals live in memory too — drop them and re-approve the default
-      // download location, or post-reset downloads would be rejected.
+      // Approvals live in memory too.
       approvedDirs.clear();
-      try {
-        approveDir(await downloads.defaultDownloadDir());
-      } catch {
-        /* approved lazily on next download */
-      }
     } finally {
       dataResetActive = false;
     }
   }));
 
-  ipc.handle("app:defaultDownloadDir", () => downloads.defaultDownloadDir());
+  ipc.handle("app:latestVersion", () => latestKnown());
+  ipc.handle("update:state", () => updateState());
+  ipc.handle("update:start", () => startUpdate());
+  ipc.handle("update:install", () => installUpdate());
   // A text file the renderer composed (the Spotify import's shopping list),
   // written only where the user picks in the native save dialog.
   ipc.handle("file:saveText", async (_e, suggestedName: unknown, content: unknown) => {
@@ -802,6 +731,19 @@ function registerIpc(): void {
   ipc.handle("cast:join", (_e, session: unknown, device: unknown) => cast.join(castSession(session) ?? "main", String(device ?? "").slice(0, 300)));
   ipc.handle("cast:leave", (_e, session: unknown, device: unknown) => cast.leave(castSession(session) ?? "main", String(device ?? "").slice(0, 300)));
   ipc.handle("cast:stop", (_e, session: unknown) => cast.stop(castSession(session)));
+  ipc.handle("cast:again", () => cast.againAll());
+  ipc.handle("cast:playAhead", (_e, map: unknown) => cast.setPlayAhead(map));
+  ipc.handle("device:power", (_e, id: unknown) => cast.devicePower(String(id ?? "").slice(0, 300)));
+  ipc.handle("device:switchOff", (_e, id: unknown) => cast.deviceSwitchOff(String(id ?? "").slice(0, 300)));
+  ipc.handle("device:command", (_e, id: unknown, word: unknown) => cast.deviceCommand(String(id ?? "").slice(0, 300), String(word ?? "").slice(0, 40)));
+  ipc.handle("tv:pairStart", (_e, id: unknown) => cast.tvPairStart(String(id ?? "").slice(0, 300)));
+  ipc.handle("tv:pairFinish", (_e, code: unknown) => cast.tvPairFinish(String(code ?? "").slice(0, 20)));
+  ipc.handle("tv:pairCancel", () => cast.tvPairCancel());
+  ipc.handle("tv:power", (_e, id: unknown) => cast.tvPower(String(id ?? "").slice(0, 300)));
+  ipc.handle("tv:off", (_e, id: unknown) => cast.tvOff(String(id ?? "").slice(0, 300)));
+  ipc.handle("firewall:matters", () => firewallMatters());
+  ipc.handle("firewall:hasRule", () => hasFirewallRule());
+  ipc.handle("firewall:allow", () => addFirewallRule());
 
   // M3U playlists (m3u.ts): read with paths resolved; written where the user picks.
   ipc.handle("playlist:openM3u", async () => {
@@ -876,9 +818,8 @@ function registerIpc(): void {
     return "Not allowed";
   });
 
-  ipc.handle("download:start", async (_e, track: Track, dir?: string, quality?: string, exportCompat?: boolean) => {
+  ipc.handle("download:start", async (_e, track: Track, dir?: string) => {
     if (dir && !isApprovedPath(dir)) throw new Error("Download folder not approved");
-    if (exportCompat === true) approveDir(downloads.exportDownloadDir());
     // An offline copy of a server song lands in its own library folder, added once.
     if (!dir && typeof track?.id === "string" && downloads.SERVER_SONG.test(track.id)) {
       const offline = downloads.offlineDir();
@@ -890,8 +831,7 @@ function registerIpc(): void {
         libraryFoldersChanged(res.lib);
       }
     }
-    const caps: Record<string, number | undefined> = { standard: 128, high: 192, lossless: undefined };
-    return downloads.enqueueDownload(track, dir, quality ? caps[quality] : undefined, exportCompat === true);
+    return downloads.enqueueDownload(track, dir);
   });
   ipc.handle("download:cancel", (_e, id: string) => downloads.cancelDownload(String(id ?? "")));
   ipc.handle("download:queue", () => downloads.queueSnapshot());
@@ -905,91 +845,6 @@ function registerIpc(): void {
 
   ipc.handle("backup:export", () => backupExport(mainWindow));
   ipc.handle("backup:import", () => backupImport(mainWindow));
-
-  // ---- Accounts (Supabase) + cloud backup ----
-  const emitAuthChanged = (): void => {
-    try {
-      mainWindow?.webContents.send("auth:changed", auth.sessionInfo());
-    } catch {
-      /* window gone */
-    }
-  };
-  ipc.handle("auth:getSession", () => auth.sessionInfo());
-  // ---- Accounts (Supabase) + cloud backup ----
-  /**
-   * Sign in / sign up / Google sign-in share this path. Guest data migrates
-   * ONLY into an account being created here (`isNewAccount`) — signing into an
-   * account that already exists must bring that account's own cloud copy
-   * forward, never mix the previous guest session's listens, likes and feed
-   * into it. `changeOwner` archives whatever the guest did under the guest
-   * slot, so a later "continue as guest" finds it again.
-   */
-  const signIn = (authenticate: () => Promise<auth.SessionInfo>) => transition.serializeData(async () => {
-    await persist.drainWrites();
-    const previous = transition.currentOwner();
-    const info = await authenticate();
-    const migrateGuest = previous === "guest" && info.isNewAccount === true;
-    await transition.changeOwner(info.userId ?? "guest", migrateGuest);
-    if (previous !== info.userId) {
-      sync.resetSyncState(info.userId ?? undefined);
-      stats.reloadStore();
-    }
-    await sync.syncNowExclusive().catch((err) => {
-      console.error("[bytune] login sync failed (account data not pulled):", err instanceof Error ? err.message : err);
-      sync.noteSyncFailure(err);
-    });
-    mainWindow?.webContents.reload();
-    return info;
-  });
-  ipc.handle("auth:signUp", (_e, username: string, password: string) => signIn(() => auth.signUp(username, password)));
-  ipc.handle("auth:signIn", (_e, username: string, password: string) => signIn(() => auth.signIn(username, password)));
-  ipc.handle("auth:signInGoogle", () => signIn(() => auth.signInGoogle()));
-  ipc.handle("auth:continueGuest", () => transition.serializeData(async () => {
-    await transition.changeOwner("guest", false);
-    sync.resetSyncState();
-    stats.reloadStore();
-    const info = await auth.continueAsGuest();
-    mainWindow?.webContents.reload();
-    return info;
-  }));
-  ipc.handle("auth:clearGuestProfile", () => auth.clearGuestProfile());
-  ipc.handle("auth:usernameAvailable", async (_e, username: string) => {
-    const problem = auth.validateUsername(String(username ?? ""));
-    if (problem) return { available: false, reason: problem };
-    try {
-      // Rename-aware: a signed-in user's own current name counts as free.
-      return { available: await auth.usernameAvailableToUser(String(username), auth.sessionInfo().userId) };
-    } catch (err) {
-      // Lookup failure is NOT "taken" — offline must not brick the form.
-      // `available: null` reads as "unknown" in the renderer: no Taken label,
-      // still submittable; the database UNIQUE constraint stays the authority
-      // and signUp surfaces a taken name as a normal, retryable error.
-      return { available: null, reason: err instanceof Error ? err.message : "Network error" };
-    }
-  });
-  ipc.handle("auth:setUsername", (_e, username: string) => auth.setUsername(username));
-  ipc.handle("auth:skipUsername", () => auth.skipUsernameClaim());
-  ipc.handle("auth:signOut", () => transition.serializeData(async () => {
-    await persist.drainWrites();
-    await sync.syncNowExclusive().catch((err) => {
-      console.error("[bytune] logout backup failed:", err instanceof Error ? err.message : err);
-      sync.noteSyncFailure(err);
-    });
-    const info = await auth.signOut();
-    await transition.changeOwner("guest", false);
-    sync.resetSyncState();
-    stats.reloadStore();
-    mainWindow?.webContents.reload();
-    return info;
-  }));
-  ipc.handle("sync:status", () => sync.syncStatus());
-  // Replay is a main-process store: its writes never pass through the
-  // renderer's data:write handler above, so the sync engine must be told
-  // here or Replay would upload once on sign-in and never again.
-  stats.onStoreWrite(() => sync.noteLocalWrite(stats.HISTORY_STORE));
-  ipc.handle("sync:now", () => sync.syncNow());
-  ipc.handle("sync:backupNow", () => sync.backupNow());
-  ipc.handle("sync:restoreNow", () => sync.restoreNow());
 
   // macOS menu checkmarks + the Windows taskbar thumbbar glyph: the renderer
   // pushes playback state; the menu is rebuilt so Shuffle/Repeat/Play-Pause
@@ -1047,29 +902,12 @@ const gotLock =
 if (!gotLock) {
   app.quit();
 } else {
-  let oauthReady = false;
-  let pendingOAuthUrl: string | undefined;
-  const oauthFromUrl = (url: string): void => {
-    if (!oauthReady) {
-      pendingOAuthUrl = url;
-      return;
-    }
-    void auth.handleOAuthCallback(url).catch((err) => console.warn("[bytune] oauth callback:", err.message));
-  };
-  const bootUrl = process.argv.find((a) => a.startsWith("bytune://"));
-  if (bootUrl) oauthFromUrl(bootUrl);
-  app.on("open-url", (event, url) => {
-    event.preventDefault();
-    oauthFromUrl(url);
-  });
-  app.on("second-instance", (_event, argv) => {
+  app.on("second-instance", () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.show();
       mainWindow.focus();
     }
-    const url = argv.find((a) => a.startsWith("bytune://"));
-    if (url) oauthFromUrl(url);
   });
 
   void app.whenReady().then(() => {
@@ -1096,30 +934,7 @@ if (!gotLock) {
       Menu.setApplicationMenu(null);
     }
     persist.migrateLegacyData();
-    transition.initializeOwner();
     pip.bindMainWindowGetter(() => mainWindow);
-    auth.registerProtocol();
-    auth.initInstallMarker();
-    sync.bindClient(auth.getClient);
-    sync.bindRestoredNotifier((stores, seq) => {
-      try {
-        mainWindow?.webContents.send("sync:restored", { stores, seq });
-      } catch {
-        /* window gone */
-      }
-    });
-    void auth.initAuth().then(() => {
-      // Signed-in session restored from the sealed token — back up now and
-      // pull anything newer (covers offline edits made while signed out of
-      // the network, not the guest flow, which never syncs).
-      if (auth.sessionInfo().mode === "account") void sync.syncNow().catch(() => undefined);
-    });
-    void downloads.defaultDownloadDir().then(approveDir);
-    try {
-      approveDir(downloads.exportDownloadDir());
-    } catch {
-      /* music library path may be unavailable; approved lazily on download */
-    }
     const lib = locallib.readLocalLibrary();
     for (const f of lib.folders) approveDir(f.path);
     for (const d of (persist.readData("approved-dirs") as string[] | null) ?? []) {
@@ -1135,6 +950,13 @@ if (!gotLock) {
       const art = await jellyfin.artBytes(req.url);
       if (!art) return new Response("not found", { status: 404 });
       return new Response(new Uint8Array(art.data), { headers: { "Content-Type": art.mime } });
+    });
+    configureAppUpdate((state) => {
+      try {
+        mainWindow?.webContents.send("update:state", state);
+      } catch {
+        /* window gone */
+      }
     });
     // Covers the tags lack are filled from the open databases in the background.
     startEnrichment();
@@ -1185,15 +1007,9 @@ if (!gotLock) {
       saveSoundIndexSync();
       pip.savePipRect();
       discord.stopDiscord();
-  void cast.stopAll();
-      // Kick off a final push, then persist sync-meta synchronously: quit
-      // cannot await the push, but the meta must record any un-synced local
-      // edits (changedAt > syncedAt) so the next boot pushes them instead of
-      // letting the pull comparison overwrite them with a stale cloud copy.
-      void sync.flushPending();
-      sync.flushMetaSync();
-      // Close-time durability: the renderer's last coalesced writes and any
-      // queued ownership work may still be in flight when the window dies.
+      void cast.stopAll();
+      // Close-time durability: the renderer's last coalesced writes may still
+      // be in flight when the window dies.
       // Hold quit for a bounded drain — the final player write lands unless
       // something is genuinely stuck, in which case we quit anyway.
       if (!drainStarted) {
@@ -1213,10 +1029,6 @@ if (!gotLock) {
           });
       }
     });
-    oauthReady = true;
-    if (pendingOAuthUrl) oauthFromUrl(pendingOAuthUrl);
-    pendingOAuthUrl = undefined;
-    stripMediaReferer();
     // Output-device picker: Chromium hides device labels/ids behind a capture
     // permission, and the renderer's one-time getUserMedia unlock is only
     // deterministic if the session approves it — Electron's implicit default
@@ -1227,9 +1039,6 @@ if (!gotLock) {
     });
     session.defaultSession.setPermissionCheckHandler(() => true);
     registerIpc();
-    // Replay lives behind registerIpc's write hook: initStats runs the
-    // one-time legacy recovery, and any months it recovers must be announced
-    // to the sync engine — which is only possible once that hook is wired.
     stats.initStats();
     void startStreamProxy().catch((err) => console.warn("[bytune] stream proxy failed:", err));
     createWindow();

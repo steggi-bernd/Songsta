@@ -39,8 +39,6 @@ const seedCache = new Map<string, Seed>();
 
 /** Read size for the quantiser. 128² is enough; the blur hides the upscale. */
 const PALETTE_PX = 128;
-/** Mobile's crossfade when the page is settling into a colour. */
-const TINT_FADE_MS = 260;
 
 /* ============================================================ extraction */
 

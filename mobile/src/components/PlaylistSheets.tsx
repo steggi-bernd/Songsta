@@ -19,11 +19,14 @@ export function NameDialog({
   action,
   allowEmpty,
   address,
+  message,
   onDone,
   onCancel,
 }: {
   visible: boolean;
   title: string;
+  /** a line under the title */
+  message?: string;
   placeholder: string;
   initial?: string;
   action: string;
@@ -45,6 +48,7 @@ export function NameDialog({
         {visible && (
           <DialogCard
             title={title}
+            message={message}
             buttons={[
               { text: T("Cancel"), style: "cancel", onPress: onCancel },
               { text: action, disabled: !ready, onPress: () => onDone(value.trim()) },

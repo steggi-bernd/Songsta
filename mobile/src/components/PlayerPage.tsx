@@ -6,7 +6,7 @@
  * the computer shows in its side panel.
  */
 import { useNavigation } from "@react-navigation/native";
-import { Bluetooth, Check, ChevronDown, EllipsisVertical, Headphones, Laptop, ListMusic, Pause, Play, Plus, Repeat, Repeat1, Share2, Shuffle, SkipBack, SkipForward, Smartphone, Tv, Speaker , Volume2 } from "lucide-react-native";
+import { Bluetooth, Check, ChevronDown, EllipsisVertical, Headphones, Laptop, ListMusic, Pause, Play, Plus, Repeat, Repeat1, Share2, Shuffle, SkipBack, SkipForward, Smartphone, Tv, Speaker  } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PanResponder, PixelRatio, Pressable, Share, StyleSheet, Text, View, type GestureResponderHandlers } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,7 +24,6 @@ import { colors, qualityColors } from "../theme";
 import { AboutArtistCard, AboutSongCard, NextUpCard } from "./PlayerCards";
 import { SongDownloadButton } from "./SongMenu";
 import { TrackStrip } from "./TrackStrip";
-import { VolumeBar } from "./VolumeBar";
 import type { LyricLine } from "../jellyfin";
 import { T } from "../shared";
 
@@ -158,7 +157,6 @@ export function PlayerPage({
   const format = useMemo(() => (track ? describePlayback(track) : null), [track]);
   const stream = usePlayer((s) => s.stream);
   const remote = usePlayer((s) => s.remote);
-  const remoteVolume = usePlayer((s) => s.remoteVolume);
   const device = usePlayer((s) => s.device);
   const output = useSoundOutput(expanded);
   const albums = useLibrary((s) => s.albums);
@@ -276,13 +274,6 @@ export function PlayerPage({
             </Pressable>
           </View>
 
-          {!!remote && remoteVolume !== null && (
-            <View style={styles.remoteVolume}>
-              <Volume2 size={17} color={colors.ink} />
-              <VolumeBar value={remoteVolume} ink={colors.ink} onChange={(v) => usePlayer.getState().setRemoteVolume(v)} />
-            </View>
-          )}
-
           <View style={styles.bottomRow}>
             <Pressable onPress={() => nav.navigate("Devices")} accessibilityLabel={T("Playing on {value}. Choose where the sound goes", { value: outputName || T("this phone") })} style={styles.device}>
               <OutputIcon size={20} color={outputColor} />
@@ -331,7 +322,6 @@ const withFeel = (run: () => void) => (): void => {
 };
 
 const styles = StyleSheet.create({
-  remoteVolume: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 2 },
   top: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8 },
   iconButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   context: { flex: 1, minWidth: 0, alignItems: "center", paddingHorizontal: 4 },

@@ -231,7 +231,6 @@ function useCastingLabel(): string | undefined {
 
 /** Opens the devices: where the music plays, here or anywhere else. */
 function DevicesButton() {
-  const active = useCast((s) => s.active);
   const connecting = useCast((s) => s.connecting);
   const followed = useHomeSync((s) => s.followed);
   const open = useUI((s) => s.rightPanel === "devices");

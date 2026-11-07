@@ -7,9 +7,7 @@ import {
   Check,
   ChevronRight,
   Circle,
-  CircleCheck,
-  CloudDownload,
-  CloudUpload,
+  CircleCheck,
   Disc3,
   Download,
   Droplets,
@@ -19,8 +17,7 @@ import {
   FileUp,
   FolderOpen,
   FolderSync,
-  Gauge,
-  HardDrive,
+  Gauge,
   Heart,
   Image,
   Infinity as InfinityIcon,
@@ -32,34 +29,28 @@ import {
   Maximize2,
   Music4,
   Palette,
+  Power,
   Radio,
   RefreshCw,
   Repeat,
   Server,
-  ShoppingBag,
-  SlidersHorizontal,
+  ShoppingBag,
   SlidersVertical,
   Sparkles,
   Speaker,
   Squircle,
-  Trash2,
-  User,
+  Trash2,
   UserRound,
   Volume2,
-  VolumeX,
-  Wifi,
+  VolumeX,
 } from "lucide-react";
 import {
-  DOWNLOAD_QUALITY_LABEL,
-  STREAM_QUALITY_LABEL,
   useSettings,
   type Accent,
   type Corners,
 } from "../stores/settings";
-import { useSession } from "../lib/session";
+import { installUpdate, lookNow, openReleasePage, startUpdate, useAppUpdate, useNewerVersion } from "../lib/newVersionWatch";
 import { isLinux, isMac } from "../lib/platform";
-import { setOnboardingIntent } from "../lib/onboardingIntent";
-import { GuestDeleteModal } from "../components/AccountModals";
 import { ParametricEqEditor } from "../components/ParametricEqEditor";
 import { useUI, type MenuItem } from "../stores/ui";
 import { EQ_BANDS, listOutputDevices } from "../lib/audio";
@@ -528,32 +519,6 @@ function SettingsRow({
   );
 }
 
-/** A toggle that reads as part of the option above it — no glyph, no divider. */
-function SettingsSubRow({
-  title,
-  checked,
-  onChange,
-  badge,
-}: {
-  title: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  badge?: string;
-}) {
-  return (
-    <div
-      onClick={() => onChange(!checked)}
-      className={`flex items-center ${ROW_INSET} pb-2.5 -mt-1 cursor-pointer`}
-    >
-      <div className="flex-1 flex items-center min-w-0">
-        <span className="text-[14px] text-ink-hi truncate">{title}</span>
-        {badge && <Badge>{badge}</Badge>}
-      </div>
-      <Switch checked={checked} onChange={onChange} />
-    </div>
-  );
-}
-
 /** Thumb width of the .slider CSS — the fill is computed so it ends exactly
     at the thumb's centre (the native input insets the thumb by half its
     width at both ends of the range). */
@@ -858,177 +823,6 @@ function OutputDeviceGroup() {
   );
 }
 
-/**
- * ByTune account — the cloud layer above the YouTube cookie. Guests keep
- * everything local; signed-in users get automatic cloud backup of library,
- * playlists, history and settings. Backups always run on top of the local
- * copy: restoring never deletes anything without writing a local backup
- * first (userData/data/backups).
- */
-function CloudAccountGroup() {
-  const toast = useUI((st) => st.toast);
-  const openDialog = useUI((st) => st.openDialog);
-  const session = useSession();
-  const [status, setStatus] = useState<{
-    lastSyncAt: number | null;
-    state: "idle" | "syncing" | "pending" | "error";
-    lastError: string | null;
-  } | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  // Keep the sync-status line honest: poll while mounted (cheap local IPC),
-  // plus refresh after every mode change.
-  useEffect(() => {
-    let cancelled = false;
-    const poll = (): void => {
-      void window.bytune
-        ?.syncStatus()
-        .then((st) => {
-          if (!cancelled) {
-            const s = st as { lastSyncAt: number | null; state?: string; lastError?: string | null } | undefined;
-            setStatus({
-              lastSyncAt: s?.lastSyncAt ?? null,
-              state: (s?.state as "idle" | "syncing" | "pending" | "error") ?? "idle",
-              lastError: s?.lastError ?? null,
-            });
-          }
-        })
-        .catch(() => undefined);
-    };
-    poll();
-    const t = setInterval(poll, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [session.mode]);
-
-  const run = async (fn: () => Promise<unknown>, done: string): Promise<void> => {
-    setBusy(true);
-    try {
-      await fn();
-      toast(done, "success");
-    } catch (err) {
-      toast(err instanceof Error ? err.message : T("Sync failed"), "error");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signOutWithConfirm = (): void => {
-    openDialog({
-      title: T("Sign out of Songsta?"),
-      body: T("Your account data is safely backed up to the cloud. You can sign in again any time to restore it."),
-      confirmLabel: T("Sign out"),
-      cancelLabel: T("Cancel"),
-      onConfirm: () => void run(async () => { await window.bytune?.authSignOut(); }, T("Signed out")),
-    });
-  };
-
-  const changeUsername = (): void => {
-    openDialog({
-      title: T("Change username"),
-      body: T("Letters, numbers, _ and @. The new name must not already be taken."),
-      initialValue: session.username ?? "",
-      confirmLabel: T("Rename"),
-      onConfirm: (value) => {
-        const next = value.trim();
-        if (!next || next === session.username) return;
-        void run(async () => {
-          await window.bytune?.authSetUsername(next);
-          await useSession.getState().refresh();
-        }, T("Username changed to {next}", { next }));
-      },
-    });
-  };
-
-  const signedIn = session.mode === "account";
-  const subtitle = !session.loaded
-    ? "…"
-    : signedIn
-      ? status?.state === "syncing"
-        ? T("Syncing…")
-        : status?.state === "error"
-          ? T("Sync error, will retry")
-          : status?.state === "pending"
-            ? T("Pending changes")
-            : status?.lastSyncAt
-              ? `Synced ${new Date(status.lastSyncAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-              : T("Signed in, backing up automatically")
-      : session.mode === "guest"
-        ? T("Your data is stored only on this device")
-        : T("Not signed in");
-
-  return (
-    <SettingsGroup
-      header={T("Songsta account")}
-      footer={
-        signedIn ? T("Backup runs automatically. Changes upload within seconds. Restore replaces this device's copy with the cloud version (a local backup is kept first).") : T("Create an account to keep your library safe even if this PC's app data is wiped.")
-      }
-    >
-      <SettingsRow
-        icon={signedIn ? UserRound : User}
-        title={signedIn ? (session.username ?? T("Account")) : session.mode === "guest" ? T("Guest") : T("No account")}
-        subtitle={subtitle}
-        badge={session.mode === "guest" ? T("Guest") : undefined}
-        trailing={
-          signedIn ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                changeUsername();
-              }}
-              className="h-7 px-2.5 rounded-md bg-ink-hi/[0.08] hover:bg-ink-hi/[0.14] text-[12px] font-semibold text-ink-hi transition-colors"
-            >{T("Change")}</button>
-          ) : undefined
-        }
-      />
-      <div className="px-4 pb-3 flex flex-wrap gap-2">
-        {signedIn ? (
-          <>
-            <button
-              onClick={() => void run(async () => { await window.bytune?.syncBackupNow(); }, T("Backup complete"))}
-              disabled={busy}
-              className="h-9 px-3.5 rounded-lg bg-ink-hi/[0.08] hover:bg-ink-hi/[0.14] text-[13px] font-semibold text-ink-hi transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
-            >
-              <CloudUpload className="w-4 h-4" />{" "}{T("Back up now")}</button>
-            <button
-              onClick={() => void run(async () => { await window.bytune?.syncRestoreNow(); }, T("Restored from cloud"))}
-              disabled={busy}
-              className="h-9 px-3.5 rounded-lg bg-ink-hi/[0.08] hover:bg-ink-hi/[0.14] text-[13px] font-semibold text-ink-hi transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
-            >
-              <CloudDownload className="w-4 h-4" />{" "}{T("Restore from cloud")}</button>
-            <button
-              onClick={signOutWithConfirm}
-              disabled={busy}
-              className="h-9 px-3.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-[13px] font-semibold transition-colors disabled:opacity-40"
-            >{T("Sign out")}</button>
-          </>
-        ) : (
-          <button
-            onClick={async () => {
-              // Guests upgrade by re-running onboarding; their local data
-              // stays and merges into the account on the first sync.
-              if (session.mode === "guest") {
-                try {
-                  await window.bytune?.authClearGuestProfile();
-                } catch {
-                  useUI.getState().toast(T("Couldn't open onboarding. Try again."), "error");
-                  return;
-                }
-              }
-              void useSession.getState().refresh();
-            }}
-            className="h-9 px-3.5 rounded-lg bg-accent text-[13px] font-semibold text-on-primary hover:brightness-110"
-          >
-            {session.mode === "guest" ? T("Create account / sign in") : T("Sign in or create account")}
-          </button>
-        )}
-      </div>
-    </SettingsGroup>
-  );
-}
-
 /** The interface's language: it follows the system unless chosen here. A change reloads the window. */
 function LanguageRow() {
   const choice = storedLanguageChoice();
@@ -1061,13 +855,120 @@ function LanguageRow() {
   );
 }
 
+/** A small button at the end of a row, looking like the language picker. */
+function RowButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onPress();
+      }}
+      className="h-9 rounded-lg bg-ink-hi/[0.08] hover:bg-ink-hi/[0.14] px-3 text-[13px] font-semibold text-ink-hi whitespace-nowrap transition-colors"
+    >
+      {label}
+    </button>
+  );
+}
+
+/** The top of Settings while a new version is around: what there is to do about it, depending on how far it's come. */
+function UpdateGroup() {
+  const update = useAppUpdate();
+  const newer = useNewerVersion();
+  const version = update.version || newer;
+  const current = window.bytune?.versions.app ?? "";
+  if (!version) return null;
+  if (update.phase === "ready") {
+    return (
+      <SettingsGroup>
+        <SettingsRow
+          icon={Download}
+          title={T("Songsta {version} is ready", { version })}
+          subtitle={T("It installs when you close Songsta.")}
+          trailing={<RowButton label={T("Restart now")} onPress={installUpdate} />}
+        />
+      </SettingsGroup>
+    );
+  }
+  if (update.phase === "downloading") {
+    return (
+      <SettingsGroup>
+        <SettingsRow
+          icon={Download}
+          title={T("Downloading Songsta {version}", { version })}
+          subtitle={T("{percent}% downloaded", { percent: update.percent })}
+          trailing={
+            <div className="w-24 h-1 rounded-full bg-ink-hi/[0.12] overflow-hidden" role="progressbar" aria-valuenow={update.percent} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${update.percent}%` }} />
+            </div>
+          }
+        />
+      </SettingsGroup>
+    );
+  }
+  if (update.phase === "failed") {
+    return (
+      <SettingsGroup>
+        <SettingsRow
+          icon={Download}
+          title={T("Couldn't update to Songsta {version}", { version })}
+          subtitle={T("Try again, or get it from the download page.")}
+          trailing={
+            <div className="flex items-center gap-2">
+              <RowButton label={T("Download page")} onPress={openReleasePage} />
+              <RowButton label={T("Try again")} onPress={startUpdate} />
+            </div>
+          }
+        />
+      </SettingsGroup>
+    );
+  }
+  if (update.canInstall) {
+    return (
+      <SettingsGroup>
+        <SettingsRow
+          icon={Download}
+          title={T("Songsta {version} is out", { version })}
+          subtitle={T("You have {version}.", { version: current })}
+          trailing={<RowButton label={T("Update")} onPress={startUpdate} />}
+        />
+      </SettingsGroup>
+    );
+  }
+  return (
+    <SettingsGroup>
+      <SettingsRow
+        icon={Download}
+        title={T("Songsta {version} is out", { version })}
+        subtitle={T("You have {version}. This opens the download page.", { version: current })}
+        trailing={<ExternalLink className="w-4 h-4 text-ink-dim" />}
+        onClick={openReleasePage}
+      />
+    </SettingsGroup>
+  );
+}
+
+function LookForUpdatesRow() {
+  const [looking, setLooking] = useState(false);
+  return (
+    <SettingsRow
+      icon={RefreshCw}
+      title={T("Look for updates")}
+      subtitle={looking ? T("Looking…") : T("You have Songsta {version}", { version: window.bytune?.versions.app ?? "" })}
+      disabled={looking}
+      onClick={() => {
+        setLooking(true);
+        void lookNow().finally(() => setLooking(false));
+      }}
+    />
+  );
+}
+
 export function SettingsView() {
   const s = useSettings();
   const toast = useUI((st) => st.toast);
   const openDialog = useUI((st) => st.openDialog);
   const versions = window.bytune?.versions;
-  const session = useSession();
-  const [guestDeleteOpen, setGuestDeleteOpen] = useState(false);
+  const canSelfUpdate = useAppUpdate((u) => u.canInstall);
   const [folderSummary, setFolderSummary] = useState<string | null>(null);
 
   const refreshFolderSummary = async (): Promise<void> => {
@@ -1079,19 +980,6 @@ export function SettingsView() {
   useEffect(() => {
     void refreshFolderSummary();
   }, []);
-
-  const browse = async (): Promise<void> => {
-    if (!window.bytune) return;
-    try {
-      const dir = await window.bytune.pickFolder();
-      if (dir) {
-        s.setDownloadDir(dir);
-        toast(T("Download folder updated"), "success");
-      }
-    } catch {
-      toast(T("Couldn't open the folder picker"), "error");
-    }
-  };
 
   const chooseMusicFolder = async (): Promise<void> => {
     if (!window.bytune) return;
@@ -1171,6 +1059,8 @@ export function SettingsView() {
   return (
     <div className="max-w-2xl pb-14">
       <h1 className="font-display text-[34px] font-extrabold tracking-[-0.03em] text-ink-hi px-1 pt-2 pb-3.5">{T("Settings")}</h1>
+
+      <UpdateGroup />
 
       <SettingsGroup
         header={T("Library sources")}
@@ -1305,6 +1195,14 @@ export function SettingsView() {
           subtitle={T("Go to another song while one is on repeat, and the whole list repeats from there")}
           trailing={<Switch checked={s.skipEndsRepeatOne} onChange={s.setSkipEndsRepeatOne} />}
           onClick={() => s.setSkipEndsRepeatOne(!s.skipEndsRepeatOne)}
+        />
+        <Divider />
+        <SettingsRow
+          icon={Power}
+          title={T("Switch receivers off afterwards")}
+          subtitle={T("Denon and Marantz go off 30 seconds after the music has left them, unless you stop it or they're doing something else")}
+          trailing={<Switch checked={s.switchOffDevices} onChange={s.setSwitchOffDevices} />}
+          onClick={() => s.setSwitchOffDevices(!s.switchOffDevices)}
         />
         <Divider />
         <SliderRow
@@ -1515,6 +1413,30 @@ export function SettingsView() {
         />
       </SettingsGroup>
 
+      <SettingsGroup header={T("Updates")} footer={T("Asking GitHub once a day which version is the newest is all that goes out for this. With both off, not even that.")}>
+        <LookForUpdatesRow />
+        {canSelfUpdate && (
+          <>
+            <Divider />
+            <SettingsRow
+              icon={Download}
+              title={T("Automatic updates")}
+              subtitle={T("Fetches new versions in the background. They install when you close Songsta.")}
+              trailing={<Switch checked={s.autoUpdate} onChange={s.setAutoUpdate} />}
+              onClick={() => s.setAutoUpdate(!s.autoUpdate)}
+            />
+          </>
+        )}
+        <Divider />
+        <SettingsRow
+          icon={Sparkles}
+          title={T("Tell me about new versions")}
+          subtitle={T("A short note and a dot on the settings button when one is out")}
+          trailing={<Switch checked={s.checkNewVersion} onChange={s.setCheckNewVersion} />}
+          onClick={() => s.setCheckNewVersion(!s.checkNewVersion)}
+        />
+      </SettingsGroup>
+
       <SettingsGroup
         header={T("Miscellaneous")}
         footer={T("These apply to this desktop client and are stored locally.")}
@@ -1522,7 +1444,7 @@ export function SettingsView() {
         <SettingsRow
           icon={ListMusic}
           title={T("Don't repeat suggestions")}
-          subtitle={T("Keep recently played tracks out of the home feed")}
+          subtitle={T("Keep recently played tracks out of autoplay")}
           trailing={<Switch checked={s.dontRepeatSuggestions} onChange={s.setDontRepeatSuggestions} />}
           onClick={() => s.setDontRepeatSuggestions(!s.dontRepeatSuggestions)}
         />
@@ -1543,56 +1465,17 @@ export function SettingsView() {
           icon={Trash2}
           title={T("Reset app data")}
           subtitle={T("Erase library, playlists, history and settings on this device")}
-          onClick={() => {
-            // Guests have no cloud backup — deletion is unrecoverable, so
-            // route through the dedicated protection modal instead.
-            if (session.mode === "guest") {
-              setGuestDeleteOpen(true);
-              return;
-            }
+          onClick={() =>
             openDialog({
-              title: T("Reset local data?"),
-              body: T("Your local Songsta data will be removed from this device. Your account and cloud backup won't be deleted. Sign in again and everything restores. Downloaded audio files are not touched."),
-              confirmLabel: T("Reset local data"),
+              title: T("Reset app data?"),
+              body: T("Your library, playlists, history and settings on this device will be erased. This can't be undone. Your music files aren't touched."),
+              confirmLabel: T("Reset app data"),
               danger: true,
               onConfirm: () => void resetAppData(),
-            });
-          }}
+            })
+          }
         />
       </SettingsGroup>
-
-      {guestDeleteOpen && (
-        <GuestDeleteModal
-          onClose={() => setGuestDeleteOpen(false)}
-          onSignIn={async () => {
-            setGuestDeleteOpen(false);
-            try {
-              await window.bytune?.authClearGuestProfile();
-            } catch {
-              useUI.getState().toast(T("Couldn't open onboarding. Try again."), "error");
-              return;
-            }
-            setOnboardingIntent("signin");
-            void useSession.getState().refresh();
-          }}
-          onCreateAccount={async () => {
-            setGuestDeleteOpen(false);
-            try {
-              await window.bytune?.authClearGuestProfile();
-            } catch {
-              useUI.getState().toast(T("Couldn't open onboarding. Try again."), "error");
-              return;
-            }
-            setOnboardingIntent("signup");
-            void useSession.getState().refresh();
-          }}
-          onDeleteAnyway={() => {
-            setGuestDeleteOpen(false);
-            void resetAppData();
-          }}
-        />
-      )}
-
 
       <div className="text-center text-[11px] text-ink-dim/80 pt-6 px-1 leading-relaxed">{T("Songsta {value} · GPL-3.0 · based on ByTune by rishiteja21", { value: versions?.app ?? "1.0.0" })}</div>
     </div>

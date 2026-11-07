@@ -17,14 +17,13 @@ async function loadDownloads(dir, original) {
   const { outputFiles } = await build({
     entryPoints: [fileURLToPath(new URL("../electron/downloads.ts", import.meta.url))],
     bundle: true, platform: "node", format: "cjs", write: false,
-    external: ["electron", "./music-service", "./jellyfin", "./subsonic"],
+    external: ["electron", "./jellyfin", "./subsonic"],
   });
   const module = { exports: {} };
   vm.runInNewContext(outputFiles[0].text, {
     module, exports: module.exports, setTimeout, clearTimeout, console, Buffer, AbortController, fetch, Response,
     require(name) {
       if (name === "electron") return { app: { getPath: () => dir } };
-      if (name === "./music-service") return { resolveStream: async () => { throw new Error("not a stream song"); } };
       if (name === "./jellyfin" || name === "./subsonic") return { originalFile: original };
       return require(name);
     },

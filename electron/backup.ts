@@ -11,10 +11,9 @@
  * Included: settings (minus device-local paths), the full library
  * (liked/playlists/folders/history/downloads index), the player queue,
  * recent searches, and every listening-history bucket.
- * Deliberately excluded: the account store (sealed YouTube cookie — a
- * secret), the approved-dirs allowlist and the local-library index (device
- * paths that may not exist on restore; re-picking the folder re-indexes,
- * and local ids are path hashes so playlists re-link).
+ * Deliberately excluded: the approved-dirs allowlist and the local-library
+ * index (device paths that may not exist on restore; re-picking the folder
+ * re-indexes, and local ids are path hashes so playlists re-link).
  *
  * Semantics are replace, not merge (mobile parity): importing wipes the
  * current stores first, so a backup never doubles plays or mixes configs.
@@ -31,7 +30,6 @@ import {
   storeEnvelopeFromBackup,
 } from "./backup-transfer";
 import { exportAll as statsExportAll, importAll as statsImportAll, type MonthBucket } from "./stats";
-import * as sync from "./sync";
 import * as transition from "./data-transition";
 
 const BACKUP_VERSION = 1;
@@ -114,11 +112,10 @@ export async function backupImport(
   const nextLibrary = doc.library != null ? storeEnvelopeFromBackup(doc.library, "library") : null;
   const nextPlayer = doc.player != null ? storeEnvelopeFromBackup(doc.player, "player") : null;
 
-  // The write section is serialized with account switches, resets and
-  // renderer writes (dialog + parse stay outside — they must not hold the
-  // transition queue while the user browses for a file). Without this an
-  // import landing mid-changeOwner could be archived under the wrong
-  // identity, and a write queued behind a reset could resurrect erased data.
+  // The write section is serialized with resets and renderer writes (dialog +
+  // parse stay outside — they must not hold the queue while the user browses
+  // for a file). Without this a write queued behind a reset could resurrect
+  // erased data.
   return transition.serializeData(async () => {
     // Settings: whitelist incoming keys, keep this machine's device-local
     // ones, and write back the zustand envelope the store hydrates from on
@@ -126,11 +123,9 @@ export async function backupImport(
     // base, not a snapshot taken while the picker was open.
     const nextSettings = settingsFromBackup(doc.settings, persist.readData("settings"));
     await persist.writeData("settings", envelope(nextSettings));
-    sync.noteLocalWrite("settings");
 
     if (nextLibrary) {
       await persist.writeData("library", nextLibrary);
-      sync.noteLocalWrite("library");
     }
     if (nextPlayer) await persist.writeData("player", nextPlayer);
     // Recent searches: plain array (current format) or a raw zustand envelope
@@ -138,7 +133,6 @@ export async function backupImport(
     // An absent field leaves the local store untouched.
     if (doc.recentSearches != null) {
       await persist.writeData("recent-searches", envelope({ searches: searchesFromBackup(doc.recentSearches) }));
-      sync.noteLocalWrite("recent-searches");
     }
 
     let months = 0;

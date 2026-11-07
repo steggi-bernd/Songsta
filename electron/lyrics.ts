@@ -1,18 +1,16 @@
 /**
  * Lyrics providers for the desktop player — BitChord mobile's sweep, ported.
  *
- * Fourteen sources are raced in parallel but their answers are taken in
+ * Eleven sources are raced in parallel but their answers are taken in
  * BitChord's default priority order; a word-synced answer beats a line-synced
  * one from a source ahead of it when prioritizeWordSync is on (it is, by
  * default). The sweep is deadline-bounded so a slow provider chain can never
- * hold the lyrics view past a couple of seconds. The plain YT Music text
- * stays as the final fallback.
+ * hold the lyrics view past a couple of seconds.
  *
  * Word-timed chain: BiniLyrics (Apple TTML, matched on the recording — it
  * also reports the ISRC every later play reuses) → BetterLyrics (Apple TTML)
  * → Portato (QQ Music karaoke timings) → PaxSenix (Apple TTML via a public
- * proxy) → LyricsPlus (syllable mirrors) → SimpMusic. Then Unison, the
- * playing video's own captions, and YT Music's Lyrics tab; then the
+ * proxy) → LyricsPlus (syllable mirrors). Then Unison; then the
  * line-synced workhorses Megalobiz → KuGou → LRCLIB → Musixmatch (richsync,
  * signed the way Musixmatch's web client signs), with Genius scraped plain
  * text as the last resort.
@@ -25,6 +23,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { lrcRows } from "../src/lib/lrc";
 import type { SyncedLyricLine, SyncedLyricWord } from "../src/types";
 import { GENIUS_HEADERS, geniusFindWith } from "./genius";
+import { geniusExtractLyrics } from "./genius-page";
 import { cleanTitle, primaryArtist, queryTitle } from "./song-names";
 
 export { GENIUS_HEADERS };
@@ -635,9 +634,9 @@ async function fetchLyricsPlusOne(host: string, q: LyricQuery, isrc?: string): P
     return `${host}/v2/lyrics/get?${params.toString()}`;
   };
 
-  // Strict first: the duration disambiguates remixes. But when the YouTube
-  // upload runs longer or shorter than every catalogue version (music videos
-  // with intros, extended cuts), a hard duration filter rejects the REAL
+  // Strict first: the duration disambiguates remixes. But when the file
+  // runs longer or shorter than every catalogue version (music videos with
+  // intros, extended cuts), a hard duration filter rejects the REAL
   // song and a keyword fallback answers with someone else's lyrics — so a
   // strict miss retries once on title+artist alone.
   for (const title of titles) {
@@ -867,7 +866,7 @@ async function fetchPaxSenix(q: LyricQuery): Promise<ProviderResult | null> {
     return results;
   };
 
-  // The YouTube upload's length must never veto the real song — music videos
+  // The file's length must never veto the real song — music videos
   // with intros run longer than the catalogue track, and a hard ±10s filter
   // rejects Despacito-style songs wholesale. Title/artist score decides;
   // duration proximity only breaks ties. One exception: an upload that names
@@ -940,7 +939,6 @@ async function fetchPaxSenix(q: LyricQuery): Promise<ProviderResult | null> {
 /* ---------------------------- BetterLyrics ------------------------------ */
 
 async function fetchBetterLyrics(q: LyricQuery): Promise<ProviderResult | null> {
-  const enc = encodeURIComponent;
   // Edition-titled uploads are asked under their own name first — the backend
   // indexes Apple's actual "(Sped Up)" releases — then the stripped title.
   const blStripped = queryTitle(q.title);
@@ -954,7 +952,7 @@ async function fetchBetterLyrics(q: LyricQuery): Promise<ProviderResult | null> 
     return `https://lyrics-api.boidu.dev/getLyrics?${params.toString()}`;
   };
   // Same rule as the other word-synced sources: a strict duration miss
-  // (YouTube video ≠ catalogue runtime) retries on title+artist alone.
+  // (the file's length ≠ catalogue runtime) retries on title+artist alone.
   let body: string | null = null;
   for (const title of titles) {
     body = await getText(attempt(title, true));
@@ -967,30 +965,6 @@ async function fetchBetterLyrics(q: LyricQuery): Promise<ProviderResult | null> 
     const ttml = typeof json?.ttml === "string" ? json.ttml : null;
     if (!ttml) return null;
     return toResult("BetterLyrics", parseTtml(ttml));
-  } catch {
-    return null;
-  }
-}
-
-/* ------------------------------ SimpMusic ------------------------------- */
-
-async function fetchSimpMusic(q: LyricQuery): Promise<ProviderResult | null> {
-  if (!q.id || q.id.includes(":")) return null; // keyed on YouTube video ids only
-  const body = await getText(`https://api-lyrics.simpmusic.org/v1/${encodeURIComponent(q.id)}`);
-  if (!body) return null;
-  try {
-    const json = JSON.parse(body);
-    if (!json?.success || !Array.isArray(json?.data)) return null;
-    const tolerance = 10;
-    const track = (json.data as any[])
-      .filter((t) => q.duration <= 0 || Math.abs((t.duration ?? 0) - q.duration) <= tolerance)
-      .sort((a, b) => Math.abs((a.duration ?? 0) - q.duration) - Math.abs((b.duration ?? 0) - q.duration))[0];
-    if (!track) return null;
-    const rich = typeof track.richSyncLyrics === "string" && track.richSyncLyrics.trim() ? parseEnhancedLrc(track.richSyncLyrics) : [];
-    if (rich.length) return toResult("SimpMusic", rich);
-    const synced = typeof track.syncedLyrics === "string" && track.syncedLyrics.trim() ? parseLrc(track.syncedLyrics) : [];
-    if (synced.length) return toResult("SimpMusic", synced);
-    return null;
   } catch {
     return null;
   }
@@ -1360,7 +1334,7 @@ async function fetchPortato(q: LyricQuery): Promise<ProviderResult | null> {
   for (const title of titles) {
     let body = await getText(attempt(title, true));
     // Same rule as the other word-synced sources: a strict duration miss
-    // (YouTube video ≠ catalogue runtime) retries on title+artist alone.
+    // (the file's length ≠ catalogue runtime) retries on title+artist alone.
     if (!body && q.duration > 0) body = await getText(attempt(title, false));
     if (!body) continue;
     if (/API key required/i.test(body)) {
@@ -1423,37 +1397,6 @@ async function fetchUnison(q: LyricQuery): Promise<ProviderResult | null> {
   const lrc = parseLrc(text);
   if (lrc.length) return toResult("Unison", lrc);
   return plain();
-}
-
-/* --------------------- YouTube captions + YT Music ----------------------- */
-
-/**
- * Timed captions for the exact playing video — innertube's get_transcript,
- * fetched by the caller (it needs the YouTube session). Not a catalogue
- * match: the timing is the caption track's, which is only as good as its
- * author. But it answers for the long tail the catalogues have never heard
- * of — covers, regionals, self-uploads — and it can never name the wrong
- * recording.
- */
-async function fetchYouTubeTranscript(
-  q: LyricQuery,
-  fn?: (videoId: string) => Promise<SyncedLyricLine[] | null>
-): Promise<ProviderResult | null> {
-  if (!fn || !q.id || q.id.includes(":")) return null;
-  const lines = await fn(q.id);
-  return lines && lines.length ? toResult("YouTube Captions", lines) : null;
-}
-
-/** Plain lyrics from YT Music's own Lyrics tab, ranked as a source of its own. */
-async function fetchYouTubeMusic(
-  q: LyricQuery,
-  fn?: (videoId: string) => Promise<string | null>
-): Promise<ProviderResult | null> {
-  if (!fn || !q.id || q.id.includes(":")) return null;
-  const text = await fn(q.id);
-  return text && text.trim()
-    ? { source: "YouTube Music", wordSynced: false, lines: [], plainText: text }
-    : null;
 }
 
 /* ------------------------------- Megalobiz ------------------------------- */
@@ -1812,45 +1755,6 @@ async function fetchMusixmatch(q: LyricQuery): Promise<ProviderResult | null> {
 /* --------------------------------- Genius -------------------------------- */
 
 /**
- * Plain-text lyrics scraped from Genius — no timings, but a catalogue so
- * large it is the last resort that almost always answers.
- */
-async function geniusExtractLyrics(html: string): Promise<string | null> {
-  const { JSDOM } = await import("jsdom");
-  const dom = new JSDOM(html);
-  try {
-    const doc = dom.window.document;
-    let containers = [...doc.querySelectorAll('div[data-lyrics-container="true"]')];
-    if (!containers.length) containers = [...doc.querySelectorAll("div.lyrics")];
-    if (!containers.length) return null;
-    const parts: string[] = [];
-    for (const container of containers) {
-      container
-        .querySelectorAll(
-          '[data-exclude-from-selection="true"], .LyricsHeader__Container, .SongBioPreview__Container, .InreadAd__Container, button, script, style'
-        )
-        .forEach((node) => node.remove());
-      container.querySelectorAll("br").forEach((br) => br.replaceWith(doc.createTextNode("\n")));
-      container.querySelectorAll("p").forEach((p) => p.before("\n"));
-      const text = container.textContent ?? "";
-      if (text.trim()) parts.push(text);
-    }
-    const cleaned = parts
-      .join("\n")
-      .replace(/\u00A0/g, " ")
-      .replace(/\u200B/g, " ")
-      .replace(/\uFEFF/g, " ")
-      .replace(/\d*You might also like/gi, "")
-      .trim()
-      .replace(/\d*Embed\s*$/i, "")
-      .trim();
-    return cleaned || null;
-  } finally {
-    dom.window.close();
-  }
-}
-
-/**
  * The song's Genius page; see geniusFindWith. Lyrics and song info share it.
  */
 export function geniusFindSong(songTitle: string, songArtist: string): Promise<{ id: number; url: string } | null | undefined> {
@@ -1936,31 +1840,20 @@ async function settledWithin(
 
 /**
  * Default priority order — BitChord mobile's: the word-synced sources lead
- * (BiniLyrics, BetterLyrics, Portato, PaxSenix, LyricsPlus, SimpMusic),
- * then Unison and the playing video's own captions/lyrics tab, then the
- * line-synced workhorses (Megalobiz, KuGou, LRCLIB, Musixmatch), with
+ * (BiniLyrics, BetterLyrics, Portato, PaxSenix, LyricsPlus), then Unison, then
+ * the line-synced workhorses (Megalobiz, KuGou, LRCLIB, Musixmatch), with
  * Genius's plain text last. Every provider is asked at once; answers are
  * taken in priority order. The sweep is deadline-bounded (settledWithin) so
  * the lyrics land within ~1.5s of the track change even when a provider
  * chain crawls.
  */
-export interface FetchLyricsHelpers {
-  /** Plain lyrics from YT Music's own Lyrics tab — ranked source and final fallback. */
-  ytMusicPlain?: (videoId: string) => Promise<string | null>;
-  /** Timed captions for the exact playing video, via the YouTube session. */
-  ytTranscript?: (videoId: string) => Promise<SyncedLyricLine[] | null>;
-}
-
 const PROVIDER_NAMES = [
   "BiniLyrics",
   "BetterLyrics",
   "Portato",
   "PaxSenix",
   "LyricsPlus",
-  "SimpMusic",
   "Unison",
-  "YouTube Captions",
-  "YouTube Music",
   "Megalobiz",
   "KuGou",
   "LRCLIB",
@@ -1970,8 +1863,7 @@ const PROVIDER_NAMES = [
 
 export async function fetchLyrics(
   q: LyricQuery,
-  opts: { prioritizeWordSync: boolean },
-  helpers: FetchLyricsHelpers
+  opts: { prioritizeWordSync: boolean }
 ): Promise<FetchedLyrics | null> {
   // Which recording is this? One small ISRC search, run alongside the sweep:
   // BiniLyrics consumes its document URL, and the ISRC it reports is kept
@@ -1985,10 +1877,7 @@ export async function fetchLyrics(
     fetchPortato(q),
     fetchPaxSenix(q),
     fetchLyricsPlus(q, cachedIsrc),
-    fetchSimpMusic(q),
     fetchUnison(q),
-    fetchYouTubeTranscript(q, helpers.ytTranscript),
-    fetchYouTubeMusic(q, helpers.ytMusicPlain),
     fetchMegalobiz(q),
     fetchKuGou(q),
     fetchLrclib(q),
@@ -2056,8 +1945,5 @@ export async function fetchLyrics(
     }
     return { source: pick.source, wordSynced: pick.wordSynced, synced: pick.lines, plain: null };
   }
-
-  const plain = (await helpers.ytMusicPlain?.(q.id)) ?? null;
-  if (plain) return { source: "YouTube Music", wordSynced: false, synced: null, plain };
   return null;
 }

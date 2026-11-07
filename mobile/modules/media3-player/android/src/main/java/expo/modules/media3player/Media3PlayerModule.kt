@@ -192,7 +192,7 @@ class Media3PlayerModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("Media3Player")
 
-    Events("onState", "onError", "onNetwork", "onOutput", "onSocket", "onZoneTick", "onZoneControl", "onLocalScan")
+    Events("onState", "onError", "onNetwork", "onOutput", "onSocket", "onZoneTick", "onZoneControl", "onLocalScan", "onAppUpdate")
 
     OnActivityResult { _, payload ->
       if (payload.requestCode == PICK_IMAGE) {
@@ -364,9 +364,9 @@ class Media3PlayerModule : Module() {
       }
     }
 
-    AsyncFunction("socketOpen") { host: String, port: Int, promise: Promise ->
+    AsyncFunction("socketOpen") { host: String, port: Int, asThisApp: Boolean, promise: Promise ->
       thread(isDaemon = true) {
-        runCatching { sockets?.connect(host, port) ?: error("The app is closing") }
+        runCatching { sockets?.connect(host, port, asThisApp) ?: error("The app is closing") }
           .onSuccess { promise.resolve(it) }
           .onFailure { promise.reject("ERR_SOCKET", it.message ?: "The device doesn't answer", it) }
       }
@@ -378,6 +378,18 @@ class Media3PlayerModule : Module() {
 
     AsyncFunction("socketClose") { id: Int ->
       sockets?.close(id)
+    }
+
+    AsyncFunction("socketPeerKey") { id: Int ->
+      sockets?.peerKey(id)
+    }
+
+    AsyncFunction("tvOwnKey") { promise: Promise ->
+      thread(isDaemon = true) {
+        runCatching { TvIdentity.ownKey() }
+          .onSuccess { promise.resolve(it) }
+          .onFailure { promise.reject("ERR_TV_KEY", it.message ?: "No key for the TV", it) }
+      }
     }
 
     /** While devices on the network play: the once a second, and with `keepAwake` the notification that keeps the app running. */
@@ -410,6 +422,35 @@ class Media3PlayerModule : Module() {
     AsyncFunction("haptic") { kind: String ->
       Haptics.play(context, kind)
     }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("appUpdateFetch") { url: String, fileName: String, sha256: String, size: Double ->
+      AppUpdate.fetch(
+        context,
+        url,
+        fileName,
+        sha256,
+        size.toLong(),
+        progress = { sendEvent("onAppUpdate", mapOf("percent" to it)) },
+        done = { sendEvent("onAppUpdate", mapOf("file" to it)) },
+        failed = { sendEvent("onAppUpdate", mapOf("problem" to it)) }
+      )
+    }
+
+    AsyncFunction("appUpdateInstall") { file: String ->
+      AppUpdate.install(context, file)
+    }
+
+    AsyncFunction("appUpdateAllowed") {
+      AppUpdate.allowed(context)
+    }
+
+    AsyncFunction("appUpdateAskToAllow") {
+      AppUpdate.askToAllow(context)
+    }
+
+    AsyncFunction("appUpdateClear") {
+      AppUpdate.clear(context)
+    }
 
     AsyncFunction("downloadStart") { url: String, headers: Map<String, String>, fileName: String, wifiOnly: Boolean ->
       SongDownloads.start(context, url, headers, fileName, wifiOnly).toDouble()

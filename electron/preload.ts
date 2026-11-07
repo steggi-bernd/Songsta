@@ -1,7 +1,8 @@
 /** Preload — exposes a minimal, typed API to the renderer via contextBridge. */
+import type { UpdateState } from "../src/lib/newVersion";
 import type { HomeSyncInfo } from "./home-sync";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import type { DownloadProgress, Track } from "../src/types";
+import type { Track } from "../src/types";
 import type { DiscordStatus } from "./discord";
 import type { JellyfinStatus, JellyfinTrack, JellyfinUser } from "./jellyfin";
 import type { SubsonicTrack } from "./subsonic";
@@ -41,33 +42,14 @@ const api = {
     node: process.versions.node ?? "",
   },
 
-  // Music (main process runs youtubei.js)
-  search: (query: string, light = false) => ipcRenderer.invoke("music:search", query, light),
-  searchPage: (query: string, filter: string) => ipcRenderer.invoke("music:searchPage", query, filter),
-  searchMore: (token: string, filter: string) => ipcRenderer.invoke("music:searchMore", token, filter),
-  suggestions: (query: string) => ipcRenderer.invoke("music:suggestions", query),
-  getAlbum: (id: string) => ipcRenderer.invoke("music:album", id),
-  getArtist: (id: string) => ipcRenderer.invoke("music:artist", id),
-  getPlaylist: (id: string) => ipcRenderer.invoke("music:playlist", id),
-  getPlaylistPage: (id: string) => ipcRenderer.invoke("music:playlistPage", id),
-  getHome: () => ipcRenderer.invoke("music:home"),
-/** YTM Charts for the device market (regional popularity — cold-start feed). */
-  getCharts: () => ipcRenderer.invoke("music:charts"),
-  /** Per-market moods & genres from the provider's Explore page. */
-  getMoods: () => ipcRenderer.invoke("music:moods"),
-  /** The resolved device market + the signal it came from (diagnostics). */
-  marketInfo: () => ipcRenderer.invoke("market:current"),
   getLyrics: (track: { id: string; title: string; artist: string; album?: string; duration?: number }) =>
     ipcRenderer.invoke("music:lyrics", track),
-  enrichDurations: (ids: string[]) => ipcRenderer.invoke("music:enrich", ids),
   playbackEvent: (event: { type: string; track?: unknown; positionSec: number; playedSec: number; deltaMs: number }) =>
     ipcRenderer.send("playback:event", event),
   statsSummary: (period: string) => ipcRenderer.invoke("stats:summary", period),
   /** all-time plays + last played per track id */
   statsPlayCounts: () =>
     ipcRenderer.invoke("stats:playcounts") as Promise<Record<string, { plays: number; lastAt: number }>>,
-  getStreamUrl: (id: string, forceRotate = false, quality?: string) =>
-    ipcRenderer.invoke("music:stream", id, forceRotate, quality),
   localLibrary: () => ipcRenderer.invoke("library:get"),
   scanLibrary: (filterNonMusic = true) => ipcRenderer.invoke("library:scan", filterNonMusic),
   /** Folder watching on/off (new, changed and deleted files appear without a rescan). */
@@ -120,8 +102,6 @@ const api = {
 
   // Open metadata (MusicBrainz · Cover Art Archive · iTunes · Wikidata/Wikipedia)
   metaArtist: (name: string) => ipcRenderer.invoke("meta:artist", name),
-  metaRecording: (title: string, artist: string, durationSec = 0) =>
-    ipcRenderer.invoke("meta:recording", title, artist, durationSec),
   /** The listening history, kept on this computer (electron/listens.ts): newest first, a page at a time; or all of it as CSV */
   /** songs by a line of their lyrics, from the lyrics already on this computer */
   searchLyrics: (query: string) => ipcRenderer.invoke("lyrics:search", query) as Promise<LyricMatch[]>,
@@ -261,32 +241,6 @@ const api = {
   backupExport: () => ipcRenderer.invoke("backup:export"),
   backupImport: () => ipcRenderer.invoke("backup:import"),
 
-  // Accounts (Supabase) + cloud backup
-  authGetSession: () => ipcRenderer.invoke("auth:getSession"),
-  authSignUp: (username: string, password: string) => ipcRenderer.invoke("auth:signUp", username, password),
-  authSignIn: (username: string, password: string) => ipcRenderer.invoke("auth:signIn", username, password),
-  authSignInGoogle: () => ipcRenderer.invoke("auth:signInGoogle"),
-  authContinueGuest: () => ipcRenderer.invoke("auth:continueGuest"),
-  authClearGuestProfile: () => ipcRenderer.invoke("auth:clearGuestProfile"),
-  authUsernameAvailable: (username: string) => ipcRenderer.invoke("auth:usernameAvailable", username),
-  authSetUsername: (username: string) => ipcRenderer.invoke("auth:setUsername", username),
-  authSkipUsername: () => ipcRenderer.invoke("auth:skipUsername"),
-  authSignOut: () => ipcRenderer.invoke("auth:signOut"),
-  onAuthChanged: (cb: (info: { mode: string | null; userId: string | null; username: string | null; freshInstall?: boolean }) => void): (() => void) => {
-    const listener = (_e: unknown, info: { mode: string | null; userId: string | null; username: string | null; freshInstall?: boolean }): void => cb(info);
-    ipcRenderer.on("auth:changed", listener as never);
-    return () => ipcRenderer.removeListener("auth:changed", listener as never);
-  },
-  syncStatus: () => ipcRenderer.invoke("sync:status"),
-  syncNow: () => ipcRenderer.invoke("sync:now"),
-  syncBackupNow: () => ipcRenderer.invoke("sync:backupNow"),
-  syncRestoreNow: () => ipcRenderer.invoke("sync:restoreNow"),
-  onSyncRestored: (cb: (info: { stores: string[]; seq: number }) => void): (() => void) => {
-    const listener = (_e: unknown, info: { stores: string[]; seq: number }): void => cb(info);
-    ipcRenderer.on("sync:restored", listener as never);
-    return () => ipcRenderer.removeListener("sync:restored", listener as never);
-  },
-
   // macOS application menu: commands flow menu → renderer, playback state
   // flows renderer → menu (checkmarks). No-ops on other platforms.
   onMenuCommand: (cb: (command: string) => void): (() => void) => {
@@ -297,8 +251,18 @@ const api = {
   menuPushState: (state: { playing: boolean; shuffle: boolean; repeat: "off" | "all" | "one" }) =>
     ipcRenderer.send("menu:push-state", state),
 
+  /** The newest release's version number, asked of GitHub (lib/newVersion.ts); null without an answer. */
+  latestVersion: () => ipcRenderer.invoke("app:latestVersion") as Promise<string | null>,
+  updateState: () => ipcRenderer.invoke("update:state") as Promise<UpdateState>,
+  startUpdate: () => ipcRenderer.invoke("update:start") as Promise<void>,
+  installUpdate: () => ipcRenderer.invoke("update:install") as Promise<void>,
+  onUpdateState: (callback: (state: UpdateState) => void) => {
+    const listener = (_e: unknown, state: UpdateState): void => callback(state);
+    ipcRenderer.on("update:state", listener as never);
+    return () => ipcRenderer.removeListener("update:state", listener as never);
+  },
+
   // Filesystem helpers
-  defaultDownloadDir: () => ipcRenderer.invoke("app:defaultDownloadDir"),
   pickFolder: () => ipcRenderer.invoke("app:pickFolder"),
   /** Keeps a picture chosen for an album; resolves to its localart:// address. */
   saveArtwork: (bytes: Uint8Array) => ipcRenderer.invoke("art:save", bytes) as Promise<string | null>,
@@ -315,7 +279,21 @@ const api = {
   castControl: (action: "play" | "pause" | "seek" | "volume" | "mute", value = 0, session?: string, device?: string) =>
     ipcRenderer.invoke("cast:control", action, value, session, device) as Promise<void>,
   castJoin: (session: string, device: string) => ipcRenderer.invoke("cast:join", session, device) as Promise<void>,
+  /** how far ahead each device plays in a group, in ms, set by hand */
+  castPlayAhead: (map: Record<string, number>) => ipcRenderer.invoke("cast:playAhead", map) as Promise<void>,
   castLeave: (session: string, device: string) => ipcRenderer.invoke("cast:leave", session, device) as Promise<boolean>,
+  castAgain: () => ipcRenderer.invoke("cast:again") as Promise<void>,
+  devicePower: (id: string) => ipcRenderer.invoke("device:power", id) as Promise<{ on: boolean; input: string } | null>,
+  deviceSwitchOff: (id: string) => ipcRenderer.invoke("device:switchOff", id) as Promise<boolean>,
+  deviceCommand: (id: string, word: string) => ipcRenderer.invoke("device:command", id, word) as Promise<boolean>,
+  tvPairStart: (id: string) => ipcRenderer.invoke("tv:pairStart", id) as Promise<void>,
+  tvPairFinish: (code: string) => ipcRenderer.invoke("tv:pairFinish", code) as Promise<"ok" | "mistyped" | "refused" | "failed">,
+  tvPairCancel: () => ipcRenderer.invoke("tv:pairCancel") as Promise<void>,
+  tvPower: (id: string) => ipcRenderer.invoke("tv:power", id) as Promise<{ on: boolean; input: string; tv?: boolean; busy?: boolean } | null>,
+  tvOff: (id: string) => ipcRenderer.invoke("tv:off", id) as Promise<boolean>,
+  firewallMatters: () => ipcRenderer.invoke("firewall:matters") as Promise<boolean>,
+  firewallHasRule: () => ipcRenderer.invoke("firewall:hasRule") as Promise<boolean>,
+  firewallAllow: () => ipcRenderer.invoke("firewall:allow") as Promise<boolean>,
   castStop: (session?: string) => ipcRenderer.invoke("cast:stop", session) as Promise<void>,
   onCastStatus: (listener: (s: CastStatus) => void): (() => void) => {
     const handler = (_e: Electron.IpcRendererEvent, s: CastStatus): void => listener(s);
@@ -340,18 +318,13 @@ const api = {
   },
 
   // Downloads
-  startDownload: (track: Track, dir?: string, quality?: string, exportCompat?: boolean) => ipcRenderer.invoke("download:start", track, dir, quality, exportCompat),
+  startDownload: (track: Track, dir?: string) => ipcRenderer.invoke("download:start", track, dir),
   cancelDownload: (id: string) => ipcRenderer.invoke("download:cancel", id),
   downloadQueue: () => ipcRenderer.invoke("download:queue"),
   onDownloadEvent: (cb: (e: { type: string; id: string; downloaded?: number; total?: number; path?: string; reason?: string }) => void): (() => void) => {
     const listener = (_e: unknown, ev: { type: string; id: string }): void => cb(ev);
     ipcRenderer.on("download:event", listener as never);
     return () => ipcRenderer.removeListener("download:event", listener as never);
-  },
-  onDownloadProgress: (cb: (p: DownloadProgress) => void): (() => void) => {
-    const listener = (_e: unknown, p: DownloadProgress): void => cb(p);
-    ipcRenderer.on("download:progress", listener as never);
-    return () => ipcRenderer.removeListener("download:progress", listener as never);
   },
 };
 

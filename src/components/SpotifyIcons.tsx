@@ -166,21 +166,6 @@ export function SpPlus({ className }: IconProps) {
   );
 }
 
-/* Share — tray with an upward arrow (Spotify's miniplayer share glyph style). */
-export function SpShare({ className = "w-4 h-4" }: IconProps) {
-  return (
-    <svg viewBox="0 0 16 16" className={className} fill="none" aria-hidden>
-      <path
-        d="M8 1.5v8M5.25 3.75 8 1l2.75 2.75M2.5 6.5v6a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 /* Added state — filled circle with check cutout (Spotify check-circle). */
 export function SpCheck({ className }: IconProps) {
   return (

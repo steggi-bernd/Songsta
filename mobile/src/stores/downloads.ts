@@ -54,6 +54,9 @@ interface Saved {
   covers?: Record<string, string>;
   quality?: DownloadQuality;
   overMobile?: boolean;
+  lists?: Record<string, true>;
+  notWanted?: Record<string, true>;
+  listsNoted?: boolean;
 }
 
 interface DownloadsState {
@@ -69,10 +72,23 @@ interface DownloadsState {
   overMobile: boolean;
   /** what went wrong last, in words */
   lastProblem: string | null;
+  /** what the phone remembers has been read */
+  restored: boolean;
+  /** lists downloaded as a whole: they stay whole (stores/keptLists.ts) */
+  lists: Record<string, true>;
+  /** songs somebody took off by hand: no list brings them back */
+  notWanted: Record<string, true>;
+  /** lists that were whole before lists were remembered have been looked for */
+  listsNoted: boolean;
   restore(): Promise<void>;
-  add(tracks: Track[]): void;
-  remove(tracks: Track[]): void;
+  /** `byItself`: nobody asked for these songs just now, so what was taken off by hand stays off */
+  add(tracks: Track[], byItself?: boolean): void;
+  /** `byHand`: this one song, not a whole list */
+  remove(tracks: Track[], byHand?: boolean): void;
   removeAll(): void;
+  keepList(key: string): void;
+  dropList(key: string): void;
+  noteLists(keys: string[]): void;
   setQuality(quality: DownloadQuality): void;
   setOverMobile(on: boolean): void;
 }
@@ -85,10 +101,17 @@ export const useDownloads = create<DownloadsState>((set, get) => ({
   quality: "original",
   overMobile: false,
   lastProblem: null,
+  restored: false,
+  lists: {},
+  notWanted: {},
+  listsNoted: false,
 
   async restore() {
     const saved = await readJson<Saved>(FILE);
-    if (!saved) return;
+    if (!saved) {
+      set({ restored: true });
+      return;
+    }
     const kept = saved.kept ?? {};
     // Files cleared from outside are gone.
     const found = new Set(await Player.downloadExisting(Object.values(kept).map((k) => k.file)).catch(() => Object.values(kept).map((k) => k.file)));
@@ -98,36 +121,63 @@ export const useDownloads = create<DownloadsState>((set, get) => ({
       covers: saved.covers ?? {},
       quality: saved.quality ?? "original",
       overMobile: saved.overMobile ?? false,
+      lists: saved.lists ?? {},
+      notWanted: saved.notWanted ?? {},
+      listsNoted: saved.listsNoted ?? false,
+      restored: true,
     });
     followSoon();
   },
 
-  add(tracks) {
-    const { kept, loading } = get();
+  add(tracks, byItself = false) {
+    const { kept, loading, notWanted } = get();
     const next = { ...loading };
+    const wanted = { ...notWanted };
     for (const t of tracks) {
+      if (!byItself) delete wanted[t.id];
       // Already on the phone, in a folder.
       if (t.localPath) continue;
       if (kept[t.id] || (next[t.id] && !next[t.id].failed)) continue;
       next[t.id] = { job: null, fileName: "", compact: false, tries: 0, wantsWifi: false, failed: false };
     }
-    set({ loading: next });
+    set({ loading: next, notWanted: wanted });
     save();
     followSoon();
   },
 
-  remove(tracks) {
+  remove(tracks, byHand = true) {
     const kept = { ...get().kept };
     const loading = { ...get().loading };
+    const notWanted = { ...get().notWanted };
     for (const t of tracks) {
+      if (byHand) notWanted[t.id] = true;
       const job = loading[t.id]?.job;
       if (job != null) void Player.downloadCancel(job);
       delete loading[t.id];
       if (kept[t.id]) void Player.downloadDelete(kept[t.id].file);
       delete kept[t.id];
     }
-    set({ kept, loading });
+    set({ kept, loading, notWanted });
     dropUnusedCovers();
+    save();
+  },
+
+  keepList(key) {
+    set({ lists: { ...get().lists, [key]: true } });
+    save();
+  },
+
+  dropList(key) {
+    const lists = { ...get().lists };
+    delete lists[key];
+    set({ lists });
+    save();
+  },
+
+  noteLists(keys) {
+    const lists = { ...get().lists };
+    for (const key of keys) lists[key] = true;
+    set({ lists, listsNoted: true });
     save();
   },
 
@@ -135,7 +185,7 @@ export const useDownloads = create<DownloadsState>((set, get) => ({
     const { kept, loading } = get();
     for (const song of Object.values(loading)) if (song.job !== null) void Player.downloadCancel(song.job);
     for (const song of Object.values(kept)) void Player.downloadDelete(song.file);
-    set({ kept: {}, loading: {} });
+    set({ kept: {}, loading: {}, lists: {}, notWanted: {} });
     dropUnusedCovers();
     save();
   },
@@ -160,8 +210,8 @@ export const useDownloads = create<DownloadsState>((set, get) => ({
 }));
 
 function save(): void {
-  const { kept, loading, covers, quality, overMobile } = useDownloads.getState();
-  writeJson(FILE, { kept, loading, covers, quality, overMobile });
+  const { kept, loading, covers, quality, overMobile, lists, notWanted, listsNoted } = useDownloads.getState();
+  writeJson(FILE, { kept, loading, covers, quality, overMobile, lists, notWanted, listsNoted });
 }
 
 function patch(id: string, change: Partial<LoadingSong>): void {

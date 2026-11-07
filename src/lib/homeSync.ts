@@ -158,6 +158,8 @@ export function watchHomeSync(): () => void {
   let device = { id: "", name: "" };
   /** the device being followed and where it stood when last heard */
   let followed: (FollowedDevice & { playing: boolean; positionMs: number; heardAt: number; pausedSince: number }) | null = null;
+  /** started while the service was away: the others hear of it when it's back */
+  let claimWhenBack = false;
   let followTimer: number | null = null;
   /** the device this computer just handed its music to: followed at once */
   let followNext: string | null = null;
@@ -465,8 +467,20 @@ export function watchHomeSync(): () => void {
   }
 
   /** The other devices said something: who, if anybody, this computer shows. */
+  /** Started here: there's one stream, and it's here now. With the service away nobody hears of it, so it's said when it's back. */
+  function claimStream(): void {
+    claimWhenBack = useHomeSync.getState().status !== "connected";
+    for (const other of useHomeSync.getState().others.filter(isAround)) {
+      if (other.presence.playing && !other.presence.separate) void engine?.sendCommand(other.id, { action: "yield", to: device.id });
+    }
+  }
+
   function hearDevices(others: RemoteDevice[]): void {
     useHomeSync.setState({ others });
+    if (claimWhenBack && others.length) {
+      claimWhenBack = false;
+      if (usePlayer.getState().playing && !followed && !useHomeSync.getState().secondStream) claimStream();
+    }
     if (!followed && usePlayer.getState().playing) return;
     // A network player has this computer's music: it isn't idle.
     if (useCast.getState().active) return;
@@ -675,9 +689,7 @@ export function watchHomeSync(): () => void {
     // Started here, not following anybody: there's one stream, and it's here now.
     if (s.playing && !prev.playing && !followed && !useHomeSync.getState().secondStream) {
       followNext = null;
-      for (const other of useHomeSync.getState().others.filter(isAround)) {
-        if (other.presence.playing && !other.presence.separate) void engine?.sendCommand(other.id, { action: "yield", to: device.id });
-      }
+      claimStream();
     }
     if (s.volume !== prev.volume || s.muted !== prev.muted || s.shuffle !== prev.shuffle || s.repeat !== prev.repeat) engine?.presenceChanged();
     if (s.queue !== prev.queue) {

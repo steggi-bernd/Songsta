@@ -42,7 +42,6 @@ import { setQueueRanOut, usePlayer } from "../stores/player";
 import { placeOf } from "./queueSections";
 import { useSettings } from "../stores/settings";
 import { useUI } from "../stores/ui";
-import { isEarlyExit, useListening } from "../stores/listening";
 import type { Track } from "../types";
 import { requireBridge } from "./bridge";
 import { emitPlayEvent } from "./playEvents";
@@ -168,38 +167,11 @@ function isAbortError(err: unknown): boolean {
 /* ============================ loudness normalisation ============================ */
 
 /**
- * Spotify-parity loudness normalisation.
- *
- * Spotify adjusts every stream to roughly -14 LUFS before it reaches the OS
- * mixer; raw YouTube streams are mastered hotter (measured: -7.7 LUFS for
- * "Shape of You", -10.7 for "All of Me"), which is why ByTune blasted past
- * Spotify at identical volume settings. YouTube reports each track's true
- * integrated loudness in the player response — the stream proxy exposes it
- * at `?meta=1` — so we compute the exact per-track gain that lands the
- * stream on the same -14 LUFS target. The gain is attenuation-only (see
- * gainForLufs): loud masters scale down, quiet ones play untouched, and no
- * sample is ever pushed past full scale. Local library files are exempt —
- * they play at their original level.
+ * Each song's level: its ReplayGain where it has one (replayGainFor), its
+ * original level otherwise. track id → gain, insertion-ordered as an LRU.
  */
-const TARGET_LUFS = -14;
-/**
- * Gain assumed for a track whose loudness hasn't landed yet. Typical YouTube
- * masters sit around -9 LUFS, whose normalisation gain is ≈0.56; the
- * measurement usually arrives with the first audio chunk, so this only
- * shapes the very start of a stream.
- */
-const FALLBACK_GAIN = 0.56;
-
-/** track id → normalisation gain, insertion-ordered as an LRU. */
 const loudnessGains = new Map<string, number>();
 const GAINS_MAX = 600;
-
-/** Normalisation gain that moves a track measured at `lufs` to the target.
- * Attenuation-only: scaling a signal down is lossless, boosting would clip
- * peaks on masters that sit near full scale — quality comes first. */
-function gainForLufs(lufs: number): number {
-  return Math.min(1, Math.max(0.05, Math.pow(10, (TARGET_LUFS - lufs) / 20)));
-}
 
 function rememberGain(trackId: string, gain: number): void {
   loudnessGains.delete(trackId);
@@ -212,17 +184,15 @@ function rememberGain(trackId: string, gain: number): void {
 }
 
 function gainForTrack(trackId: string | null): number {
-  if (!trackId) return FALLBACK_GAIN * MASTER_TRIM;
-  return loudnessGains.get(trackId) ?? FALLBACK_GAIN * MASTER_TRIM;
+  return trackId ? loudnessGains.get(trackId) ?? 1 : 1;
 }
 
 /**
  * ReplayGain for library songs: tag values for local files, Jellyfin's own
  * loudness gain, Navidrome's OpenSubsonic values. Gains are referenced to
- * −18 LUFS; the target setting shifts them (−14 LUFS = +4 dB). Like the
- * stream normalisation it only ever attenuates: loud masters come down,
- * quieter ones stay as they are, so nothing can clip. Songs without gain
- * information keep their original level.
+ * −18 LUFS; the target setting shifts them (−14 LUFS = +4 dB). It only ever
+ * attenuates: loud masters come down, quieter ones stay as they are, so
+ * nothing can clip. Songs without gain information keep their original level.
  */
 function replayGainFor(track: Track): number {
   const { replayGainMode, replayGainTarget } = useSettings.getState();
@@ -232,54 +202,6 @@ function replayGainFor(track: Track): number {
   if (db === undefined || !Number.isFinite(db)) return 1;
   return Math.min(1, Math.pow(10, (db + replayGainTarget + 18) / 20));
 }
-
-/**
- * Fetch a stream's loudness metadata from the proxy and cache its gain.
- * Best-effort: on failure the track keeps the fallback gain.
- */
-async function fetchLoudness(proxyUrl: string, trackId: string): Promise<void> {
-  try {
-    const res = await fetch(`${proxyUrl}&meta=1`, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return;
-    const data = (await res.json()) as { lufs?: unknown };
-    const lufs = typeof data?.lufs === "number" && Number.isFinite(data.lufs) ? data.lufs : null;
-    if (lufs === null) return;
-    rememberGain(trackId, gainForLufs(lufs) * MASTER_TRIM);
-    // The track already playing (or being faded into) picks the gain up now.
-    const state = usePlayer.getState();
-    if (state.queue[state.index]?.id === trackId || fade?.toId === trackId || fade?.fromId === trackId) {
-      refreshVolumes();
-    }
-  } catch {
-    /* metadata is best-effort */
-  }
-}
-
-/**
- * Pre-warm the next queue track: its loudness must be known before a
- * crossfade starts, and the proxy-side resolution cache warms up too, so the
- * transition itself never waits on a getBasicInfo roundtrip.
- */
-function prefetchLoudness(track: Track | null): void {
-  if (!track || isLibraryTrack(track)) return;
-  // No loudnessGains shortcut: a replayed track knows its gain but its
-  // resolution has likely expired, and a warm `?meta=1` hit costs nothing.
-  void (async () => {
-    const url = await requireBridge().getStreamUrl(track.id, false, useSettings.getState().streamingQuality);
-    if (url) await fetchLoudness(url, track.id);
-  })().catch(() => undefined);
-}
-
-/**
- * Master trim — folded into every STREAM track's gain. 1.0 = neutral: streams
- * play at the standard -14 LUFS loudness, same as Spotify/YouTube Music.
- * Lower it (e.g. 0.7) if you want streams quieter than the standard, or
- * nudge it up if you want them hotter — above 1.0 a loud master can clip,
- * so treat anything >1.0 with care.
- * Local library files deliberately skip it — they play at their original
- * level (gain 1.0), untrimmed and unnormalised.
- */
-const MASTER_TRIM = 1.0;
 
 /**
  * The volume slider is perceptual: hearing is logarithmic, so a linear gain
@@ -723,25 +645,17 @@ async function beginFade(nextTrack: Track, fadeMs: number): Promise<void> {
   /** The arming this continuation belongs to is still the live one. */
   const stale = (): boolean => token !== transitionToken;
   try {
-    // Library tracks (local files, Jellyfin) resolve through their own route
-    // and play at their original level; streams carry a measured gain.
-    const library = isLibraryTrack(nextTrack);
     // A song found in several places fades in from the copy it plays from
     // (the local file before a server stream).
-    const source = library ? await resolveLibrarySource(nextTrack) : null;
-    const url = library
-      ? source?.url ?? null
-      : await requireBridge().getStreamUrl(nextTrack.id, false, useSettings.getState().streamingQuality);
-    if (!url) {
+    const source = isLibraryTrack(nextTrack) ? await resolveLibrarySource(nextTrack) : null;
+    if (!source) {
       armed = null;
       return;
     }
-    // The fade's standby element carries the incoming track's own loudness
-    // gain; the load-time prefetch usually already did this — cheap retry.
-    if (source) {
-      rememberGain(nextTrack.id, replayGainFor(source.version));
-      usePlayer.getState()._setSource(nextTrack.id, source.version);
-    } else void fetchLoudness(url, nextTrack.id);
+    const { url } = source;
+    // The fade's standby element carries the incoming track's own gain.
+    rememberGain(nextTrack.id, replayGainFor(source.version));
+    usePlayer.getState()._setSource(nextTrack.id, source.version);
     // The world may have moved on while we resolved.
     const cur = usePlayer.getState().queue[usePlayer.getState().index];
     if (stale() || !armed || armed.toId !== nextTrack.id || fade || cur?.id === nextTrack.id) {
@@ -767,7 +681,6 @@ async function beginFade(nextTrack: Track, fadeMs: number): Promise<void> {
     stand.src = url;
     stand.currentTime = 0;
     applySpeed();
-    const state = usePlayer.getState();
     armed = null;
     if (fadeMs <= GAPLESS_MS) {
       await untilRemaining(fadeMs, stale);
@@ -1093,14 +1006,7 @@ function flushAccum(type: "stop" | "pause"): void {
     emitPlayEvent(type, track, accum.lastPos, accum.playedMs / 1000, Math.round(accum.pendingMs));
     accum.pendingMs = 0;
   }
-  if (type === "stop") {
-    // Every flush("stop") is a track switch — the one moment a skip is
-    // knowable. "stop" is only ever sent here and at the crossfade swap.
-    if (track && isEarlyExit(accum.playedMs / 1000, track.duration)) {
-      useListening.getState().recordSkip(track);
-    }
-    accum = null;
-  }
+  if (type === "stop") accum = null;
 }
 
 function armSilenceTail(tailSec: number): void {
@@ -1137,15 +1043,12 @@ function requestSilenceAnalysis(track: Track): void {
   if (!s.skipSilence) return;
   if (silenceTrims.has(track.id) || silenceAnalysing.has(track.id)) return;
   if (!track.duration || track.duration < 10) return;
-  const isLocal = isLibraryTrack(track);
+  if (!isLibraryTrack(track)) return;
   silenceAnalysing.add(track.id);
   void (async () => {
     try {
-      const bridge = requireBridge();
-      // Library songs decode through the same proxy route (and copy) the element plays.
-      const url = isLocal
-        ? (await resolveLibrarySource(track))?.url ?? null
-        : await bridge.getStreamUrl(track.id, false, useSettings.getState().streamingQuality);
+      // Decoded through the same proxy route (and copy) the element plays.
+      const url = (await resolveLibrarySource(track))?.url ?? null;
       if (!url) return;
       const res = await fetch(url);
       if (!res.ok || !res.body) return;
@@ -1524,74 +1427,35 @@ async function loadTrack(track: Track | null, autoplay: boolean): Promise<void> 
     duration: track.duration || 0,
   });
   requestSilenceAnalysis(track);
-  await loadUrl(track, autoplay, false);
-  // Pre-warm the next track: its proxy-side stream resolution (so a skip
-  // never waits on a getBasicInfo + probe roundtrip) and its loudness (a
-  // crossfade needs the gain the moment it starts). After loadUrl, so the
-  // current track's resolution goes first.
-  const st = usePlayer.getState();
-  if (st.queue[st.index]?.id === track.id) prefetchLoudness(st.queue[st.index + 1] ?? null);
+  await loadUrl(track, autoplay);
 }
 
-async function loadUrl(track: Track, autoplay: boolean, forceRotate: boolean): Promise<void> {
+async function loadUrl(track: Track, autoplay: boolean): Promise<void> {
   if (!elements) return;
   const turn = ++loadTurn;
   loadingId = track.id;
   try {
-    if (isLibraryTrack(track)) {
-      // Local files stream through the main-process proxy (a file:// src is
-      // blocked from the http renderer origin). Always resolve fresh — the
-      // proxy port changes between launches, so cached URLs would go stale,
-      // and the IPC lookup is a local roundtrip. A song found in several
-      // places plays its local file first, a server stream when that's away.
-      const found = await resolveLibrarySource(track, failedVersions);
-      if (turn !== loadTurn) return; // another load took over while we were resolving
-      if (!found) throw await librarySourceError(track);
-      const { url: src, version } = found;
-      const now = usePlayer.getState().queue[usePlayer.getState().index];
-      if (now?.id !== track.id) return; // user moved on while we were resolving
-      const a = el();
-      usePlayer.getState()._setSource(track.id, version);
-      // Library songs are levelled by ReplayGain (when tagged and enabled);
-      // otherwise they play at their original level — no trim.
-      rememberGain(track.id, replayGainFor(version));
-      // Apply immediately: without this the element keeps the PREVIOUS
-      // track's gain (streams land their own via fetchLoudness, locals
-      // would otherwise never get a volume write).
-      refreshVolumes();
-      a.src = src;
-      loadedId = track.id;
-      loadingId = null;
-      if (pendingSeek > 0) {
-        try {
-          a.currentTime = pendingSeek;
-        } catch {
-          /* ignore */
-        }
-        pendingSeek = 0;
-      }
-      applySpeed();
-      updateMediaSession(track);
-      if (autoplay || usePlayer.getState().playing) {
-        await a.play();
-      } else {
-        usePlayer.setState({ buffering: false });
-      }
-      return;
-    }
-    const url = await requireBridge().getStreamUrl(track.id, forceRotate, useSettings.getState().streamingQuality);
+    // A song from before this was a local player: it has no place to play from.
+    if (!isLibraryTrack(track)) throw new LibrarySourceError("missing");
+    // Local files stream through the main-process proxy (a file:// src is
+    // blocked from the http renderer origin). Always resolve fresh — the
+    // proxy port changes between launches, so cached URLs would go stale,
+    // and the IPC lookup is a local roundtrip. A song found in several
+    // places plays its local file first, a server stream when that's away.
+    const found = await resolveLibrarySource(track, failedVersions);
     if (turn !== loadTurn) return; // another load took over while we were resolving
+    if (!found) throw await librarySourceError(track);
+    const { url: src, version } = found;
     const cur = usePlayer.getState().queue[usePlayer.getState().index];
     if (cur?.id !== track.id) return; // user moved on while we were resolving
-    // Loudness metadata races the element's own first request: both share the
-    // proxy's single in-flight resolution, so the measured gain lands with the
-    // first audio chunk while the fallback gain covers the moment before.
-    void fetchLoudness(url, track.id);
     const a = el();
-    a.src = url;
-    // Start at this track's own gain (cached or fallback) instead of the
-    // previous track's — fetchLoudness refines it once metadata lands.
+    usePlayer.getState()._setSource(track.id, version);
+    // Songs are levelled by ReplayGain (when tagged and enabled); otherwise
+    // they play at their original level.
+    rememberGain(track.id, replayGainFor(version));
+    // Apply immediately: without this the element keeps the PREVIOUS track's gain.
     refreshVolumes();
+    a.src = src;
     loadedId = track.id;
     loadingId = null;
     const trim = silenceTrims.get(track.id);
@@ -1678,7 +1542,7 @@ function handleFailure(track: Track, err?: unknown): void {
         failedVersions.add(playingFrom.id);
         // The failed source says nothing more; `playing` decides when the new one is there.
         loadedId = null;
-        void loadUrl(track, false, false);
+        void loadUrl(track, false);
         return;
       }
     }
@@ -1686,13 +1550,13 @@ function handleFailure(track: Track, err?: unknown): void {
   if (retryCount < 1 && reason !== "unreachable") {
     retryCount += 1;
     loadedId = null;
-    void loadUrl(track, false, true);
+    void loadUrl(track, false);
     return;
   }
   consecutiveFailures += 1;
-  // A local: track that resolves to nothing means ByTune lost the file's
-  // folder — a data reset, a fresh sign-in on this device, or the drive is
-  // away. The entries survive in synced playlists, and re-importing the
+  // A local: track that resolves to nothing means the file's folder is gone
+  // from the library — a data reset, or the drive is away. The entries
+  // survive in synced playlists, and re-importing the
   // folder relinks them (ids are hashes of the file's absolute path).
   const isLocal = !!track.localPath || track.id.startsWith("local:");
   const ext = (track.localPath?.split(".").pop() ?? "").toUpperCase();

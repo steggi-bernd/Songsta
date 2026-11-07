@@ -69,6 +69,7 @@ All three are on the [Releases page](https://github.com/steggi-bernd/Songsta/rel
 - **Local folders**, watched while the app runs: new, changed and deleted files show up without a rescan.
 - **Jellyfin** (user name and password, or an API key) and **Navidrome or any Subsonic server**. Streams pass through a local proxy, so plain-http servers on your network work too.
 - **Duplicates become one song.** A song you have as a local FLAC and on your server is listed once, with its plays added up. It plays from the local file and streams only when that file can't be reached.
+- **Offline copies of server songs.** *Download for offline* on a song, album or playlist fetches the original into a library folder. An album or playlist downloaded as a whole stays whole: what's added later, or didn't make it, comes by itself.
 - **Unreachable songs are greyed out** — an unplugged drive, a server that doesn't answer — and come back by themselves.
 - **Missing facts come from open databases**: covers and album names from MusicBrainz and the Cover Art Archive (iTunes Search as a fallback), artist bios and photos from Wikidata, Wikipedia and Wikimedia Commons. Your files are never rewritten.
 - Credits like "Artist A, Artist B" count as two artists, each with their own page.
@@ -176,7 +177,7 @@ The Android app plays the music on your Jellyfin server and in folders you pick 
 - **Swipes:** pull a song right in any list: let go quickly and it joins the queue, behind everything you asked for before it; hold it a moment and it branches off, with the rest of its list behind it. A small mark shows which song you chose, and pulling that song again takes the branch back. Pull a song left to mute it. In the queue a pull to the right or the small cross takes a song out, and in Your Library a pull to the right pins a playlist, album, mix or artist on top. Settings has two feels for this.
 - **Settings:** streaming quality, fades between songs, skip silence, playback speed, autoplay, volume leveling, a ten-band equalizer, lyrics, accent colour, reduced animation and more.
 - **Devices:** the speaker in the mini player or the player opens them, see [below](#your-devices-in-one-place).
-- **Downloads:** the arrow in the player, the ⋮ on a song, or the arrow on an album or playlist, with each song's progress on its row. The app fetches them, also with the screen off, as the file itself or as a 192 kbps MP3; over mobile data only if you allow it.
+- **Downloads:** the arrow in the player, the ⋮ on a song, or the arrow on an album or playlist, with each song's progress on its row. The app fetches them, also with the screen off, as the file itself or as a 192 kbps MP3; over mobile data only if you allow it. A playlist, album or Liked Songs downloaded as a whole stays whole: what's added later, or didn't make it, comes by itself, looked for when the app starts and after a pull-down too. A song you remove by hand stays removed.
 - **Without a connection** the app opens from what it remembers: the library, playlists, covers and the lyrics it has shown. Downloaded songs play, the rest is greyed out.
 - **Quality:** the player shows what really plays, gold for lossless and down to red for a small copy; tap it to choose. *Original* plays the file itself, *Compact* a 128 kbps copy, *Automatic* the best the connection carries, over mobile data up to AAC 256 kbps.
 
@@ -196,11 +197,15 @@ The speaker button next to the volume on the computer, and in the mini player or
 
 - **One press moves the music:** to this device and its outputs (Bluetooth speakers, headphones), to your other computers and phones with Songsta on them, or to anything on your network that plays by itself: receivers and network speakers over UPnP/DLNA, Chromecast, Google TV and Nest speakers over Cast. It goes on from the same place in the song.
 - **A receiver still asleep is waited for:** the music counts as moved once the device really plays. Until then its tile says it's waiting, and a device that forgets the song on its way out of standby gets it again, from the same place. After a minute without a start you're told, and the music is back where it was, paused.
+- **Off again afterwards:** a Denon or Marantz receiver goes off half a minute after the music has left it, unless you press *Keep on*, it plays again, or it has been switched to another input. Its menu switches it off right away; Settings can turn this off. Other brands offer no common way to do this.
+- **What hangs on a receiver:** a Google TV on a Denon's HDMI input only sounds on that input. Tell its menu where it's plugged in (*Plugged into a receiver*: first the receiver, already chosen when there's only one, then the input), and music to it brings the receiver along: switched on and over to that input. While it plays, the receiver doesn't count down to off, and when the music is gone from both, both go off. Music back on the receiver itself: it goes to its own player, and if it hasn't after a few seconds, it's told to. Set this once on each app.
+- **The TV goes off too:** pair a Google TV or Android TV once, with a code on its screen, in that same place. From then on it goes off half a minute after the music has left it, whether the music went elsewhere or back to the receiver alone. With a film or an app open on the TV it stays on, and so does the receiver it sounds through. If a receiver goes off along with the TV over HDMI, you're told what to change: on a Denon that's *Pow.Off Control*, set to *Video*.
+- **Local files and Windows' firewall:** a device fetches a local file from this computer, and the firewall can keep it out while the device waits with the song's name on its display. Songsta notices and offers a rule for your own network only; Windows asks for the OK. A song from a Jellyfin server on your network goes straight from the server to the device, past this computer.
 - **Several at once:** the plus lets another device play along, each with its own volume. Or hold a tile on the phone, right-click one on the computer, and choose as many as you like; on the phone this device can be one of them.
 - **Different music per device:** a device's menu lets you choose music for it, on the phone right there from your playlists, albums and songs, and a song's own menu has *Play on*. It gets its own queue and controls, while your own music goes on. On the phone it keeps running with the screen off, with a notification to steer it.
 - **Rename** anything. On the phone a device that doesn't announce itself can be added by its address.
 
-A group of separate devices isn't sample-exact: each one fetches and buffers by itself, which you can hear between two speakers in one room. A Cast group made in Google's own app is exact, and shows up here as one device. Amazon lets no app send music to an Echo or Fire TV directly, so those are listed with how to pair them over Bluetooth. A song that's only in a folder on the phone can't go to a device on the network, which fetches its songs from your server.
+A group of separate devices isn't sample-exact: each one fetches and buffers by itself. Songsta looks at where each one really stands, moves the late ones on, and remembers how much later each tends to start, so the next song starts closer. What's left you can still hear between two speakers in one room. If one still sounds behind the others, or ahead of them, its menu has *Fine-tune timing*: earlier or later in steps of 50 ms. Once one device is set, the group is kept closer together, with a short gap on a device now and then. A Cast group made in Google's own app is exact, and shows up here as one device. Amazon lets no app send music to an Echo or Fire TV directly, so those are listed with how to pair them over Bluetooth. A song that's only in a folder on the phone can't go to a device on the network, which fetches its songs from your server.
 
 ## Muting songs
 
@@ -213,8 +218,10 @@ Pull a song left on the phone, or choose *Mute song* in its menu on either app, 
 **Windows 10 / 11 (64-bit).** Get `Songsta-Setup.exe` from the [Releases page](https://github.com/steggi-bernd/Songsta/releases) or [build it yourself](#build-from-source). The installer isn't code-signed, so SmartScreen asks once: *More info → Run anyway*.
 
 - It installs as **Songsta** and replaces an older ByTune Local (the app's name until November 2026; `com.bytune.local` stays its app id for that). It never replaces an installed original ByTune or shares its data.
+- The installer is one page and one button; *Change…* takes it to another folder. At the first start Songsta asks where your music is: a folder, your own server, or both.
 - Your data lives in `%APPDATA%\Songsta`; an older `ByTune Local` folder moves there at the first start. **Settings → Your data** exports and imports backups.
 - For AIFF, ALAC, WMA, WavPack, APE and DSD, install FFmpeg (`winget install ffmpeg`); Settings shows whether it was found.
+- **It updates itself** from version 1.4 on: a new version is fetched in the background and goes in when you close Songsta, or at once with *Restart now*. **Settings → Updates** looks right away. *Automatic updates* turns the fetching off, and the short notes about a new version have a switch of their own.
 
 **Linux (64-bit).** The Releases page has two packages. The **.deb** is for Debian, Ubuntu, Linux Mint, Pop!_OS and their relatives; it puts Songsta in the app menu and installs FFmpeg along with it:
 
@@ -232,17 +239,19 @@ chmod +x Songsta-x86_64.AppImage
 - AppImages need FUSE 2: `libfuse2t64` on Ubuntu 24.04 and later (`libfuse2` before), `fuse-libs` on Fedora, `fuse2` on Arch. If one stops at start with a message about the "SUID sandbox helper", your system restricts the sandbox Chromium uses (Ubuntu does since 23.10) — take the .deb there, which sets up the AppArmor profile Ubuntu asks for.
 - Your data lives in `~/.config/Songsta`. Without the .deb, install FFmpeg with your package manager (`sudo apt install ffmpeg`, `sudo pacman -S ffmpeg`, …).
 - Server sign-ins are sealed by your desktop's keyring (GNOME Keyring, KWallet). Without one, Songsta keeps them unencrypted in its data folder.
+- Songsta tells you about a new version and links to it; install it the way you installed the first one.
 - Media keys and the desktop's media controls work through MPRIS. Under Wayland the mini player can't stay on top of other windows; Wayland doesn't let apps do that.
 
 The Linux packages are built by GitHub Actions for every release; this edition is developed and tested on Windows. The macOS build targets from upstream are still in the project, but untested.
 
 ### Android
 
-For Android 7 or newer on a 64-bit phone, which is nearly all of them. Get `Songsta.apk` from the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest) and open it on the phone; Android asks once whether your browser may install apps. At the first start, enter your Jellyfin server's address and your login. A new version installs over the old one the same way.
+For Android 7 or newer on a 64-bit phone, which is nearly all of them. Get `Songsta.apk` from the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest) and open it on the phone; Android asks once whether your browser may install apps. A new version installs over the old one the same way.
 
 - The app isn't on a store. Google Play Protect may ask whether you trust it: *More details → Install anyway*.
 - It's signed with the standard development key, not one of its own. That's fine for your own phone, but should a later version get a real key, it needs one fresh install.
-- At the first start, enter your server or choose *No server* and pick a folder; either can be added later in Settings. Navidrome is the desktop app's only.
+- From version 1.4 on, **Settings → This app** fetches a new version and hands it to Android, which asks before it installs anything. With *Automatic updates* on, it fetches by itself over Wi-Fi and asks when it's there.
+- The first start asks where your music is: a folder on the phone, your Jellyfin server, or both; either can be added later in Settings. Then it asks for what's of use, if Android hasn't got an answer yet: notifications, and whether Songsta may install its own updates. Navidrome is the desktop app's only.
 
 ### Sync service
 
@@ -294,7 +303,7 @@ Shortcuts never fire while you're typing in a text field.
 
 - **No account, no sign-in, no ads, no analytics.** Your library, likes, playlists and listening history stay on your own devices, and on your own server if you run the sync service.
 - **Passwords aren't stored:** Jellyfin keeps a session token (or your API key), Navidrome a salt/token pair — sealed by Windows (on Linux, your desktop's keyring) through Electron's safeStorage.
-- **What goes online:** your own servers; the devices on your own network, which fetch songs from your server or this computer themselves; the open-database lookups above, paced to MusicBrainz's one request per second and cached; lyrics providers for songs without lyrics of their own, on the phone LRCLIB; Genius for what's known about a song; the AutoEQ index when you search for headphones; and, only if you switch it on, the animated canvas behind the player (a community index and TIDAL's public search).
+- **What goes online:** your own servers; the devices on your own network, which fetch songs from your server or this computer themselves; the open-database lookups above, paced to MusicBrainz's one request per second and cached; lyrics providers for songs without lyrics of their own, on the phone LRCLIB; Genius for what's known about a song; the AutoEQ index when you search for headphones; GitHub once a day, for the newest version's number, and for the update itself when there is one (Settings can turn that off); and, only if you switch it on, the animated canvas behind the player (a community index and TIDAL's public search).
 - **Discord status** talks to the Discord app on your computer, not to the internet.
 
 ## Credits and license

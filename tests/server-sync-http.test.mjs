@@ -140,3 +140,50 @@ test("Navidrome: starred songs, star/unstar and scrobbles", async () => {
   assert.deepEqual([calls[2].query.u, calls[2].query.s, calls[2].query.t], ["steggi", "salt1", "tok1"]);
   await assert.rejects(subsonic.setStarred("bad id with spaces", true), /Not a song/);
 });
+
+test("a device gets a song straight from a server on its own network that needs no login; anything else goes through this computer", async (t) => {
+  const jellyfin = await load("jellyfin");
+  const id = "33333333333333333333333333333333";
+  const login = { serverName: "Home", userId: null, userName: null, token: "sealed:secret-token", deviceId: "dev-1" };
+  const asked = [];
+  let answer = 401;
+  t.mock.method(globalThis, "fetch", async (url, init) => {
+    asked.push({ url: String(url), method: init?.method });
+    return new Response(null, { status: answer });
+  });
+  const realNow = Date.now;
+  t.after(() => {
+    Date.now = realNow;
+  });
+
+  // Not a word to a server that's out of the device's reach.
+  for (const server of ["http://172.17.0.2:8096", "http://192.168.2.5:8096", "http://127.0.0.1:8096", "https://music.example.org"]) {
+    store.set("jellyfin", { ...login, server });
+    assert.equal(await jellyfin.deviceStreamUrl(id, "192.168.1.50"), null, server);
+  }
+  assert.deepEqual(asked, []);
+
+  store.set("jellyfin", { ...login, server: "http://192.168.1.5:8096" });
+  assert.equal(await jellyfin.deviceStreamUrl("not an id", "192.168.1.50"), null);
+  assert.deepEqual(asked, []);
+
+  // It wants a login: through this computer, and it isn't asked again for a while.
+  assert.equal(await jellyfin.deviceStreamUrl(id, "192.168.1.50"), null);
+  assert.equal(await jellyfin.deviceStreamUrl(id, "192.168.1.50"), null);
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].method, "HEAD");
+
+  // Later it gives songs out: the device gets the address, with nothing secret in it.
+  answer = 200;
+  Date.now = () => realNow() + 6 * 60_000;
+  const url = await jellyfin.deviceStreamUrl(id, "192.168.1.50");
+  assert.match(url, /^http:\/\/192\.168\.1\.5:8096\/Audio\/3{32}\/stream\?/);
+  assert.ok(!/secret-token|api_key|token/i.test(url), url);
+  assert.equal(asked.length, 2);
+  await jellyfin.deviceStreamUrl(id, "192.168.1.50");
+  assert.equal(asked.length, 2, "once it says yes, that stands");
+
+  // A server and a device on this computer, as in a test run.
+  store.set("jellyfin", { ...login, server: "http://127.0.0.1:8096" });
+  assert.match(await jellyfin.deviceStreamUrl(id, "127.0.0.1"), /^http:\/\/127\.0\.0\.1:8096\/Audio\//);
+});

@@ -1,13 +1,8 @@
 /**
- * Local stream proxy.
- *
- * The renderer's media requests to googlevideo get rejected (403) even when
- * the exact same URL streams fine from the main process — the Chromium
- * network stack reaches googlevideo differently (address family / TLS
- * fingerprint). So the main process does all googlevideo traffic: this tiny
- * HTTP server on 127.0.0.1 resolves a track id to a stream URL and pipes the
- * upstream response (including Range requests for seeking) back to the
- * renderer's <audio> element.
+ * Local stream proxy: how the renderer's <audio> element gets at the library.
+ * This tiny HTTP server on 127.0.0.1 answers with a local file or pipes a
+ * server's response back (with Range requests for seeking), so the server's
+ * token stays in the main process and the renderer needs no way to file://.
  */
 import fs from "fs";
 import http from "http";
@@ -17,10 +12,6 @@ import { fetchStream as fetchJellyfinStream } from "./jellyfin";
 import { fetchStream as fetchSubsonicStream } from "./subsonic";
 import { localStreamPath } from "./local-library";
 import { servedPathFor } from "./transcode";
-import { resolveStream } from "./music-service";
-
-const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 const PASSTHROUGH_HEADERS = ["content-type", "content-length", "content-range", "accept-ranges"];
 
@@ -66,15 +57,6 @@ export function startStreamProxy(): Promise<number> {
       resolve(proxyPort);
     });
   });
-}
-
-export function getStreamProxyPort(): number {
-  return proxyPort;
-}
-
-export function proxyUrlFor(trackId: string, forceRotate = false, maxKbps?: number): string {
-  const kbps = typeof maxKbps === "number" && maxKbps > 0 ? `&kbps=${Math.floor(maxKbps)}` : "";
-  return `http://127.0.0.1:${proxyPort}/?id=${encodeURIComponent(trackId)}${forceRotate ? "&rotate=1" : ""}${kbps}`;
 }
 
 /* Local library files travel through the proxy too: the renderer runs on an
@@ -177,20 +159,13 @@ function serveLocalFile(id: string, range: string | undefined, res: http.ServerR
   stream.pipe(res);
 }
 
-function fetchUpstream(streamUrl: string, range: string | undefined): Promise<Response> {
-  const headers: Record<string, string> = { "User-Agent": UA };
-  if (range) headers.Range = range;
-  return fetch(streamUrl, { headers });
-}
-
 async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   try {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
-    const trackId = url.searchParams.get("id");
     const localId = url.searchParams.get("lid");
     const jellyfinId = url.searchParams.get("jf");
     const subsonicId = url.searchParams.get("ss");
-    if (!trackId && !localId && !jellyfinId && !subsonicId) {
+    if (!localId && !jellyfinId && !subsonicId) {
       res.writeHead(400);
       res.end("missing id");
       return;
@@ -204,46 +179,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       await pipeUpstream(await fetchJellyfinStream(jellyfinId, range), `jf:${jellyfinId}`, req, res);
       return;
     }
-    if (subsonicId) {
-      await pipeUpstream(await fetchSubsonicStream(subsonicId, range), `ss:${subsonicId}`, req, res);
-      return;
-    }
-    const forceRotate = url.searchParams.get("rotate") === "1";
-    const kbpsRaw = Number(url.searchParams.get("kbps") ?? 0);
-    const maxKbps = Number.isFinite(kbpsRaw) && kbpsRaw > 0 ? Math.floor(kbpsRaw) : undefined;
-
-    // Metadata-only request: the renderer asks `?id=…&meta=1` to learn the
-    // track's loudness (for Spotify-style −14 LUFS normalisation) without
-    // pulling audio bytes. Shares the resolution cache with playback, so it
-    // costs one getBasicInfo at most.
-    if (url.searchParams.get("meta") === "1") {
-      try {
-        const meta = await resolveStream(trackId as string, false, maxKbps);
-        res.writeHead(200, {
-          "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "no-store",
-          "Content-Type": "application/json",
-        });
-        res.end(JSON.stringify({ lufs: meta.lufs }));
-      } catch (err) {
-        console.warn("[bytune] proxy meta error:", err instanceof Error ? err.message : err);
-        res.writeHead(502, { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" });
-        res.end(JSON.stringify({ lufs: null }));
-      }
-      return;
-    }
-
-    let stream = await resolveStream(trackId as string, forceRotate, maxKbps);
-    let upstream = await fetchUpstream(stream.url, range);
-
-    // Self-heal: a URL that just went bad gets one more resolution.
-    if (upstream.status === 403 && trackId) {
-      console.warn(`[bytune] proxy upstream 403 for ${trackId}, rotating client`);
-      stream = await resolveStream(trackId, true, maxKbps);
-      upstream = await fetchUpstream(stream.url, range);
-    }
-
-    await pipeUpstream(upstream, String(trackId), req, res);
+    await pipeUpstream(await fetchSubsonicStream(subsonicId as string, range), `ss:${subsonicId}`, req, res);
   } catch (err) {
     console.warn("[bytune] proxy error:", err instanceof Error ? err.message : err);
     try {

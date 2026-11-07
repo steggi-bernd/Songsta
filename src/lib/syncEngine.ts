@@ -169,6 +169,8 @@ const LIKES_AFTER_CHANGE_MS = 3000;
 const MUTED_AFTER_CHANGE_MS = 800;
 const PRESENCE_AFTER_CHANGE_MS = 300;
 /** A device that says nothing for longer than this and a bit counts as gone: see DEVICE_ONLINE_MS. */
+/** No word from the service for this long: nobody counts as around, and a device being followed can't be steered anyway. */
+const NOBODY_HEARD_AFTER_MS = 30_000;
 const PRESENCE_EVERY_MS = 40_000;
 const DEVICES_LOOK_MS = 45_000;
 const MERGE_ATTEMPTS = 4;
@@ -207,6 +209,10 @@ export function createSyncEngine(host: SyncHost) {
   let hasDevices = false;
   let lastPlaybackAt = 0;
   let wakeSleep: (() => void) | null = null;
+  let lastHeardAt = 0;
+  let nobodyTimer: ReturnType<typeof setTimeout> | null = null;
+  /** told that nobody is around: what the service says next is news, whatever its revision */
+  let toldNobody = false;
 
   const setStatus = (next: SyncStatus): void => {
     if (next === status) return;
@@ -392,6 +398,25 @@ export function createSyncEngine(host: SyncHost) {
     host.onCommand?.({ action: "takeOver" });
   }
 
+  /** With the service away nothing says who's still around: from a while on, nobody is. */
+  function nobodyHeardSoon(mine: number): void {
+    if (nobodyTimer || toldNobody) return;
+    nobodyTimer = setTimeout(() => {
+      nobodyTimer = null;
+      if (!running || mine !== session || status === "connected") return;
+      toldNobody = true;
+      known.devices = -1;
+      host.applyDevices?.([]);
+    }, Math.max(0, lastHeardAt + NOBODY_HEARD_AFTER_MS - Date.now()));
+  }
+
+  function heardAgain(): void {
+    lastHeardAt = Date.now();
+    toldNobody = false;
+    if (nobodyTimer) clearTimeout(nobodyTimer);
+    nobodyTimer = null;
+  }
+
   function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
       const timer = setTimeout(done, ms);
@@ -407,6 +432,7 @@ export function createSyncEngine(host: SyncHost) {
   async function run(mine: number): Promise<void> {
     let retry = FIRST_RETRY_MS;
     let synced = false;
+    lastHeardAt = Date.now();
     while (running && mine === session) {
       try {
         // Asked for at once the first time round; from then on it waits for news.
@@ -415,6 +441,7 @@ export function createSyncEngine(host: SyncHost) {
         if (!running || mine !== session) return;
         if (reply.status !== 200) throw refused(reply);
         setStatus("connected");
+        heardAgain();
         retry = FIRST_RETRY_MS;
         seq = reply.body.seq;
         const revs = reply.body.revs ?? {};
@@ -444,6 +471,7 @@ export function createSyncEngine(host: SyncHost) {
         const code = (err as { status?: number }).status;
         const rejected = code === 400 || code === 401 || code === 403;
         setStatus(rejected ? "rejected" : "unreachable");
+        nobodyHeardSoon(mine);
         await sleep(rejected ? REJECTED_RETRY_MS : retry);
         retry = Math.min(retry * 2, LAST_RETRY_MS);
       }

@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
+  DEVICE_LOCAL_SETTINGS,
+  SETTINGS_KEYS,
   envelope,
   searchesFromBackup,
   searchesToBackup,
@@ -16,9 +19,9 @@ import {
 test("settings and recent searches survive export → wipe → import", () => {
   // 1. A live store, in the envelope shape persist writes to disk.
   const settingsEnvelope = envelope({
-    downloadDir: "C:\\Music\\ByTune", // device-local: never travels
-    downloadQuality: "high",
-    streamingQuality: "low",
+    localMusicFolder: "C:\\Music\\ByTune", // device-local: never travels
+    accent: "teal",
+    skipEndsRepeatOne: false,
     crossfadeSeconds: 4,
     smartFade: true,
     liquidGlass: false,
@@ -30,9 +33,9 @@ test("settings and recent searches survive export → wipe → import", () => {
     settings: settingsToBackup(settingsEnvelope),
     recentSearches: searchesToBackup(recentsEnvelope),
   };
-  assert.equal(doc.settings.downloadDir, undefined);
-  assert.equal(doc.settings.streamingQuality, "low");
-  assert.equal(doc.settings.downloadQuality, "high");
+  assert.equal(doc.settings.localMusicFolder, undefined);
+  assert.equal(doc.settings.accent, "teal");
+  assert.equal(doc.settings.skipEndsRepeatOne, false);
   assert.deepEqual(doc.recentSearches, ["radiohead", "Aphex Twin", "burial"]);
 
   // 3. Wipe (reset app data): stores go back to empty defaults.
@@ -43,13 +46,13 @@ test("settings and recent searches survive export → wipe → import", () => {
   const restoredSettings = settingsFromBackup(doc.settings, wipedSettings);
   const restoredSearches = searchesFromBackup(doc.recentSearches);
 
-  assert.equal(restoredSettings.downloadQuality, "high");
-  assert.equal(restoredSettings.streamingQuality, "low");
+  assert.equal(restoredSettings.accent, "teal");
+  assert.equal(restoredSettings.skipEndsRepeatOne, false);
   assert.equal(restoredSettings.crossfadeSeconds, 4);
   assert.equal(restoredSettings.smartFade, true);
   assert.equal(restoredSettings.liquidGlass, false);
   // Device-local: absent from the backup AND from the wiped store → absent.
-  assert.equal("downloadDir" in restoredSettings, false);
+  assert.equal("localMusicFolder" in restoredSettings, false);
   assert.deepEqual(restoredSearches, ["radiohead", "Aphex Twin", "burial"]);
 
   // 5. The import result must be written as the envelope the store hydrates.
@@ -62,17 +65,32 @@ test("settings and recent searches survive export → wipe → import", () => {
 
 test("import keeps this machine's device-local settings", () => {
   const current = envelope({
-    downloadDir: "D:\\Current",
+    audioSinkId: "this-computers-speakers",
     localMusicFolder: "D:\\Lib",
-    streamingQuality: "high",
+    accent: "violet",
   });
   const restored = settingsFromBackup(
-    envelope({ streamingQuality: "low", downloadDir: "C:\\Old" }),
+    envelope({ accent: "teal", audioSinkId: "another-computers-speakers" }),
     current
   );
-  assert.equal(restored.downloadDir, "D:\\Current");
+  assert.equal(restored.audioSinkId, "this-computers-speakers");
   assert.equal(restored.localMusicFolder, "D:\\Lib");
-  assert.equal(restored.streamingQuality, "low");
+  assert.equal(restored.accent, "teal");
+});
+
+test("a backup knows every setting there is", () => {
+  // A setting missing here goes back to its default on every import, without a word.
+  const source = fs.readFileSync(new URL("../src/stores/settings.ts", import.meta.url), "utf8");
+  const body = source.slice(source.indexOf("interface SettingsState {"), source.indexOf("export const useSettings"));
+  const keys = [...body.matchAll(/^  (\w+)\??: /gm)].map((m) => m[1]);
+  assert.ok(keys.length > 30, "the settings are found");
+  assert.deepEqual(keys.filter((k) => !SETTINGS_KEYS.has(k)), []);
+  assert.deepEqual([...SETTINGS_KEYS].filter((k) => !keys.includes(k)), [], "and none that's gone");
+  // What a backup leaves out belongs to this one computer.
+  for (const k of DEVICE_LOCAL_SETTINGS) assert.ok(SETTINGS_KEYS.has(k), k);
+  const everything = Object.fromEntries(keys.map((k) => [k, 1]));
+  const out = settingsToBackup(envelope(everything));
+  assert.deepEqual(keys.filter((k) => !(k in out)).sort(), [...DEVICE_LOCAL_SETTINGS].sort());
 });
 
 test("legacy backup shapes still import", () => {
@@ -87,8 +105,8 @@ test("legacy backup shapes still import", () => {
 });
 
 test("unknown settings keys never enter the backup or the import", () => {
-  const exported = settingsToBackup(envelope({ evilKey: 1, streamingQuality: "high" }));
-  assert.deepEqual(exported, { streamingQuality: "high" });
+  const exported = settingsToBackup(envelope({ evilKey: 1, accent: "teal" }));
+  assert.deepEqual(exported, { accent: "teal" });
   const imported = settingsFromBackup({ evilKey: 2, autoplay: true }, envelope({}));
   assert.deepEqual(imported, { autoplay: true });
 });

@@ -8,7 +8,7 @@
  *                     as PNG)
  *   build/icon.icns — macOS size ladder 16-1024 incl. Retina @2x variants,
  *                     PNG-based (what iconutil itself emits)
- *   installerHeader.bmp / installerSidebar.bmp — NSIS assisted-wizard art
+ *   installer-logo.bmp — the logo on the installer's own dark page (build/installer.nsh)
  * Windows surfaces (Start menu previews, taskbar, UAC, the NSIS installer)
  * each request one specific size; the ico must carry that size natively or
  * the requester scales whatever closest entry it finds, which is what blurs
@@ -306,15 +306,11 @@ writeFileSync(join(buildDir, "icon.png"), encodePNG(512, 512, renderFit(512)));
 writeFileSync(join(buildDir, "icon.ico"), buildICO());
 writeFileSync(join(buildDir, "icon.icns"), buildICNS());
 
-// NSIS assisted installer: header strip bitmap (documented 150x57) and the
-// welcome/finish sidebar (164x314, also used by the uninstaller). Without
-// these electron-builder falls back to the header icon (a white logo ghosted
-// onto the white strip) and the stock NSIS sidebar art.
-writeFileSync(join(buildDir, "installerHeader.bmp"), panelBMP(150, 57, [255, 255, 255], 44));
-writeFileSync(join(buildDir, "installerSidebar.bmp"), panelBMP(164, 314, [30, 30, 30], 76));
+// On the installer's dark page, which scales it down to fit the screen.
+writeFileSync(join(buildDir, "installer-logo.bmp"), panelBMP(192, 192, [18, 18, 18], 192));
 
 console.log(
   "Wrote build/icon.png (512), build/icon.ico (sizes " +
     ICO_SIZES.join(", ") +
-    "), build/icon.icns (16-1024), installerHeader.bmp (150x57) and installerSidebar.bmp (164x314)"
+    "), build/icon.icns (16-1024) and installer-logo.bmp (192)"
 );

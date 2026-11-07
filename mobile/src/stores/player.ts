@@ -1053,6 +1053,8 @@ interface DeviceLink {
   look(): void;
   /** What this phone says about itself changed. */
   presence(): void;
+  /** Whether the service answers: without it the others hear nothing. */
+  connected?(): boolean;
 }
 
 /** A list this long goes by the queue document rather than in a command. */
@@ -1088,9 +1090,18 @@ function sendUpcoming(): void {
 }
 
 /** Started here, not following anybody: there's one stream, and it's here now. */
+/** started while the service was away: the others hear of it when it's back */
+let claimWhenBack = false;
+const playingHereNow = (): boolean => {
+  const { isPlaying, playWhenReady, remote } = usePlayer.getState();
+  return (isPlaying || playWhenReady) && !remote;
+};
+
 function claimStream(): void {
   followNext = null;
   if (usePlayer.getState().secondStream || !deviceLink) return;
+  // With the service away nobody hears of it: it's said when it's back.
+  claimWhenBack = deviceLink.connected?.() === false;
   for (const d of useDevices.getState().others.filter(isAround)) {
     if (d.presence.playing && !d.presence.separate) void deviceLink.send(d.id, { action: "yield", to: deviceLink.self });
   }
@@ -1252,6 +1263,10 @@ function follow(device: RemoteDevice): void {
 /** The other devices said something: who, if anybody, this phone shows. */
 export function hearDevices(others: RemoteDevice[]): void {
   useDevices.setState({ others });
+  if (claimWhenBack && others.length) {
+    claimWhenBack = false;
+    if (playingHereNow()) claimStream();
+  }
   // Music on a device of the network is this phone's own, playing or not.
   if (output !== Player) return;
   // Its own stream, by request: whatever the others do.
@@ -1610,7 +1625,8 @@ export function watchPlayer(): void {
     if (current && chosen.get(current.id)?.kind === "transcode") {
       transcodesWork = false;
       void output.replaceCurrent(toItem(current), positionMs);
-      void output.play();
+      // Paused it stays paused: a list only just taken over, or a phone in somebody's pocket.
+      if (usePlayer.getState().playWhenReady) void output.play();
       refreshStreams(false);
       showStream();
       return;

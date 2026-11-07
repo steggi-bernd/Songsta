@@ -197,8 +197,8 @@ export async function resetAppData(): Promise<void> {
       }
       // Do not report success for an incomplete reset (e.g. a locked file).
       await fs.promises.rm(path.join(dir, "stats"), { recursive: true, force: true });
-      // Pre-merge cloud snapshots hold account-owned payloads; a reset must
-      // not leave them recoverable on disk.
+      // Snapshots an older version kept there; a reset must not leave them
+      // recoverable on disk.
       await fs.promises.rm(path.join(dir, "backups"), { recursive: true, force: true });
       await fs.promises.rm(path.join(app.getPath("userData"), "local-art"), { recursive: true, force: true });
     } finally {

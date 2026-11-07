@@ -7,12 +7,15 @@
  * Smoothness is the point of owning this instead of an <input type=range>:
  *  - dragging is pointer-captured and paints straight onto the DOM — no React
  *    render per pointer move, and no snapping to an input's step grid
- *  - `live` lets the seek bar follow the audio clock every frame instead of
- *    the store's ~4 Hz position updates, so the fill glides instead of ticking
+ *  - `live` lets the seek bar follow the audio clock instead of the store's
+ *    ~4 Hz position updates, so the fill glides instead of ticking. It only
+ *    paints when the fill has moved by a part of a pixel that can show: over a
+ *    whole song that's a few times a second, and the app rests in between
  *  - keyboard steps stop propagation, so the global seek/volume shortcuts
  *    never act a second time on the same key
  */
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { nextLook, smallestMove } from "../lib/seekBarPace";
 
 interface SliderProps {
   /** 0..1 */
@@ -25,7 +28,7 @@ interface SliderProps {
   onCommit?: (v: number) => void;
   /** the drag position while dragging, null once released (time labels follow it) */
   onScrub?: (v: number | null) => void;
-  /** read every frame while set — the fill follows it (the audio clock) */
+  /** read while set, as often as the fill can visibly move — it follows this (the audio clock) */
   live?: () => number;
   label: string;
   valueText?: string;
@@ -73,12 +76,30 @@ export function Slider({
   useEffect(() => {
     if (!live) return;
     let raf = 0;
-    const tick = (): void => {
-      if (dragRef.current === null) paint(live());
-      raf = window.requestAnimationFrame(tick);
+    let timer = 0;
+    let shown = Number.NaN;
+    let shownAt = 0;
+    let wait = 0;
+    const look = (now: number): void => {
+      if (dragRef.current === null) {
+        const v = live();
+        const step = nextLook(Math.abs(v - shown), smallestMove(trackRef.current?.clientWidth ?? 0, window.devicePixelRatio), now - shownAt, wait);
+        wait = step.waitMs;
+        if (step.paint) {
+          paint(v);
+          shown = v;
+          shownAt = now;
+        }
+      }
+      timer = window.setTimeout(() => {
+        raf = window.requestAnimationFrame(look);
+      }, wait);
     };
-    raf = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(raf);
+    raf = window.requestAnimationFrame(look);
+    return () => {
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(raf);
+    };
   }, [live]);
 
   const at = (clientX: number): number => {

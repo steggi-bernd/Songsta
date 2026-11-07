@@ -34,11 +34,15 @@ import { useAvailability } from "../stores/availability";
 import { useCatalog } from "../stores/catalog";
 import { isMac } from "../lib/platform";
 import { useUI } from "../stores/ui";
-import { usePlayer } from "../stores/player";
 import { useRecents } from "../stores/recents";
-import type { SearchSuggestion } from "../types";
 import brandLogo from "../assets/brand/songsta-logo.svg";
 import { T } from "../lib/i18n";
+import { useNewerVersion } from "../lib/newVersionWatch";
+
+/** A completion under the search field. */
+interface SearchSuggestion {
+  text: string;
+}
 
 /** The brand mark alone — no wordmark beside it. The SVG is pure white and
     sits directly on the dark `chrome-glass` bar. Imported as an asset so Vite
@@ -94,6 +98,7 @@ function SourcesAndSettings() {
   const jellyfin = useAvailability((s) => s.jellyfin);
   const subsonic = useAvailability((s) => s.subsonic);
   const reach = (up: boolean | null): string => (up === false ? " — can't be reached" : up ? " — connected" : "");
+  const newer = useNewerVersion();
   return (
     <div className="app-no-drag ml-1 mr-2 flex items-center gap-0.5">
       <ClusterButton
@@ -121,7 +126,13 @@ function SourcesAndSettings() {
           onClick={() => navigate({ name: "subsonic" })}
         />
       )}
-      <ClusterButton icon={Settings} label={T("Settings")} active={view.name === "settings"} onClick={() => navigate({ name: "settings" })} />
+      <ClusterButton
+        icon={Settings}
+        label={newer ? T("Settings — Songsta {version} is out", { version: newer }) : T("Settings")}
+        active={view.name === "settings"}
+        dot={newer ? true : null}
+        onClick={() => navigate({ name: "settings" })}
+      />
     </div>
   );
 }
@@ -202,7 +213,6 @@ export function TopBar() {
   const recents = useRecents((s) => s.searches);
   const removeSearch = useRecents((s) => s.removeSearch);
   const clearSearches = useRecents((s) => s.clearSearches);
-  const track = usePlayer((s) => s.queue[s.index] ?? null);
 
   // Typing only feeds the dropdown — the page behind it stays put. The
   // results page is where songs get chosen; navigation happens on Enter or

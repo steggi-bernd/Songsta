@@ -61,18 +61,12 @@ async function loadIpcHandlers() {
       };
       if (name === "./downloads") return {
         addDownloadListener() {},
-        defaultDownloadDir: async () => path.join(root, "downloads"),
-        exportDownloadDir: () => path.join(root, "exports"),
         enqueueDownload: async (track) => { downloads.enqueued.push(track); return "q1"; },
         cancelDownload: () => "ok",
         queueSnapshot: () => [],
         resetDownloads: async () => {},
       };
-      if (name === "./sync") return {
-        noteLocalWrite() {}, resetSyncState() {}, bindClient() {}, bindRestoredNotifier() {},
-        flushPending() {}, flushMetaSync() {}, syncNow: async () => ({}), syncNowExclusive: async () => ({}),
-        backupNow: async () => ({}), restoreNow: async () => ({}), syncStatus: () => ({}),
-      };
+      if (name === "./app-update") return { configureAppUpdate() {}, installUpdate() {}, latestKnown: async () => null, startUpdate: async () => {}, updateState: () => ({}) };
       if (name === "./local-library") return {
         readLocalLibrary: () => ({ folders: [], tracks: [] }),
         scanLibrary: async () => ({}),
@@ -86,26 +80,16 @@ async function loadIpcHandlers() {
       if (name === "./stats") return {
         initStats() {}, flushSync() {}, resetStats() {},
         noteTrackStart() {}, recordListening() {}, summary: () => ({}),
-        onStoreWrite() {}, HISTORY_STORE: "listening-history",
+        HISTORY_STORE: "listening-history",
       };
       if (name === "./stream-proxy") return {
-        proxyUrlFor: async () => "http://127.0.0.1:1/x", proxyUrlForLocalTrack: () => null, startStreamProxy: async () => {},
-      };
-      if (name === "./supabase") return {
-        getClient: () => null, registerProtocol() {}, initInstallMarker() {}, initAuth: async () => {},
-        sessionInfo: () => ({ mode: null, userId: null, username: null, freshInstall: false }),
-        readProfile: () => null, handleOAuthCallback: async () => {}, signOut: async () => ({}),
-        signUp: async () => ({}), signIn: async () => ({}), signInGoogle: async () => ({}),
-        continueAsGuest: async () => ({}), clearGuestProfile: async () => {},
-        validateUsername: () => null, usernameAvailableToUser: async () => true,
-        setUsername: async () => ({}), skipUsernameClaim: async () => ({}),
+        proxyUrlForLocalTrack: () => null, startStreamProxy: async () => {},
       };
       if (name === "./backup") return { backupExport: async () => ({}), backupImport: async () => ({}) };
       if (name === "./data-transition") return {
         serializeData: (fn) => Promise.resolve().then(fn),
-        documentScope: () => "scope", readForDocument: () => null, writeForDocument: async () => true,
-        initializeOwner() {}, invalidateResetDocuments() {}, currentOwner: () => "guest",
-        changeOwner: async () => {}, drainData: async () => {},
+        documentScope: () => "scope", readForDocument: () => null, writeForDocument: async () => {},
+        invalidateResetDocuments() {}, drainData: async () => {},
       };
       if (name === "./persist") return {
         readData: () => null, writeData: async () => {}, writeDataSync() {},

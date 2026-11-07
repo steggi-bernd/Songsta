@@ -160,8 +160,7 @@ export async function libraryLyrics(q: LyricsRequest): Promise<FetchedLyrics | n
   const duration = typeof q.duration === "number" && Number.isFinite(q.duration) ? Math.round(q.duration) : 0;
   const found = await fetchProviderLyrics(
     { id: q.id, title: q.title || "", artist: q.artist || "", album: q.album, duration },
-    { prioritizeWordSync: true },
-    {} // no YouTube sources: local files and Jellyfin items have no video behind them
+    { prioritizeWordSync: true }
   ).catch(() => null);
   sessionMemo.set(q.id, found);
   if (sessionMemo.size > 500) sessionMemo.delete(sessionMemo.keys().next().value as string);

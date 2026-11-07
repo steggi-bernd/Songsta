@@ -59,16 +59,3 @@ test("createProgressBuffer: a 4Hz progress storm applies at most once per tick, 
   await new Promise((r) => setTimeout(r, 700));
   assert.equal(applied.length, count, "flush must cancel pending ticks");
 });
-
-test("evictOldest keeps session caches bounded, evicting oldest first", async () => {
-  globalThis.__stub = {};
-  const outfile = await bundle("../electron/music-service.ts", [
-    "electron", "jsdom", "undici", "youtubei.js", "bgutils-js", "@supabase/supabase-js",
-  ]);
-  const { evictOldest } = require(outfile);
-
-  const map = new Map();
-  for (let i = 0; i < 10; i++) { map.set(`k${i}`, i); evictOldest(map, 4); }
-  assert.equal(map.size, 4);
-  assert.deepEqual([...map.keys()], ["k6", "k7", "k8", "k9"], "oldest entries must be evicted first");
-});

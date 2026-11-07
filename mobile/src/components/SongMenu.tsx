@@ -201,7 +201,7 @@ export function SongDownloadButton({ track, size = 24, style }: { track: Track; 
 }
 
 /** All of a list on the phone: the arrow fills up as its songs arrive. */
-export function DownloadButton({ tracks, size = 24, style }: { tracks: Track[]; size?: number; style?: ViewStyle }) {
+export function DownloadButton({ tracks, list, size = 24, style }: { tracks: Track[]; /** which list this is: it then stays whole */ list?: string; size?: number; style?: ViewStyle }) {
   const counts = useDownloads((s) => {
     let kept = 0;
     let loading = 0;
@@ -213,7 +213,7 @@ export function DownloadButton({ tracks, size = 24, style }: { tracks: Track[]; 
   });
   const [kept, loading] = counts.split("/").map(Number);
   const all = tracks.length > 0 && kept === tracks.length;
-  const { remove } = useDownloads.getState();
+  const { remove, keepList, dropList } = useDownloads.getState();
   const label = all ? T("Remove download") : loading ? T("Downloading") : T("Download");
   return (
     <Pressable
@@ -223,9 +223,19 @@ export function DownloadButton({ tracks, size = 24, style }: { tracks: Track[]; 
         if (all || loading) {
           showDialog(all ? T("Remove these downloads?") : T("Stop these downloads?"), T("{count} from this phone. They stay on your server.", { count: plural(kept + loading, T("song"), T("songs")) }), [
             { text: T("Cancel"), style: "cancel" },
-            { text: T("Remove"), style: "destructive", onPress: () => remove(tracks) },
+            {
+              text: T("Remove"),
+              style: "destructive",
+              onPress: () => {
+                if (list) dropList(list);
+                remove(tracks, false);
+              },
+            },
           ]);
-        } else startDownload(tracks);
+        } else {
+          if (list) keepList(list);
+          startDownload(tracks);
+        }
       }}
       style={[styles.button, style]}
     >
