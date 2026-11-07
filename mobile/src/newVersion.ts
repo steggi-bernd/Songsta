@@ -17,7 +17,7 @@ import { useConnection } from "./stores/connection";
 import { showDialog, toast } from "./stores/popups";
 import { useSettings } from "./stores/settings";
 
-export const APP_VERSION = "1.3.0";
+export const APP_VERSION = "1.4.0";
 
 export function openReleasePage(): void {
   void Linking.openURL(RELEASE_PAGE).catch(() => undefined);

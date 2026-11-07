@@ -2,7 +2,7 @@
   "name": "songsta-desktop",
   "productName": "Songsta",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": "Songsta",
   "description": "Songsta — local music player with Jellyfin and open metadata",
   "desktopName": "songsta.desktop",
