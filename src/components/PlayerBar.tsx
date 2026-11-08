@@ -22,8 +22,8 @@
  *    radius, white @30%), white fill, 12px white handle on hover
  *  - right: lyrics / queue / cast / volume (speaker 32px + 67px track)
  *    / miniplayer / fullscreen — 16px icons white @70% → white on hover
- *  - while a network player has the music: a 24px "Playing on …" strip
- *    beneath the bar (Spotify's Connect treatment, in the primary colour)
+ *  - while another device has the music: a "Playing on …" strip above the
+ *    bar, tinted in the accent colour, with *Play here* to bring it back
  */
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Check, Heart, ListMusic, ListPlus, Loader2, Smartphone, Speaker } from "lucide-react";
@@ -58,8 +58,8 @@ import { useDrag } from "../lib/dnd";
 import { isLibraryTrack } from "../lib/libraryTracks";
 import { ArtistLinks } from "./ArtistLinks";
 import { describePlayback, formatLine } from "../lib/playbackFormat";
-import { useHomeSync } from "../lib/homeSync";
-import { useCast, useVolumeTarget } from "../lib/cast";
+import { otherDevices, useHomeSync } from "../lib/homeSync";
+import { stopCasting, useCast, useVolumeTarget } from "../lib/cast";
 import { useDeviceNames } from "../stores/deviceNames";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
@@ -376,6 +376,18 @@ export function PlayerBar() {
 
   return (
     <footer className="shrink-0 z-30 bg-black px-2">
+      {(castingTo || followed) && (
+        <div className="mt-1.5 flex h-8 items-center gap-2 rounded-lg bg-accent/[0.16] pl-3 pr-1 text-[12.5px] font-semibold text-ink-hi ring-1 ring-inset ring-accent/40">
+          {castingTo ? <Speaker className="h-3.5 w-3.5 shrink-0 text-accent" /> : <Smartphone className="h-3.5 w-3.5 shrink-0 text-accent" />}
+          <span className="min-w-0 flex-1 truncate">{castingTo ? T("Playing on {castingLabel}", { castingLabel }) : T("Playing on {name}", { name: followed?.name ?? "" })}</span>
+          <button
+            onClick={() => (followed && !castingTo ? otherDevices.takeHere() : void stopCasting())}
+            className="h-6 shrink-0 rounded-full bg-accent px-3 text-[12px] font-bold text-black transition hover:brightness-110 active:scale-95"
+          >
+            {T("Play here")}
+          </button>
+        </div>
+      )}
       <div
         className="h-[88px] grid grid-cols-[3fr_4fr_3fr] items-center"
         role="contentinfo"
@@ -500,16 +512,6 @@ export function PlayerBar() {
           </BarButton>
         </div>
       </div>
-      {followed && !castingTo && (
-        <div className="-mx-2 flex h-6 items-center justify-end gap-1.5 bg-primary px-4 text-[12px] font-semibold text-on-primary">
-          <Smartphone className="h-3.5 w-3.5" />{T("Playing on {name}", { name: followed.name })}
-        </div>
-      )}
-      {castingTo && (
-        <div className="-mx-2 flex h-6 items-center justify-end gap-1.5 bg-primary px-4 text-[12px] font-semibold text-on-primary">
-          <Speaker className="h-3.5 w-3.5" />{T("Playing on {castingLabel}", { castingLabel })}
-        </div>
-      )}
     </footer>
   );
 }

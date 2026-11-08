@@ -92,6 +92,9 @@ function Dialogs() {
 function Toast() {
   const insets = useSafeAreaInsets();
   const message = usePopups((s) => s.message);
+  const over = usePopups((s) => s.over > 0);
+  const bar = useRef(new Animated.Value(1, { useNativeDriver: true })).current;
+  const [counting, setCounting] = useState(false);
   const action = message?.action;
   const [shown, setShown] = useState<string | null>(null);
   const showing = useRef(new Animated.Value(0, { useNativeDriver: true })).current;
@@ -103,6 +106,13 @@ function Toast() {
     }
     setShown(message.text);
     Animated.timing(showing, { toValue: 1, duration: 170, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    // A real deadline: the bar runs out with it.
+    const left = message.endsAt ? Math.max(0, message.endsAt - Date.now()) : 0;
+    setCounting(left > 0);
+    if (left > 0) {
+      bar.setValue(1);
+      Animated.timing(bar, { toValue: 0, duration: left, easing: Easing.linear, useNativeDriver: true }).start();
+    }
     const timer = setTimeout(
       () => {
         Animated.timing(showing, { toValue: 0, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(({ finished }) => finished && setShown(null));
@@ -110,14 +120,15 @@ function Toast() {
       message.ms ?? (message.long ? TOAST_LONG_MS : TOAST_MS)
     );
     return () => clearTimeout(timer);
-  }, [message, showing]);
+  }, [message, showing, bar]);
   if (!shown) return null;
   return (
-    <View pointerEvents="box-none" style={[styles.toastPlace, { bottom: insets.bottom + TAB_BAR_HEIGHT + MINI_PLAYER_HEIGHT + 14 }]}>
+    <View pointerEvents="box-none" style={[styles.toastPlace, { bottom: over ? insets.bottom + 22 : insets.bottom + TAB_BAR_HEIGHT + MINI_PLAYER_HEIGHT + 14 }]}>
       <Animated.View accessibilityLiveRegion="polite" pointerEvents={action ? "auto" : "none"} style={[styles.toast, action && styles.toastWithAction, { opacity: showing, transform: [{ translateY: lift }] }]}>
         <Text numberOfLines={3} style={[styles.toastText, action && styles.toastTextWithAction]}>
           {shown}
         </Text>
+        {counting && <Animated.View pointerEvents="none" style={[styles.toastBar, { transform: [{ scaleX: bar }] }]} />}
         {!!action && (
           <Pressable
             onPress={() => {
@@ -159,7 +170,8 @@ const styles = StyleSheet.create({
   buttonTextMain: { color: colors.onAccent },
   buttonTextDanger: { color: "#FFFFFF" },
   toastPlace: { position: "absolute", left: 18, right: 18, alignItems: "center" },
-  toast: { backgroundColor: "#303034", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, elevation: 12 },
+  toast: { backgroundColor: "#303034", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 11, elevation: 12, overflow: "hidden" },
+  toastBar: { position: "absolute", left: 0, right: 0, bottom: 0, height: 3, backgroundColor: colors.accent, transformOrigin: "left" },
   toastWithAction: { flexDirection: "row", alignItems: "center", gap: 14 },
   toastText: { color: colors.ink, fontSize: 14, fontWeight: "600", textAlign: "center" },
   toastTextWithAction: { flexShrink: 1, textAlign: "left" },

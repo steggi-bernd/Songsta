@@ -3,6 +3,7 @@
  * for these looks like another app. Its pickers, share sheet and permission
  * questions stay Android's: those really are the system asking.
  */
+import { useEffect } from "react";
 import { create } from "zustand";
 import { T } from "../shared";
 
@@ -30,13 +31,16 @@ export interface ToastAction {
 interface PopupState {
   /** what's asked now, then what waits its turn */
   dialogs: DialogRequest[];
-  message: { text: string; long: boolean; at: number; action?: ToastAction; ms?: number } | null;
+  message: { text: string; long: boolean; at: number; action?: ToastAction; ms?: number; endsAt?: number } | null;
+  /** surfaces over the tab bar and the mini player that are showing (the player, Devices, lyrics, the queue): notes sit lower then */
+  over: number;
   closeDialog(): void;
 }
 
 export const usePopups = create<PopupState>((set) => ({
   dialogs: [],
   message: null,
+  over: 0,
   closeDialog: () => set((s) => ({ dialogs: s.dialogs.slice(1) })),
 }));
 
@@ -48,8 +52,18 @@ export function showDialog(title: string, message?: string, buttons?: DialogButt
 }
 
 /** A short word above the player, gone by itself. */
-export function toast(text: string, long = false, action?: ToastAction, ms?: number): void {
-  usePopups.setState({ message: { text, long, at: Date.now(), action, ms } });
+/** `endsAt`: a real deadline the note counts down to, with a bar (a device switching off). */
+export function toast(text: string, long = false, action?: ToastAction, ms?: number, endsAt?: number): void {
+  usePopups.setState({ message: { text, long, at: Date.now(), action, ms, endsAt } });
+}
+
+/** While a surface over the tab bar and the mini player shows, notes sit at the bottom of the screen. */
+export function useOverBottomBar(active = true): void {
+  useEffect(() => {
+    if (!active) return;
+    usePopups.setState((s) => ({ over: s.over + 1 }));
+    return () => usePopups.setState((s) => ({ over: Math.max(0, s.over - 1) }));
+  }, [active]);
 }
 
 /** That word is out of date before its time. */

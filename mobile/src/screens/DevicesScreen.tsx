@@ -7,6 +7,7 @@
  * is Android's own list: no app can connect those by itself.
  */
 import { useNavigation } from "@react-navigation/native";
+import { PullDownToClose } from "../components/PullDownToClose";
 import { Bluetooth, Cable, Check, ChevronDown, CircleStop, Crosshair, Headphones, Heart, Laptop, Link2, ListChecks, ListMusic, Minus, MoreHorizontal, Pause, Pencil, Play, Plus, Power, RefreshCw, Search, SkipBack, SkipForward, Smartphone, Speaker, Split, Timer, Trash2, Tv, Volume2, X, type LucideIcon } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -21,7 +22,7 @@ import { isAround, useDevices } from "../stores/devices";
 import { likedSongIds, useLibrary } from "../stores/library";
 import { endSecondStream, startSecondStream, usePlayer } from "../stores/player";
 import { playlistTracks, usePlaylists } from "../stores/playlists";
-import { showDialog, toast } from "../stores/popups";
+import { showDialog, toast, useOverBottomBar } from "../stores/popups";
 import { feel, useSettings } from "../stores/settings";
 import {
   addDeviceByAddress,
@@ -445,6 +446,7 @@ function TimingSheet({ device, onClose }: { device: FoundDevice | null; onClose:
 
 export function DevicesScreen() {
   const nav = useNavigation<any>();
+  useOverBottomBar();
   const insets = useSafeAreaInsets();
   const { width } = useSafeAreaFrame();
   const found = useZones((s) => s.found);
@@ -554,7 +556,7 @@ export function DevicesScreen() {
     }
     if (canSwitchOff(d.model) || pairedTvs.includes(d.id)) rows.push({ label: T("Switch off"), Icon: Power, run: () => void switchDeviceOff(d) });
     if (!canSwitchOff(d.model) && canPlay(d) && receivers.length) rows.push({ label: plugLine(d.id) ?? T("Plugged into a receiver"), Icon: Cable, run: () => setPlugging(d) });
-    if (looksLikeATv(d) && !pairedTvs.includes(d.id) && !receivers.length) rows.push({ label: T("Pair to switch it off"), Icon: Power, run: () => void pair(d) });
+    if (looksLikeATv(d) && !pairedTvs.includes(d.id)) rows.push({ label: T("Pair to switch it off"), Icon: Power, run: () => void pair(d) });
     rows.push(renameRow(d));
     if (d.byHand) rows.push({ label: T("Remove from this list"), Icon: Trash2, danger: true, run: () => forgetDevice(d.id) });
     setMenu({ title: deviceName(d, names), rows });
@@ -621,6 +623,7 @@ export function DevicesScreen() {
   };
 
   return (
+<PullDownToClose onClose={() => nav.goBack()}>
     <View style={[styles.screen, { paddingTop: insets.top + 4 }]}>
       <View style={styles.header}>
         <Pressable onPress={() => nav.goBack()} accessibilityLabel={T("Close")} hitSlop={8} style={styles.headerButton}>
@@ -834,6 +837,7 @@ export function DevicesScreen() {
         }}
       />
     </View>
+    </PullDownToClose>
   );
 }
 

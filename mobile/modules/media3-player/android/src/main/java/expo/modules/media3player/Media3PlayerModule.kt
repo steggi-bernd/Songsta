@@ -61,6 +61,7 @@ class Media3PlayerModule : Module() {
   private var lastNetworkState: Map<String, Boolean>? = null
   private var output: SoundOutput? = null
   private var sockets: LanSockets? = null
+  private var files: FileServer? = null
   private var pickingFolder: Promise? = null
   private var pickingImage: Promise? = null
 
@@ -192,6 +193,11 @@ class Media3PlayerModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("Media3Player")
 
+    // A page closed by pulling it down (PullDownView.kt).
+    View(PullDownView::class) {
+      Events("onClose")
+    }
+
     Events("onState", "onError", "onNetwork", "onOutput", "onSocket", "onZoneTick", "onZoneControl", "onLocalScan", "onAppUpdate")
 
     OnActivityResult { _, payload ->
@@ -294,6 +300,7 @@ class Media3PlayerModule : Module() {
       appContext.reactContext?.let { reactContext ->
         output = SoundOutput(reactContext) { now -> sendEvent("onOutput", now) }.also { watch -> main.post { watch.start() } }
         sockets = LanSockets(reactContext) { news -> sendEvent("onSocket", news) }
+        files = FileServer(reactContext)
         ZoneKeepAliveService.controls = { action -> sendEvent("onZoneControl", mapOf("action" to action)) }
       }
     }
@@ -303,6 +310,8 @@ class Media3PlayerModule : Module() {
       output = null
       sockets?.closeAll()
       sockets = null
+      files?.stop()
+      files = null
       main.removeCallbacks(zoneTick)
       ZoneKeepAliveService.controls = null
       appContext.reactContext?.let { ZoneKeepAliveService.hide(it) }
@@ -382,6 +391,19 @@ class Media3PlayerModule : Module() {
 
     AsyncFunction("socketPeerKey") { id: Int ->
       sockets?.peerKey(id)
+    }
+
+    /** A song from this phone's folders, for a device on the network: the address it fetches it from. */
+    AsyncFunction("fileShare") { uri: String, mime: String, ext: String, deviceHost: String, promise: Promise ->
+      thread(isDaemon = true) {
+        runCatching { files?.share(uri, mime, ext, deviceHost) ?: error("The app is closing") }
+          .onSuccess { promise.resolve(it) }
+          .onFailure { promise.reject("ERR_FILE_SHARE", it.message ?: "Can't hand that song out", it) }
+      }
+    }
+
+    AsyncFunction("fileShareStop") {
+      files?.stop()
     }
 
     AsyncFunction("tvOwnKey") { promise: Promise ->

@@ -19,6 +19,7 @@ import { watchNewVersion } from "./lib/newVersionWatch";
 import { watchDevicesLeaving } from "./lib/deviceSwitchOff";
 import { watchKeptLists } from "./lib/keptListsWatch";
 import { watchPlayAhead } from "./lib/playAhead";
+import { watchScrollbars } from "./lib/scrollbars";
 import { watchServerSync } from "./lib/serverSync";
 import { watchArchiveDrops } from "./lib/archiveImport";
 import { volumeTarget } from "./lib/cast";
@@ -355,6 +356,7 @@ export default function App() {
   useEffect(() => watchDevicesLeaving(), []);
   useEffect(() => watchKeptLists(), []);
   useEffect(() => watchPlayAhead(), []);
+  useEffect(() => watchScrollbars(), []);
 
   // The mouse's back and forward buttons walk the views like the top bar's arrows (back closes
   // the full-screen player first). They come as mouse buttons 3 and 4 and, on Windows, also as

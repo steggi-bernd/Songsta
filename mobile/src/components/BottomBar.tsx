@@ -8,6 +8,7 @@ import { House, Library, Search } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useOverBottomBar } from "../stores/popups";
 import { deviceName, pickMusicFor, useZones } from "../stores/zones";
 import { colors, MINI_PLAYER_HEIGHT, TAB_BAR_HEIGHT } from "../theme";
 import { PlayerSheet } from "./PlayerSheet";
@@ -24,6 +25,8 @@ export function BottomBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(0, { useNativeDriver: true })).current;
   const [expanded, setExpanded] = useState(false);
+  // The open player covers the tab bar and the mini player: notes sit lower then.
+  useOverBottomBar(expanded);
   const pickingFor = useZones((s) => s.pickingFor);
   const shownTab = state.routes[state.index].name;
   const goTo = (screen: string, params: object): void => navigation.navigate(shownTab, { screen, params });

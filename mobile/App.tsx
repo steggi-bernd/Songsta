@@ -19,6 +19,7 @@ import { usePlayer, watchPlayer } from "./src/stores/player";
 import { watchZones } from "./src/stores/zones";
 import { usePlaylists } from "./src/stores/playlists";
 import { watchKeptLists } from "./src/stores/keptLists";
+import { watchPlayed } from "./src/stores/played";
 import { useSession } from "./src/stores/session";
 import { useSettings } from "./src/stores/settings";
 import { startSync, stopSync } from "./src/sync";
@@ -29,6 +30,7 @@ watchZones();
 watchConnection();
 watchNewVersion();
 watchKeptLists();
+watchPlayed();
 
 /** Keeps the clock and icons readable while a page scrolls under them. */
 function StatusScrim() {

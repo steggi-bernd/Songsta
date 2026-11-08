@@ -3,6 +3,7 @@
  * to the songs of theirs you've liked, what you play most, their releases.
  */
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { PullDownToClose } from "../components/PullDownToClose";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronLeft, ChevronRight, Heart, Pause, Play, Shuffle } from "lucide-react-native";
@@ -60,6 +61,7 @@ export function ArtistScreen() {
   );
 
   return (
+<PullDownToClose onClose={() => nav.goBack()}>
     <ScrollView style={styles.root} contentContainerStyle={{ paddingBottom: PAGE_END + insets.bottom }}>
       <View style={styles.banner}>
         {!!banner && (
@@ -87,14 +89,14 @@ export function ArtistScreen() {
           {T("{count} · {count2} in your library", { count: plural(songs.length, T("song"), T("songs")), count2: plural(own.length, T("release"), T("releases")) })}</Text>
         <Pressable
           accessibilityLabel={T("Shuffle")}
-          onPress={() => usePlayer.getState().playAll(songs, name, true)}
+          onPress={() => usePlayer.getState().playAll(songs, name, true, `artist:${name.toLowerCase()}`)}
           style={styles.shuffle}
         >
           <Shuffle size={24} color={colors.ink} />
         </Pressable>
         <Pressable
           accessibilityLabel={pause ? T("Pause") : T("Play {name}", { name })}
-          onPress={() => (playingHere ? toggle() : usePlayer.getState().playAll(popular, name))}
+          onPress={() => (playingHere ? toggle() : usePlayer.getState().playAll(popular, name, undefined, `artist:${name.toLowerCase()}`))}
           style={styles.play}
         >
           {pause ? <Pause size={24} color={colors.base} fill={colors.base} /> : <Play size={24} color={colors.base} fill={colors.base} />}
@@ -126,7 +128,7 @@ export function ArtistScreen() {
             number={i + 1}
             subtitle={plays ? plural(plays, T("play"), T("plays")) : t.artist}
             list={{ tracks: popular, name }}
-            onPress={() => playTracks(popular, i, name, false)}
+            onPress={() => playTracks(popular, i, name, false, `artist:${name.toLowerCase()}`)}
           />
         );
       })}
@@ -142,6 +144,7 @@ export function ArtistScreen() {
         </Shelf>
       )}
     </ScrollView>
+</PullDownToClose>
   );
 }
 

@@ -231,14 +231,18 @@ Function songstaProgressLayout
   System::Call "user32::SetWindowPos(p r0, p 0, i r6, i r8, i r7, i r9, i 0x14)"
   ShowWindow $0 ${SW_SHOW}
 
-  ; Where the button was, thin as the app's own bars.
+  ; Where the button was, thin as the app's own bars: 5 pixels at 100 %, growing with the screen.
   GetDlgItem $0 $5 1004
   IntOp $8 $4 * 63
   IntOp $8 $8 / 100
   IntOp $2 $9 * 12
   IntOp $2 $2 / 40
   IntOp $8 $8 + $2
-  System::Call "user32::SetWindowPos(p r0, p 0, i r6, i r8, i r7, i 5, i 0x14)"
+  IntOp $2 $9 / 12
+  ${If} $2 < 5
+    StrCpy $2 5
+  ${EndIf}
+  System::Call "user32::SetWindowPos(p r0, p 0, i r6, i r8, i r7, i r2, i 0x14)"
   ShowWindow $0 ${SW_SHOW}
   ShowWindow $5 ${SW_SHOW}
 FunctionEnd
@@ -341,6 +345,10 @@ FunctionEnd
 !macroend
 
 !macro customHeader
+  ; Sharp on a screen at 150 or 175 %: without it Windows draws the installer at 96 dpi and blows the
+  ; picture up, text and logo blurred. The pages are laid out in dialog units and the fonts in points,
+  ; so they grow with the screen by themselves.
+  ManifestDPIAware true
   !ifndef BUILD_UNINSTALLER
     LangString songstaLine ${LANG_ENGLISH} "Your music, wherever you keep it. No account and no ads."
     LangString songstaLine ${LANG_GERMAN} "Deine Musik, wo immer du sie hast. Ohne Konto und ohne Werbung."

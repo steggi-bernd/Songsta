@@ -5,6 +5,7 @@
  * of its songs starts; a queue that plays none of them touches nothing. The
  * times start out once from the listening history (seedPlayed).
  */
+import { create } from "zustand";
 import { songKey, useCatalog } from "../stores/catalog";
 import { useLibrary } from "../stores/library";
 import { useLibraryOrder } from "../stores/libraryOrder";
@@ -54,8 +55,41 @@ function shelves(): Shelves {
   return { keyOf: (t) => songKey(t.id), albumOf, albumSize, collections };
 }
 
+/**
+ * Where the music playing now was started from, for the right rail: an album, a playlist or Liked
+ * Songs, matched as above. It stays through what's done to the queue after (songs added, a branch,
+ * shuffle), and goes with a new list that is none of them.
+ */
+export const usePlayingFrom = create<{ from: string | null }>(() => ({ from: null }));
+
+/** The queue now still holds most of the one before it: an edit, not a new list. */
+function sharesMost(before: readonly Track[] | null, now: readonly Track[]): boolean {
+  if (!before?.length || !now.length) return false;
+  const ids = new Set(now.map((t) => t.id));
+  let kept = 0;
+  for (const t of before) if (ids.has(t.id)) kept += 1;
+  return kept * 2 >= before.length;
+}
+
 /** Subscribe once from App — returns an unsubscribe fn. */
 export function watchRecentlyPlayed(): () => void {
+  let fromQueue: Track[] | null = null;
+  const lookFrom = (): void => {
+    const { queue } = usePlayer.getState();
+    if (queue === fromQueue && usePlayingFrom.getState().from) return;
+    const found = queue.length ? collectionOf(queue, shelves()) : null;
+    if (found) usePlayingFrom.setState({ from: found });
+    else if (queue !== fromQueue && !sharesMost(fromQueue, queue)) usePlayingFrom.setState({ from: null });
+    fromQueue = queue;
+  };
+  const offFrom = usePlayer.subscribe((s, prev) => {
+    if (s.queue !== prev.queue) lookFrom();
+  });
+  // A queue from before the library had loaded is matched once it has.
+  const offFromCatalog = useCatalog.subscribe(() => {
+    if (!usePlayingFrom.getState().from) lookFrom();
+  });
+  lookFrom();
   let seen: Track[] | null = null;
   // What the queue plays, worked out when its first song starts (by then the
   // library and the catalog are loaded); undefined until then.
@@ -82,6 +116,8 @@ export function watchRecentlyPlayed(): () => void {
   const offLibrary = useLibrary.persist.onFinishHydration(seed);
   seed();
   return () => {
+    offFrom();
+    offFromCatalog();
     offPlayer();
     offCatalog();
     offOrder();

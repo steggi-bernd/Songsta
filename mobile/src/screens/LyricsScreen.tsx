@@ -9,6 +9,7 @@ import { currentLine, useLyrics } from "../lyrics";
 import { fmtTime, hasCyrillic, toLatin } from "../shared";
 import { useCoverColor } from "../stores/library";
 import { usePlayer } from "../stores/player";
+import { useOverBottomBar } from "../stores/popups";
 import { useSettings } from "../stores/settings";
 import { colors } from "../theme";
 import { T } from "../shared";
@@ -48,6 +49,7 @@ const Line = memo(function Line({
 
 export function LyricsScreen() {
   const nav = useNavigation<any>();
+  useOverBottomBar();
   const insets = useSafeAreaInsets();
   const track = usePlayer((s) => s.queue[s.index]);
   const position = usePlayer((s) => s.positionMs);

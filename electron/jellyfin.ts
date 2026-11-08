@@ -38,6 +38,7 @@ const VERSION = "1.4.0";
 const LIB_VERSION = 3;
 
 export type { JellyfinTrack };
+import { pickAddress, type Addresses, type Reach } from "../src/lib/serverAddresses";
 
 export interface JellyfinLibrary {
   fetchedAt: number;
@@ -60,10 +61,21 @@ export interface JellyfinStatus {
   /** whose favorites and plays Server sync uses (see syncUser) */
   syncUserId: string | null;
   syncUserName: string | null;
+  /** the address at home, and one that works from anywhere (a tunnel or proxy); `server` is the one in use */
+  home: string | null;
+  away: string | null;
+  reach: Reach | null;
 }
 
 interface Config {
+  /** the address in use now: the one at home, or the one away when only that answers */
   server: string;
+  /** the address at home, as signed in with (older logins: server) */
+  home?: string;
+  /** an address that works from anywhere: a tunnel or proxy */
+  away?: string;
+  /** the server's own id: another server at the same private address, in somebody else's home, doesn't count */
+  serverId?: string;
   serverName: string;
   userId: string | null;
   userName: string | null;
@@ -89,11 +101,11 @@ function authHeader(token?: string, device = deviceId()): string {
   return `MediaBrowser ${parts.join(", ")}`;
 }
 
-/** "nas:8096" → "http://nas:8096"; anything that is not http(s) is refused. */
-export function normalizeServer(input: string): string {
+/** "nas:8096" → "http://nas:8096"; anything that is not http(s) is refused. An address away from home is https unless it says otherwise. */
+export function normalizeServer(input: string, away = false): string {
   let s = String(input ?? "").trim();
   if (!s) throw new Error("Enter your Jellyfin server address");
-  if (!/^[a-z]+:\/\//i.test(s)) s = `http://${s}`;
+  if (!/^[a-z]+:\/\//i.test(s)) s = `${away ? "https" : "http"}://${s}`;
   const url = new URL(s);
   if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("The server address must start with http:// or https://");
   return `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, "")}`;
@@ -144,7 +156,77 @@ export function status(): JellyfinStatus {
     apiKey: !!cfg && !cfg.userId,
     syncUserId: cfg ? syncUser(cfg) : null,
     syncUserName: cfg ? (cfg.userId ? cfg.userName : (cfg.syncUserName ?? null)) : null,
+    home: cfg ? (cfg.home ?? cfg.server) : null,
+    away: cfg?.away ?? null,
+    reach: cfg ? reach : null,
   };
+}
+
+/* ------------------------------------------------------------ home and away */
+
+/** Which of the server's addresses answers: the one at home whenever it does (checkReach). */
+let reach: Reach = "home";
+const REACH_TIMEOUT_MS = 3500;
+
+const addressesOf = (cfg: Config): Addresses => ({ home: cfg.home ?? cfg.server, away: cfg.away });
+
+/** The id the server at this address answers with; null when nothing does in time. */
+async function serverIdAt(address: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${address}/System/Info/Public`, { signal: AbortSignal.timeout(REACH_TIMEOUT_MS) });
+    if (!res.ok) return null;
+    const info = (await res.json()) as { Id?: unknown } | null;
+    return typeof info?.Id === "string" ? info.Id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Which address answers now, the one at home first (lib/serverAddresses.ts pickAddress, as on the
+ * phone); the address in use follows it, and with it every song, cover and sync request. Answers
+ * whether anything changed that the page should show.
+ */
+export async function checkReach(): Promise<boolean> {
+  const cfg = readConfig();
+  if (!cfg?.away) {
+    const changed = reach !== "home";
+    reach = "home";
+    return changed;
+  }
+  const addresses = addressesOf(cfg);
+  const [homeAnswer, awayAnswer] = await Promise.all([serverIdAt(addresses.home), serverIdAt(cfg.away)]);
+  const picked = pickAddress(addresses, cfg.serverId, homeAnswer, awayAnswer);
+  const before = reach;
+  reach = picked.reach;
+  const latest = readConfig();
+  // Changed meanwhile (signed out, another address): this look is out of date.
+  if (!latest || latest.away !== cfg.away) return false;
+  if (picked.server && (picked.server !== latest.server || (!latest.serverId && picked.serverId))) {
+    await persist.writeData(CONFIG_STORE, { ...latest, home: addresses.home, server: picked.server, serverId: latest.serverId ?? picked.serverId } satisfies Config);
+    return true;
+  }
+  return before !== reach;
+}
+
+/** An address that works from anywhere, once it proved to lead to this same server. Empty takes it back. */
+export async function setAway(input: unknown): Promise<JellyfinStatus> {
+  const cfg = readConfig();
+  if (!cfg) throw new Error("Connect to your Jellyfin server first");
+  const home = cfg.home ?? cfg.server;
+  if (!String(input ?? "").trim()) {
+    await persist.writeData(CONFIG_STORE, { ...cfg, home, away: undefined, server: home } satisfies Config);
+    reach = "home";
+    return status();
+  }
+  const away = normalizeServer(String(input).slice(0, 500), true);
+  const awayId = await serverIdAt(away);
+  if (!awayId) throw new Error("Nothing answers at that address");
+  const ownId = cfg.serverId ?? (await serverIdAt(home));
+  if (ownId && ownId !== awayId) throw new Error("That address leads to another Jellyfin server");
+  await persist.writeData(CONFIG_STORE, { ...cfg, home, away, serverId: ownId ?? awayId } satisfies Config);
+  await checkReach();
+  return status();
 }
 
 /** Whether the server answers right now; null when no server is connected. */
@@ -194,6 +276,8 @@ export async function connect(input: {
 
   await persist.writeData(CONFIG_STORE, {
     server,
+    home: server,
+    serverId: typeof info.Id === "string" ? info.Id : undefined,
     serverName: String(info.ServerName ?? "Jellyfin"),
     userId,
     userName,

@@ -1,5 +1,7 @@
 /** The native player (android/): commands in, one state event out. */
-import { NativeModule, requireNativeModule } from "expo";
+import type { ReactNode } from "react";
+import type { ViewStyle } from "react-native";
+import { NativeModule, requireNativeModule, requireNativeView } from "expo";
 
 export type RepeatMode = "off" | "all" | "one";
 
@@ -115,6 +117,10 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   socketPeerKey(id: number): Promise<{ modulus: string; exponent: string } | null>;
   /** This app's own key for a TV's remote control, in hex; made the first time. */
   tvOwnKey(): Promise<{ modulus: string; exponent: string } | null>;
+  /** A song from this phone's folders, for a device on the network: the address it fetches it from, on this phone (FileServer.kt). */
+  fileShare(uri: string, mime: string, ext: string, deviceHost: string): Promise<string>;
+  /** Nothing is handed out from here any more: devices stopped playing from this phone. */
+  fileShareStop(): Promise<void>;
   /** `volume` is the lead device's, 0–100; below 0 when it can't be set from here. */
   zonesWatch(ticking: boolean, keepAwake: boolean, title: string, text: string, playing: boolean, volume: number): Promise<void>;
   /** Android's folder picker; null when somebody changed their mind. */
@@ -167,3 +173,6 @@ declare class Media3PlayerModule extends NativeModule<Events> {
 }
 
 export default requireNativeModule<Media3PlayerModule>("Media3Player");
+
+/** A page closed by pulling it down while its list is at the top (PullDownView.kt). */
+export const PullDownView = requireNativeView<{ style?: ViewStyle; onClose?: () => void; children?: ReactNode }>("Media3Player", "PullDownView");

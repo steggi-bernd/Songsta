@@ -1,5 +1,6 @@
 /** An album: its cover over a wash of its colour, the facts, play and shuffle, its songs in order. */
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { PullDownToClose } from "../components/PullDownToClose";
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronLeft, Pause, Play, Shuffle } from "lucide-react-native";
 import { useMemo } from "react";
@@ -35,6 +36,7 @@ export function AlbumScreen() {
   const pause = playingHere && playWhenReady;
 
   return (
+<PullDownToClose onClose={() => nav.goBack()}>
     <FlatList
       style={styles.root}
       data={album.tracks}
@@ -82,14 +84,14 @@ export function AlbumScreen() {
             {album.tracks.some((t) => !t.localPath) ? <DownloadButton tracks={album.tracks} list={albumListKey(album.key)} style={styles.download} /> : <View style={styles.download} />}
             <Pressable
               accessibilityLabel={T("Shuffle")}
-              onPress={() => usePlayer.getState().playAll(album.tracks, album.title, true)}
+              onPress={() => usePlayer.getState().playAll(album.tracks, album.title, true, `album:${album.key}`)}
               style={styles.shuffle}
             >
               <Shuffle size={24} color={colors.ink} />
             </Pressable>
             <Pressable
               accessibilityLabel={pause ? T("Pause") : T("Play")}
-              onPress={() => (playingHere ? toggle() : usePlayer.getState().playAll(album.tracks, album.title))}
+              onPress={() => (playingHere ? toggle() : usePlayer.getState().playAll(album.tracks, album.title, undefined, `album:${album.key}`))}
               style={styles.play}
             >
               {pause ? <Pause size={24} color={colors.base} fill={colors.base} /> : <Play size={24} color={colors.base} fill={colors.base} />}
@@ -98,9 +100,10 @@ export function AlbumScreen() {
         </View>
       }
       renderItem={({ item, index }) => (
-        <TrackRow track={item} showCover={false} list={{ tracks: album.tracks, name: album.title }} onPress={() => playTracks(album.tracks, index, album.title, false)} />
+        <TrackRow track={item} showCover={false} list={{ tracks: album.tracks, name: album.title }} onPress={() => playTracks(album.tracks, index, album.title, false, `album:${album.key}`)} />
       )}
     />
+    </PullDownToClose>
   );
 }
 

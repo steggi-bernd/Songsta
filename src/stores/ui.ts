@@ -73,6 +73,8 @@ export interface Toast {
   duration?: number;
   /** one button on the toast ("Branch off"); the toast closes after it */
   action?: { label: string; run: () => void };
+  /** a real deadline it counts down to, with a bar: hovering doesn't hold it (a device switching off, say) */
+  endsAt?: number;
 }
 
 /** A modal request — replaces browser prompt()/confirm() with the ByTune dialog. */
@@ -126,7 +128,7 @@ export interface UIState {
   toggleNowPlaying(): void;
   setOsFullscreen(fs: boolean): void;
   closePanels(): void;
-  toast(message: string, kind?: Toast["kind"], duration?: number, action?: Toast["action"]): void;
+  toast(message: string, kind?: Toast["kind"], duration?: number, action?: Toast["action"], options?: { endsAt?: number }): void;
   dismissToast(id: number): void;
   setTintThumb(url: string | null): void;
   openContextMenu(x: number, y: number, items: MenuItem[], options?: { above?: boolean; alignRight?: boolean }): void;
@@ -278,10 +280,10 @@ export const useUI = create<UIState>((set, get) => ({
     set({ rightPanel: "details", lyricsCenter: false, nowPlayingOpen: false });
   },
 
-  toast(message, kind = "info", duration = 4600, action) {
+  toast(message, kind = "info", duration = 4600, action, options) {
     // No self-removal timer here — ToastCard runs the countdown so hover can
     // pause it and the lift-out animation plays before dismissToast.
-    const toast: Toast = { id: toastSeq++, message, kind, duration, action };
+    const toast: Toast = { id: toastSeq++, message, kind, duration, action, endsAt: options?.endsAt };
     set({ toasts: [...get().toasts, toast].slice(-4) });
   },
 

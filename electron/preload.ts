@@ -127,6 +127,14 @@ const api = {
 
   // Jellyfin server (token stays in the main process)
   jellyfinStatus: () => ipcRenderer.invoke("jellyfin:status"),
+  /** the server's address away from home (a tunnel or proxy); empty takes it back */
+  jellyfinSetAway: (address: string) => ipcRenderer.invoke("jellyfin:setAway", address) as Promise<JellyfinStatus>,
+  /** home or away changed: the server's other address answers now */
+  onJellyfinReach: (listener: (s: JellyfinStatus) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, s: JellyfinStatus): void => listener(s);
+    ipcRenderer.on("jellyfin:reach", handler);
+    return () => ipcRenderer.removeListener("jellyfin:reach", handler);
+  },
   jellyfinConnect: (input: { server: string; username?: string; password?: string; apiKey?: string }) =>
     ipcRenderer.invoke("jellyfin:connect", input),
   jellyfinDisconnect: () => ipcRenderer.invoke("jellyfin:disconnect"),

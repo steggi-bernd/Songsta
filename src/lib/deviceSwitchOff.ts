@@ -4,7 +4,7 @@ import { useDeviceNames } from "../stores/deviceNames";
 import { useSettings } from "../stores/settings";
 import { useUI } from "../stores/ui";
 import { leaveCast, useCast, type CastDevice } from "./cast";
-import { bringToInput, canSwitchOff, inputName, isNetworkInput, linksToFollow, OWN_INPUT, receiverInUse, SwitchOffs, wentOffToo, type DeviceLink, type LeavingDevice } from "./devicePower";
+import { bringToInput, canSwitchOff, inputName, isNetworkInput, linksToFollow, looksLikeTv, OWN_INPUT, receiverInUse, SwitchOffs, wentOffToo, type DeviceLink, type LeavingDevice } from "./devicePower";
 import { T } from "./i18n";
 import { useZones, zoneLeave, zoneStop } from "./zones";
 
@@ -43,7 +43,7 @@ const offs = new SwitchOffs({
   counting: (d) => {
     const text = T("{name} switches off in 30 seconds", { name: d.name });
     said.set(d.id, text);
-    useUI.getState().toast(text, "info", 30_000, { label: T("Keep on"), run: () => offs.forget(d.id) });
+    useUI.getState().toast(text, "info", 30_000, { label: T("Keep on"), run: () => offs.forget(d.id) }, { endsAt: d.at });
   },
 });
 
@@ -171,6 +171,16 @@ export async function pairTv(device: CastDevice): Promise<void> {
   ask();
 }
 
+/** The music left a TV that isn't paired, so it stays on: said once, with the way to change that. */
+function hintPairing(id: string): void {
+  const device = useCast.getState().devices.find((d) => d.id === id);
+  const { pairHinted, setPairHinted } = useSettings.getState();
+  if (!device || !looksLikeTv(device) || isPairedTv(id) || pairHinted.includes(id)) return;
+  setPairHinted([...pairHinted, id]);
+  const name = useDeviceNames.getState().names[id] ?? device.name;
+  useUI.getState().toast(T("{name} stays on. Pair it once, and it goes off by itself half a minute after the music.", { name }), "info", 12_000, { label: T("Pair"), run: () => void pairTv(device) });
+}
+
 export function watchDevicesLeaving(): () => void {
   let before = devicesWithMusic();
   const look = (): void => {
@@ -180,6 +190,7 @@ export function watchDevicesLeaving(): () => void {
       const device = useCast.getState().devices.find((d) => d.id === id);
       return device ? { name: useDeviceNames.getState().names[id] ?? device.name, canSwitchOff: wanted && (canSwitchOff(device.model) || isPairedTv(id)) } : null;
     }, useSettings.getState().deviceLinks);
+    if (wanted) for (const id of before) if (!now.has(id)) hintPairing(id);
     for (const id of now) if (!before.has(id)) void backToOwnInput(id);
     for (const link of linksToFollow(now, before, useSettings.getState().deviceLinks)) {
       offs.forget(link.receiver);

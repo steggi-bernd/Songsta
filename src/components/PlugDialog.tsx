@@ -56,9 +56,9 @@ export function PlugDialog({ device, devices, nameOf, onClose }: { device: CastD
               key={r.id}
               onClick={() => setReceiverId(r.id)}
               aria-pressed={r.id === receiverId}
-              className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors ${r.id === receiverId ? "bg-primary text-on-primary" : "bg-ink-hi/[0.08] text-ink-hi hover:bg-ink-hi/[0.14]"}`}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors ${r.id === receiverId ? "bg-accent/[0.18] text-ink-hi ring-1 ring-inset ring-accent/50" : "bg-ink-hi/[0.08] text-ink-hi hover:bg-ink-hi/[0.14]"}`}
             >
-              {r.id === receiverId && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              {r.id === receiverId && <Check className="h-3.5 w-3.5 text-accent" strokeWidth={3} />}
               {nameOf(r)}
             </button>
           ))}

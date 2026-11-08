@@ -130,6 +130,8 @@ interface PlayerState {
   context: string;
   /** the list that comes after the branch playing now; null while none is */
   homeContext: string | null;
+  /** what was started as a whole, as Your Library names it: "album:…", "artist:…", "playlist:…", "mix:…"; null for songs from anywhere else (stores/played.ts) */
+  source: string | null;
   isPlaying: boolean;
   playWhenReady: boolean;
   isBuffering: boolean;
@@ -162,10 +164,13 @@ interface PlayerState {
   leveling: Leveling;
   setLeveling(leveling: Leveling): void;
   setQuality(mode: QualityMode): void;
-  /** A song asked for, with its list after it. Muted ones in the list stay out; the asked-for one plays anyway. */
-  playTracks(tracks: Track[], start: number, context: string, shuffle?: boolean): void;
+  /**
+   * A song asked for, with its list after it. Muted ones in the list stay out; the asked-for one plays anyway.
+   * `source`: the list as Your Library names it, when a whole album, artist, playlist or mix was started (stores/played.ts).
+   */
+  playTracks(tracks: Track[], start: number, context: string, shuffle?: boolean, source?: string | null): void;
   /** A whole list from its Play or Shuffle button: nothing in it is asked for by name, so nothing muted plays. Play goes by the shuffle that's on, as on the computer. */
-  playAll(tracks: Track[], context: string, shuffle?: boolean): void;
+  playAll(tracks: Track[], context: string, shuffle?: boolean, source?: string | null): void;
   /** The music of the device being followed comes here and plays on. */
   takeHere(): void;
   /** This device's music goes to another one and plays on there. */
@@ -240,6 +245,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   queue: [],
   index: 0,
   context: "",
+  source: null,
   homeContext: null,
   isPlaying: false,
   playWhenReady: false,
@@ -286,7 +292,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     void output.replaceUpcoming(queue.slice(index + 1).map(toItem));
   },
 
-  playTracks(all, start, context, shuffle = get().shuffle) {
+  playTracks(all, start, context, shuffle = get().shuffle, source = null) {
     if (playHook?.(all, start, shuffle)) return;
     // Without a way to the server only what's on the phone can play.
     const { kept } = useDownloads.getState();
@@ -306,7 +312,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       void deviceLink?.sendList(remote.id, tracks.slice(from, from + LONGEST_LIST).map(toWireTrack), context, { action: "playList", start: askedAt - from, context, shuffle });
       queueId = "";
       steeringTo = { id: asked.id, until: Date.now() + STEER_PATIENCE_MS };
-      set({ queue: [asked], index: 0, context, homeContext: null, shuffle, unshuffled: null, lineEnd: 0, branches: [], durationMs: asked.duration * 1000, error: null });
+      set({ queue: [asked], index: 0, context, source, homeContext: null, shuffle, unshuffled: null, lineEnd: 0, branches: [], durationMs: asked.duration * 1000, error: null });
       hold(0, true);
       return;
     }
@@ -316,17 +322,17 @@ export const usePlayer = create<PlayerState>((set, get) => ({
       queue = [tracks[index], ...shuffled(tracks.filter((_, i) => i !== index))];
       index = 0;
     }
-    load(queue, index, context, { shuffle, unshuffled: shuffle ? tracks : null });
+    load(queue, index, context, { shuffle, unshuffled: shuffle ? tracks : null }, source);
   },
 
-  playAll(all, context, shuffle = get().shuffle) {
+  playAll(all, context, shuffle = get().shuffle, source = null) {
     const { muted } = useLibrary.getState();
     const open = all.filter((t) => !muted.has(t.id));
     if (!open.length) {
       if (all.length) toast(T("Everything here is muted"));
       return;
     }
-    get().playTracks(open, shuffle ? Math.floor(Math.random() * open.length) : 0, context, shuffle);
+    get().playTracks(open, shuffle ? Math.floor(Math.random() * open.length) : 0, context, shuffle, source);
   },
 
   takeHere() {
@@ -716,7 +722,7 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     void output.pause();
     void output.setQueue([], 0, 0, false);
     branchUndo.clear();
-    set({ queue: [], index: 0, context: "", homeContext: null, positionMs: 0, durationMs: 0, unshuffled: null, lineEnd: 0, branches: [], sleepAt: null });
+    set({ queue: [], index: 0, context: "", source: null, homeContext: null, positionMs: 0, durationMs: 0, unshuffled: null, lineEnd: 0, branches: [], sleepAt: null });
     activityAt = 0;
     queueId = "";
     writeJson(FILE, null);
@@ -735,12 +741,12 @@ function leaveRepeatOne(): boolean {
 }
 
 /** A list from the top, whatever came before it. */
-function load(queue: Track[], index: number, context: string, order: { shuffle: boolean; unshuffled: Track[] | null }): void {
+function load(queue: Track[], index: number, context: string, order: { shuffle: boolean; unshuffled: Track[] | null }, source: string | null = null): void {
   const before = usePlayer.getState();
   // Listening to another song. With nothing on, repeat-one may well be meant for this one.
   if (before.repeat === "one" && before.playWhenReady && before.queue[before.index] && before.queue[before.index].id !== queue[index]?.id) leaveRepeatOne();
   branchUndo.clear();
-  usePlayer.setState({ queue, index, context, homeContext: null, ...order, lineEnd: 0, branches: [], positionMs: 0, error: null });
+  usePlayer.setState({ queue, index, context, source, homeContext: null, ...order, lineEnd: 0, branches: [], positionMs: 0, error: null });
   void output.setQueue(queue.map(toItem), index, 0, true);
   showStream();
   queueChanged();

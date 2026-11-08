@@ -38,6 +38,9 @@ const KIND_STYLES = {
     the `to` value of the toast-ring keyframes in index.css. */
 const RING_C = 2 * Math.PI * 16.75;
 
+/** Hovering holds a note's own countdown, never a real deadline's. */
+const hoverHolds = (deadline: boolean): boolean => !deadline;
+
 /** The notification layer: beacons drop from under the top bar, centre
     screen, stack newest-first. Each card owns its own countdown so hovering
     pauses both the ring and the auto-dismiss timer. */
@@ -62,7 +65,12 @@ export function Toasts() {
 
 function ToastCard({ toast, onDone }: { toast: Toast; onDone: () => void }) {
   const { icon: Icon, tint, badge, ring, glow } = KIND_STYLES[toast.kind];
-  const duration = toast.duration ?? 4600;
+  // A real deadline counts down whatever the pointer does: the device goes off then anyway.
+  const [startedLeft] = useState(() => (toast.endsAt ? Math.max(0, toast.endsAt - Date.now()) : 0));
+  const deadline = !!toast.endsAt;
+  const duration = deadline ? startedLeft : (toast.duration ?? 4600);
+  const total = deadline ? Math.max(startedLeft, toast.duration ?? startedLeft) : duration;
+  const held = hoverHolds(deadline);
   const [leaving, setLeaving] = useState(false);
   const [hover, setHover] = useState(false);
   const remaining = useRef(duration);
@@ -79,7 +87,7 @@ function ToastCard({ toast, onDone }: { toast: Toast; onDone: () => void }) {
   // Countdown that banks the remaining time whenever hover pauses it, so the
   // ring (a pure CSS animation paused in sync) and this timer never drift.
   useEffect(() => {
-    if (hover || closing.current) return;
+    if ((hover && held) || closing.current) return;
     startedAt.current = performance.now();
     const t = window.setTimeout(close, remaining.current);
     return () => {
@@ -127,7 +135,7 @@ function ToastCard({ toast, onDone }: { toast: Toast; onDone: () => void }) {
                 strokeDasharray={RING_C}
                 style={{
                   animation: `toast-ring ${duration}ms linear forwards`,
-                  animationPlayState: hover ? "paused" : "running",
+                  animationPlayState: hover && held ? "paused" : "running",
                 }}
               />
             </svg>
@@ -146,6 +154,13 @@ function ToastCard({ toast, onDone }: { toast: Toast; onDone: () => void }) {
             >
               {toast.action.label}
             </button>
+          )}
+          {deadline && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 left-0 right-0 h-[3px] origin-left bg-accent"
+              style={{ transform: `scaleX(${total ? startedLeft / total : 0})`, animation: `toast-bar ${startedLeft}ms linear forwards` }}
+            />
           )}
           <button
             onClick={close}

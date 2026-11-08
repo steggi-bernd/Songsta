@@ -113,7 +113,7 @@ export function SongMenu() {
         },
       });
     }
-    if (playable.length > 0 && !track.localPath) rows.push({ label: T("Play on a device"), Icon: Speaker, run: () => setPlayOn(track) });
+    if (playable.length > 0) rows.push({ label: T("Play on a device"), Icon: Speaker, run: () => setPlayOn(track) });
     if (albumKey) rows.push({ label: T("Go to album"), Icon: Disc3, run: () => goTo?.("Album", { albumKey }) });
     rows.push({ label: T("Go to artist"), Icon: User, run: () => goTo?.("Artist", { name: leadArtist(track.artist) }) });
     rows.push({ label: muted ? T("Play again (unmute)") : T("Mute song"), Icon: muted ? Volume2 : VolumeX, run: () => void useLibrary.getState().toggleMuted(track) });

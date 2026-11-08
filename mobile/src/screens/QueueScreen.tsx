@@ -14,6 +14,7 @@ import { glideList, PullRow } from "../components/SwipeRow";
 import { Cover, EqBars } from "../components/ui";
 import { handRows, type Track } from "../shared";
 import { usePlayer } from "../stores/player";
+import { useOverBottomBar } from "../stores/popups";
 import { feel } from "../stores/settings";
 import { colors } from "../theme";
 import { T } from "../shared";
@@ -156,6 +157,7 @@ function UpcomingRow({
 
 export function QueueScreen() {
   const nav = useNavigation<any>();
+  useOverBottomBar();
   const insets = useSafeAreaInsets();
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);

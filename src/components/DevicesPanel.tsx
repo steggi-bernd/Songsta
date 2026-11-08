@@ -77,11 +77,11 @@ function Tile({
         }
       }}
       className={`flex min-h-[104px] min-w-0 cursor-pointer flex-col justify-between rounded-2xl p-3 transition-colors ${wide ? "col-span-2" : ""} ${
-        active ? "bg-primary text-on-primary" : "bg-ink-hi/[0.06] text-ink-hi hover:bg-ink-hi/[0.1]"
+        active ? "bg-accent/[0.16] text-ink-hi ring-1 ring-inset ring-accent/45" : "bg-ink-hi/[0.06] text-ink-hi hover:bg-ink-hi/[0.1]"
       } ${dim ? "opacity-60" : ""} ${picked ? "ring-2 ring-accent" : ""}`}
     >
       <div className="flex items-start justify-between gap-1">
-        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${active ? "bg-on-primary/10" : "bg-ink-hi/[0.08]"}`}>
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${active ? "bg-accent/25 text-accent" : "bg-ink-hi/[0.08]"}`}>
           {busy ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <Icon className="h-[18px] w-[18px]" />}
         </span>
         {picked !== undefined ? (
@@ -94,7 +94,7 @@ function Tile({
       </div>
       <div className="mt-2 min-w-0">
         <span className="block truncate text-[14px] font-semibold">{name}</span>
-        <span className={`mt-0.5 block truncate text-[12px] ${active ? "text-on-primary/70" : "text-ink-dim"}`}>{line}</span>
+        <span className={`mt-0.5 block truncate text-[12px] ${active ? "text-ink-hi/70" : "text-ink-dim"}`}>{line}</span>
       </div>
       {children}
     </div>
@@ -111,7 +111,7 @@ function SmallButton({ title, onClick, children }: { title: string; onClick: (e:
         e.stopPropagation();
         onClick(e);
       }}
-      className="grid h-7 w-7 place-items-center rounded-full opacity-80 transition hover:bg-black/10 hover:opacity-100"
+      className="grid h-7 w-7 place-items-center rounded-full opacity-80 transition hover:bg-ink-hi/10 hover:opacity-100"
     >
       {children}
     </button>
@@ -275,7 +275,7 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
       ...(zone ? [{ label: T("Stop the music here"), icon: X, action: () => void zoneStop(zone.id) }] : []),
       ...(canSwitchOff(d.model) || pairedTvs.includes(d.id) ? [{ label: T("Switch off"), icon: Power, action: () => void switchDeviceOff(d) }] : []),
       ...(!canSwitchOff(d.model) && receivers.length ? [{ label: plugLine(d.id) ?? T("Plugged into a receiver"), icon: Cable, action: () => setPlugging(d) }] : []),
-      ...(looksLikeTv(d) && !pairedTvs.includes(d.id) && !receivers.length ? [{ label: T("Pair to switch it off"), icon: Power, action: () => void pairTv(d) }] : []),
+      ...(looksLikeTv(d) && !pairedTvs.includes(d.id) ? [{ label: T("Pair to switch it off"), icon: Power, action: () => void pairTv(d) }] : []),
       ...zones
         .filter((z) => !z.members.some((m) => m.id === d.id))
         .map((z): MenuItem => ({ label: T("Play along with {value}", { value: names[z.device.id] ?? z.device.name }), icon: Plus, action: () => void zoneJoin(z.id, d) })),
@@ -371,7 +371,7 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
                   <button
                     key={o.deviceId || "default"}
                     onClick={() => useSettings.getState().setAudioSinkId(o.deviceId)}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-black/10"
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-ink-hi/10"
                   >
                     <Check className={`h-3.5 w-3.5 shrink-0 ${o.deviceId === sinkId ? "" : "opacity-0"}`} />
                     <span className="truncate">{o.label}</span>
@@ -510,7 +510,7 @@ export function DevicesPanel({ onClose }: { onClose: () => void }) {
             <button
               disabled={!choosing.size}
               onClick={() => void playTogether()}
-              className="h-9 flex-1 rounded-full bg-primary px-3 text-[13px] font-semibold text-on-primary disabled:opacity-40"
+              className="h-9 flex-1 rounded-full bg-accent px-3 text-[13px] font-semibold text-black disabled:opacity-40"
             >{T("Play together")}</button>
             <button
               disabled={!choosing.size}

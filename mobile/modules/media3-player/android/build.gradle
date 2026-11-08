@@ -15,6 +15,8 @@ android {
 }
 
 dependencies {
+  // NativeGestureUtil: a pull taken from a list tells React Native its touch is over (PullDownView.kt).
+  implementation "com.facebook.react:react-android"
   def media3 = "1.11.1"
   implementation "androidx.media3:media3-exoplayer:$media3"
   implementation "androidx.media3:media3-exoplayer-hls:$media3"

@@ -1,7 +1,7 @@
 /** Songsta desktop — Electron main process. */
 // First of all: the data folder moves before anything else opens a file in it.
 import "./rename-data";
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, protocol, session, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, protocol, session, shell } from "electron";
 import type { NativeImage } from "electron";
 import { fileURLToPath, pathToFileURL } from "url";
 import * as m3u from "./m3u";
@@ -139,9 +139,21 @@ function applyMenu(): void {
  * renderer push keeps both native surfaces truthful.
  */
 const thumbarIcons = new Map<string, NativeImage>();
+/** The glyphs' colour on a light taskbar, where white would vanish. */
+const GLYPH_ON_LIGHT = 0x20;
+
+function lightTaskbar(): boolean {
+  try {
+    return !nativeTheme.shouldUseDarkColorsForSystemIntegratedUI;
+  } catch {
+    return false;
+  }
+}
 
 function thumbarIcon(name: "previous" | "play" | "pause" | "next"): NativeImage {
-  let img = thumbarIcons.get(name);
+  const light = lightTaskbar();
+  const key = light ? `${name}-on-light` : name;
+  let img = thumbarIcons.get(key);
   if (!img) {
     // 1x (16px) + 2x (32px) representations: high-DPI taskbars pick the
     // sharp copy instead of upscaling a blurry 16px bitmap.
@@ -151,12 +163,29 @@ function thumbarIcon(name: "previous" | "play" | "pause" | "next"): NativeImage 
       [2, `${name}-32.png`],
     ] as const) {
       const p = path.join(__dirname, "assets", "thumbar", file);
-      if (fs.existsSync(p)) img.addRepresentation({ scaleFactor: scale, buffer: fs.readFileSync(p) });
+      if (!fs.existsSync(p)) continue;
+      if (!light) {
+        img.addRepresentation({ scaleFactor: scale, buffer: fs.readFileSync(p) });
+        continue;
+      }
+      // The same glyph, dark: its alpha kept, its colour changed (premultiplied pixels).
+      const glyph = nativeImage.createFromBuffer(fs.readFileSync(p));
+      const { width, height } = glyph.getSize();
+      const pixels = glyph.toBitmap();
+      for (let i = 0; i < pixels.length; i += 4) {
+        const shade = Math.round((GLYPH_ON_LIGHT * pixels[i + 3]) / 255);
+        pixels[i] = shade;
+        pixels[i + 1] = shade;
+        pixels[i + 2] = shade;
+      }
+      img.addRepresentation({ scaleFactor: scale, width, height, buffer: pixels });
     }
-    thumbarIcons.set(name, img);
+    thumbarIcons.set(key, img);
   }
   return img;
 }
+
+let thumbarThemeWatched = false;
 
 /** Returns true when the taskbar accepted the buttons (false = too early). */
 function applyThumbar(): boolean {
@@ -172,6 +201,21 @@ function applyThumbar(): boolean {
     },
     { icon: thumbarIcon("next"), tooltip: "Next", click: command("next") },
   ]);
+}
+
+/**
+ * Home or away (jellyfin.ts checkReach): which of the server's addresses answers, looked at now and
+ * then and after a sleep, with the page told when that changes. A laptop taken out of the house goes
+ * on through the tunnel or proxy, and comes back to the direct way at home.
+ */
+const REACH_EVERY_MS = 30_000;
+function watchServerReach(): void {
+  const look = async (): Promise<void> => {
+    if (await jellyfin.checkReach().catch(() => false)) mainWindow?.webContents.send("jellyfin:reach", jellyfin.status());
+  };
+  setTimeout(() => void look(), 3000);
+  setInterval(() => void look(), REACH_EVERY_MS);
+  powerMonitor.on("resume", () => void look());
 }
 
 function createWindow(): void {
@@ -220,11 +264,21 @@ function createWindow(): void {
   // refuses (shell timing), retry once — every later play/pause re-applies
   // the bar anyway via menu:push-state.
   if (process.platform === "win32") {
-    mainWindow.once("show", () => {
+    const attach = (triesLeft: number): void => {
       const ok = applyThumbar();
       if (isDev) console.log("[bytune] taskbar thumbbar:", ok ? "attached" : "deferred");
-      if (!ok) setTimeout(applyThumbar, 1500);
-    });
+      if (!ok && triesLeft > 0) setTimeout(() => attach(triesLeft - 1), 1500);
+    };
+    mainWindow.once("show", () => attach(5));
+    // Again whenever the window comes back: without a play or pause nothing else would, and
+    // Windows forgets the buttons of a window it rebuilt its taskbar for.
+    mainWindow.on("show", () => void applyThumbar());
+    mainWindow.on("restore", () => void applyThumbar());
+    mainWindow.on("focus", () => void applyThumbar());
+    if (!thumbarThemeWatched) {
+      thumbarThemeWatched = true;
+      nativeTheme.on("updated", () => void applyThumbar());
+    }
   }
 
   // Keep the renderer's maximize/restore button icon in sync.
@@ -509,6 +563,7 @@ function registerIpc(): void {
   ipc.handle("meta:artistPicture", (_e, name: unknown) => meta.lookupArtistPicture(String(name ?? "").slice(0, 200)));
   // Jellyfin server as a second library source.
   ipc.handle("jellyfin:status", () => jellyfin.status());
+  ipc.handle("jellyfin:setAway", (_e, address: unknown) => jellyfin.setAway(address));
   ipc.handle("jellyfin:connect", (_e, input: { server: string; username?: string; password?: string; apiKey?: string }) =>
     jellyfin.connect(input ?? { server: "" })
   );
@@ -934,6 +989,7 @@ if (!gotLock) {
       Menu.setApplicationMenu(null);
     }
     persist.migrateLegacyData();
+    watchServerReach();
     pip.bindMainWindowGetter(() => mainWindow);
     const lib = locallib.readLocalLibrary();
     for (const f of lib.folders) approveDir(f.path);

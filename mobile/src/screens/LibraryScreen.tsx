@@ -16,6 +16,7 @@ import { Chip, Cover, CoverGrid, EqBars } from "../components/ui";
 import { plural, type LibAlbum, type Track } from "../shared";
 import { sizeLine, useDownloads } from "../stores/downloads";
 import { likedSongIds, useArtistPhoto, useLibrary } from "../stores/library";
+import { usePlayed } from "../stores/played";
 import { usePlayer } from "../stores/player";
 import { playlistTracks, usePlaylists } from "../stores/playlists";
 import { toast } from "../stores/popups";
@@ -80,6 +81,7 @@ export function LibraryScreen() {
   const mixes = useLibrary((s) => s.mixes);
   const playingAlbum = usePlayer((s) => s.queue[s.index]?.albumId);
   const kept = useDownloads((s) => s.kept);
+  const played = usePlayed((s) => s.at);
   const loadingCount = useDownloads((s) => Object.values(s.loading).filter((song) => !song.failed).length);
   const wifiCount = useDownloads((s) => Object.values(s.loading).filter((song) => song.wantsWifi).length);
 
@@ -89,12 +91,8 @@ export function LibraryScreen() {
   };
 
   const rows = useMemo<Row[]>(() => {
-    const lastOf = (tracks: Track[]): number => Math.max(0, ...tracks.map((t) => data.counts[t.id]?.lastAt ?? 0));
-    const artistLast = new Map<string, number>();
-    for (const t of data.tracks) {
-      const at = data.counts[t.id]?.lastAt ?? 0;
-      if (at > (artistLast.get(t.artist.toLowerCase()) ?? 0)) artistLast.set(t.artist.toLowerCase(), at);
-    }
+    // What was started as a whole (stores/played.ts): a song from a playlist doesn't make its album or its artist recent.
+    const playedAt = (key: string): number => played[key] ?? 0;
     const rest: Row[] = [];
     if (filter !== "albums" && filter !== "artists") {
       for (const p of playlists) {
@@ -107,16 +105,16 @@ export function LibraryScreen() {
           tracks,
           cover: p.cover,
           // A new one stands on top, as what somebody just did.
-          lastAt: Math.max(p.createdAt, lastOf(tracks)),
+          lastAt: Math.max(p.createdAt, playedAt(`playlist:${p.id}`)),
         });
       }
-      for (const m of mixes) rest.push({ kind: "mix", key: m.id, id: m.id, title: m.title, subtitle: T("Mix · {count}", { count: plural(m.tracks.length, T("song"), T("songs")) }), tracks: m.tracks, lastAt: 0 });
+      for (const m of mixes) rest.push({ kind: "mix", key: m.id, id: m.id, title: m.title, subtitle: T("Mix · {count}", { count: plural(m.tracks.length, T("song"), T("songs")) }), tracks: m.tracks, lastAt: playedAt(`mix:${m.id}`) });
     }
     if (filter !== "playlists" && filter !== "artists") {
-      for (const album of albums) rest.push({ kind: "album", key: album.key, album, lastAt: lastOf(album.tracks) });
+      for (const album of albums) rest.push({ kind: "album", key: album.key, album, lastAt: playedAt(`album:${album.key}`) });
     }
     if (filter !== "playlists" && filter !== "albums") {
-      for (const a of artists) rest.push({ kind: "artist", key: a.name, name: a.name, thumb: a.thumb, lastAt: artistLast.get(a.name.toLowerCase()) ?? 0 });
+      for (const a of artists) rest.push({ kind: "artist", key: a.name, name: a.name, thumb: a.thumb, lastAt: playedAt(`artist:${a.name.toLowerCase()}`) });
     }
     // Stable: what never played keeps its order behind the rest. What's pinned stands above it all.
     const lastAt = (r: Row): number => (r.kind === "liked" || r.kind === "downloads" || r.kind === "local" ? 0 : r.lastAt);
@@ -137,7 +135,7 @@ export function LibraryScreen() {
     const local: Row[] = onPhone ? [{ kind: "local", key: "local", line: T("Folders on this phone · {count}", { count: plural(onPhone, T("song"), T("songs")) }) }] : [];
     return [...liked, ...local, ...downloads, ...rest];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, albums, artists, mixes, playlists, filter, kept, loadingCount, wifiCount, pins]);
+  }, [data, albums, artists, mixes, playlists, filter, kept, loadingCount, wifiCount, pins, played]);
 
   const chip = (label: string, value: Exclude<Filter, null>) => (
     <Chip label={label} active={filter === value} onPress={() => setFilter(filter === value ? null : value)} />

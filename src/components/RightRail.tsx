@@ -32,6 +32,8 @@ import { soundOf, useSound } from "../stores/sound";
 import { keyName } from "../../electron/sound-analysis";
 import type { Track } from "../types";
 import { upgradeArtwork } from "../lib/artwork";
+import { usePlayingFrom } from "../lib/recentlyPlayed";
+import { songKey } from "../stores/catalog";
 import { T } from "../lib/i18n";
 
 /** The queue's "Now playing" row — draggable like every other song row. */
@@ -417,6 +419,34 @@ export function QueuePanel({ onClose }: { onClose: () => void }) {
 
 /* ---------------------------------------------------------- song details */
 
+/**
+ * Where the song playing comes from, over its cover: the album, playlist or Liked Songs it was
+ * started from, a click away. Not for a song added to the queue, or one that came by itself after.
+ */
+function PlayingFrom({ track }: { track: Track }) {
+  const from = usePlayingFrom((s) => s.from);
+  const playlists = useLibrary((s) => s.playlists);
+  const liked = useLibrary((s) => s.liked);
+  const navigate = useUI((s) => s.navigate);
+  if (!from) return null;
+  const key = songKey(track.id);
+  const playlist = from.startsWith("lib:album:") || from === "__liked__" ? null : playlists.find((p) => p.id === from) ?? null;
+  const inIt = from === "__liked__" ? liked.some((t) => songKey(t.id) === key) : from.startsWith("lib:album:") ? track.albumId === from : !!playlist?.tracks.some((t) => songKey(t.id) === key);
+  const name = from === "__liked__" ? T("Liked Songs") : from.startsWith("lib:album:") ? track.album : playlist?.name;
+  if (!inIt || !name) return null;
+  const open = (): void => {
+    if (from === "__liked__") navigate({ name: "library", param: "liked" });
+    else if (from.startsWith("lib:album:")) navigate({ name: "album", param: from });
+    else navigate({ name: "playlist", param: from });
+  };
+  return (
+    <button onClick={open} title={name} className="group block w-full min-w-0 px-0.5 text-left">
+      <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-dim">{T("Playing from")}</span>
+      <span className="block truncate text-[14px] font-bold text-ink-hi group-hover:underline">{name}</span>
+    </button>
+  );
+}
+
 function DetailsBody() {
   const track = usePlayer((s) => s.queue[s.index] ?? null);
   const navigate = useUI((s) => s.navigate);
@@ -443,6 +473,7 @@ function DetailsBody() {
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto scroll-center px-3 py-3 space-y-3">
+      <PlayingFrom track={track} />
       {/* Full-width square artwork, Spotify-panel style — everything scrolls.
           The cover + title block is a drag source: drop it on a sidebar
           playlist. The whole header (art, title, artist) shares one drag

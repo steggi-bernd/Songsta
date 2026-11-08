@@ -330,12 +330,21 @@ body.bytune-dragging * {
   cursor: grabbing !important;
 }
 
+/* A note counting down to a deadline: its bar runs out (Toasts.tsx). */
+@keyframes toast-bar {
+  to {
+    transform: scaleX(0);
+  }
+}
+
 /* ---------- scrollbars (desktop feel) ----------
    Themed exclusively via ::-webkit-scrollbar — do NOT set standard
    scrollbar-width/scrollbar-color on themed elements: Chromium disables
    all webkit scrollbar styling for them and falls back to the native
    Windows scrollbar (arrows + gray thumb).
-   A thumb shows only while the pointer is over the area that scrolls. */
+   A thumb shows only while the pointer is over the area that scrolls: that area
+   carries data-scroll-shown then (lib/scrollbars.ts). Not :hover, which Chromium
+   leaves stuck on a bar the pointer left straight off it. */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -352,10 +361,10 @@ body.bytune-dragging * {
   border: 3px solid transparent;
   background-clip: content-box;
 }
-:hover::-webkit-scrollbar-thumb {
+[data-scroll-shown]::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.14);
 }
-::-webkit-scrollbar-thumb:hover {
+[data-scroll-shown]::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.24);
 }
 ::-webkit-scrollbar-track {
@@ -374,7 +383,7 @@ body.bytune-dragging * {
   background-clip: content-box;
   transition: background-color 0.2s ease;
 }
-.shelf-scroll:hover::-webkit-scrollbar-thumb,
+.shelf-scroll[data-scroll-shown]::-webkit-scrollbar-thumb,
 .shelf-scroll:focus-within::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.16);
 }

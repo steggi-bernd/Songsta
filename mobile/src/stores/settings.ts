@@ -83,6 +83,8 @@ export interface Settings {
   pairedTvs: string[];
   /** how far ahead a device plays in a group, in ms, set by hand; below zero behind */
   playAhead: Record<string, number>;
+  /** TVs whose music left them unpaired: told once that pairing switches them off */
+  pairHinted: string[];
   /** the version that ran last, for the note after an update */
   lastVersion: string;
 }
@@ -116,6 +118,7 @@ const DEFAULTS: Settings = {
   deviceLinks: [],
   pairedTvs: [],
   playAhead: {},
+  pairHinted: [],
   lastVersion: "",
 };
 

@@ -11,6 +11,7 @@ export { lrcRows, sungLines, unfoldStamps } from "../../src/lib/lrc";
 export { describePlayback, formatLine } from "../../src/lib/playbackFormat";
 export { jellyfinItemToTrack, jellyfinToTrack } from "../../src/lib/jellyfinItem";
 export { PLAY_AHEAD_MAX_MS, PLAY_AHEAD_STEP_MS } from "../../src/lib/groupSync";
+export { seedPlayed } from "../../src/lib/libraryOrder";
 export {
   artistAlbums,
   artistTracks,

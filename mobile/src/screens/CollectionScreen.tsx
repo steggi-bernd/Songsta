@@ -5,6 +5,7 @@
  * its lower edge, round glass controls under them.
  */
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { PullDownToClose } from "../components/PullDownToClose";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronLeft, CircleMinus, EllipsisVertical, Image as ImageIcon, ImageOff, Pause, Pencil, Pin, PinOff, Play, Search, Shuffle, Trash2 } from "lucide-react-native";
@@ -43,6 +44,8 @@ export function CollectionScreen() {
   const playWhenReady = usePlayer((s) => s.playWhenReady);
 
   const playlistId = params.kind === "playlist" ? params.id : null;
+  /** What Your Library counts as played when this list is started (stores/played.ts). */
+  const source = params.kind === "playlist" ? `playlist:${params.id}` : params.kind === "mix" ? `mix:${params.id}` : null;
   const playlist = usePlaylists((s) => (playlistId ? s.playlists.find((p) => p.id === playlistId) : undefined));
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -110,6 +113,7 @@ export function CollectionScreen() {
 
   return (
     <>
+<PullDownToClose onClose={() => nav.goBack()}>
       <FlatList
         style={styles.root}
         data={found}
@@ -160,12 +164,12 @@ export function CollectionScreen() {
               {params.kind !== "downloads" && tracks.some((t) => !t.localPath) && <DownloadButton tracks={tracks} list={params.kind === "playlist" ? playlistListKey(params.id) : params.kind === "liked" ? LIKED_LIST : undefined} size={20} style={styles.roundWide} />}
               <Pressable
                 accessibilityLabel={T("Shuffle")}
-                onPress={() => playAll(tracks, title, true)}
+                onPress={() => playAll(tracks, title, true, source)}
                 style={styles.round}
               >
                 <Shuffle size={18} color={colors.ink} />
               </Pressable>
-              <Pressable onPress={() => (playingHere ? toggle() : playAll(tracks, title))} style={styles.pill}>
+              <Pressable onPress={() => (playingHere ? toggle() : playAll(tracks, title, undefined, source))} style={styles.pill}>
                 {pause ? <Pause size={18} color={colors.ink} fill={colors.ink} /> : <Play size={18} color={colors.ink} fill={colors.ink} />}
                 <Text style={styles.pillText}>{pause ? T("Pause") : T("Play")}</Text>
               </Pressable>
@@ -187,10 +191,11 @@ export function CollectionScreen() {
                     })
                 : undefined
             }
-            onPress={() => playTracks(tracks, Math.max(0, tracks.indexOf(item)), title, false)}
+            onPress={() => playTracks(tracks, Math.max(0, tracks.indexOf(item)), title, false, source)}
           />
         )}
       />
+      </PullDownToClose>
       {!!playlist && (
       <>
         <MenuSheet

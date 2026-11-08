@@ -326,22 +326,39 @@ function trackOf(id: string): Track | undefined {
 }
 
 /** Where a device gets a song: from the server's address at home, by itself. */
-function whereToGet(song: ZoneSong): { url: string; mime: string; mark: string } {
-  const session = useSession.getState().session;
+/** A file's own extension, out of its address on the phone (a folder's songs are content:// documents). */
+function extensionOf(uri: string): string | null {
+  const name = decodeURIComponent(uri).split(/[/:]/).pop() ?? "";
+  return /\.([a-z0-9]{1,5})$/i.exec(name)?.[1].toLowerCase() ?? null;
+}
+
+/** Songs of this phone are being handed out: once no device plays any more, that ends. */
+let sharing = false;
+
+async function whereToGet(song: ZoneSong, host: string): Promise<{ url: string; mime: string; mark: string }> {
   const track = trackOf(song.id);
-  if (!track || track.localPath) throw new Error(`"${song.title}" is only on this phone, so a device can't fetch it`);
+  if (!track) throw new Error(`"${song.title}" can't be played there`);
+  if (track.localPath) {
+    // Only in a folder on this phone: the device fetches it from here, the file itself (FileServer.kt).
+    const ext = extensionOf(track.localPath) ?? ((track.container ?? "").split(",")[0].trim().toLowerCase() || "mp3");
+    const mime = mimeOf(`.${ext}`);
+    sharing = true;
+    const url = await Player.fileShare(track.localPath, mime, ext, host);
+    return { url, mime, mark: /\/song\/([0-9a-f]{32})/.exec(url)?.[1] ?? url };
+  }
+  const session = useSession.getState().session;
   if (!session) throw new Error(`"${song.title}" can't be played there`);
   const plan = jellyfinStreamPlan(track);
   const ext = plan !== "static" ? plan : (track.container ?? "").split(",")[0].trim().toLowerCase() || "flac";
   return { url: streamUrl({ ...session, server: session.home ?? session.server }, track, ORIGINAL), mime: mimeOf(`.${ext}`), mark: itemIdOf(track) };
 }
 
-function driverFor(player: DevicePlayer, deviceId: string): ZoneDriver {
+function driverFor(player: DevicePlayer, deviceId: string, host: string): ZoneDriver {
   const watch = new EndWatch();
   let playing: { song: ZoneSong; mark: string } | null = null;
   return {
     async load(song, position, play) {
-      const { url, mime, mark } = whereToGet(song);
+      const { url, mime, mark } = await whereToGet(song, host);
       playing = { song, mark };
       watch.begin(position);
       await player.load(url, { ...song, mime }, position, play);
@@ -426,7 +443,7 @@ async function memberFor(d: FoundDevice): Promise<ZoneMember> {
     if (!renderer) throw new Error(T("{name} doesn't answer", { name: deviceName(d) }));
     player = upnpPlayer(renderer);
   } else throw new Error(`${deviceName(d)} can only be reached over Bluetooth`);
-  const driver = driverFor(player, d.id);
+  const driver = driverFor(player, d.id, d.host);
   // Its volume stays where it is: the slider shows it, and only moving the slider changes it.
   const volume = await driver.getVolume().catch(() => null);
   return { deviceId: d.id, name: deviceName(d), driver, volume };
@@ -537,7 +554,7 @@ const offs = new SwitchOffs({
   counting: (d) => {
     const text = T("{name} switches off in 30 seconds", { name: d.name });
     said.set(d.id, text);
-    toast(text, true, { label: T("Keep on"), run: () => offs.forget(d.id) }, 12_000);
+    toast(text, true, { label: T("Keep on"), run: () => offs.forget(d.id) }, Math.max(1000, d.at - Date.now()), d.at);
   },
 });
 
@@ -670,6 +687,15 @@ export async function finishPairing(code: string): Promise<boolean> {
 
 let onDevices = new Set<string>();
 
+/** The music left a TV that isn't paired, so it stays on: said once, with where to change that. */
+function hintPairing(id: string): void {
+  const d = useZones.getState().found.find((f) => f.id === id);
+  const { pairHinted, change } = useSettings.getState();
+  if (!d || !looksLikeTv(d) || isPairedTv(id) || pairHinted.includes(id)) return;
+  change({ pairHinted: [...pairHinted, id] });
+  toast(T("{name} stays on. Pair it once in its menu under Devices, and it goes off by itself half a minute after the music.", { name: deviceName(d) }), true, undefined, 9000);
+}
+
 function seeDevices(): void {
   const now = devicesWithMusic();
   const { found, names } = useZones.getState();
@@ -678,6 +704,7 @@ function seeDevices(): void {
     const d = found.find((f) => f.id === id);
     return d ? { name: names[id] ?? d.name, canSwitchOff: wanted && (canSwitchOff(d.model) || isPairedTv(id)) } : null;
   }, useSettings.getState().deviceLinks);
+  if (wanted) for (const id of onDevices) if (!now.has(id)) hintPairing(id);
   for (const id of now) if (!onDevices.has(id)) void backToOwnInput(id);
   for (const link of linksToFollow(now, onDevices, useSettings.getState().deviceLinks)) {
     offs.forget(link.receiver);
@@ -688,6 +715,10 @@ function seeDevices(): void {
 
 function publish(): void {
   dropEmptyZones();
+  if (sharing && !running.size) {
+    sharing = false;
+    void Player.fileShareStop().catch(() => undefined);
+  }
   useZones.setState({ zones: [...running.values()].map(view) });
   seeDevices();
   const main = mainZone();

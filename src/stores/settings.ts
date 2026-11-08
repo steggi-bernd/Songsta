@@ -70,6 +70,8 @@ interface SettingsState {
   pairedTvs: string[];
   /** how far ahead a device plays in a group, in ms, set by hand; below zero behind (lib/groupSync.ts) */
   playAhead: Record<string, number>;
+  /** TVs whose music left them unpaired: told once that pairing switches them off (lib/deviceSwitchOff.ts) */
+  pairHinted: string[];
   /** a receiver goes off half a minute after the music has left it (lib/devicePower.ts) */
   switchOffDevices: boolean;
   /** where the app can replace itself: fetches a new version unasked, to install when it closes */
@@ -142,6 +144,7 @@ interface SettingsState {
   setDeviceLinks(v: DeviceLink[]): void;
   setPairedTvs(v: string[]): void;
   setPlayAhead(id: string, ms: number): void;
+  setPairHinted(v: string[]): void;
   setSwitchOffDevices(v: boolean): void;
   setAutoUpdate(v: boolean): void;
   setLastVersion(v: string): void;
@@ -207,6 +210,7 @@ export const useSettings = create<SettingsState>()(
       deviceLinks: [],
       pairedTvs: [],
       playAhead: {},
+      pairHinted: [],
       switchOffDevices: true,
       autoUpdate: true,
       lastVersion: "",
@@ -261,6 +265,7 @@ export const useSettings = create<SettingsState>()(
       setKeptLists: (keptLists) => set({ keptLists }),
       setDeviceLinks: (deviceLinks) => set({ deviceLinks }),
       setPairedTvs: (pairedTvs) => set({ pairedTvs }),
+      setPairHinted: (pairHinted) => set({ pairHinted }),
       setPlayAhead: (id, ms) =>
         set((s) => {
           const playAhead = { ...s.playAhead };

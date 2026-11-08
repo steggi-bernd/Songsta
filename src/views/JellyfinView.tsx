@@ -152,6 +152,9 @@ export function JellyfinView() {
     }
   };
 
+  // Home or away changed: the line under the addresses says which way it goes now.
+  useEffect(() => window.bytune?.onJellyfinReach((s) => setStatus(s as JellyfinStatus)), []);
+
   useEffect(() => {
     void (async () => {
       const s = (await window.bytune?.jellyfinStatus()) as JellyfinStatus | undefined;
@@ -200,6 +203,25 @@ export function JellyfinView() {
 
   const fetched = lib?.fetchedAt ? new Date(lib.fetchedAt).toLocaleString() : null;
 
+  /** The address away from home: a tunnel or proxy to the same server, for a laptop out of the house. */
+  const editAway = (): void =>
+    openDialog({
+      title: T("Address away from home"),
+      body: T("A tunnel or proxy that leads to this same server from anywhere. Songsta goes through it whenever the address at home doesn't answer, and back to the direct way at home."),
+      initialValue: status.away ?? "",
+      placeholder: "https://music.example.org",
+      confirmLabel: T("Save"),
+      onConfirm: async (value) => {
+        try {
+          const s = (await window.bytune?.jellyfinSetAway(value)) as JellyfinStatus | undefined;
+          if (s) setStatus(s);
+          toast(value.trim() ? T("Saved: {value}", { value: s?.away ?? value.trim() }) : T("Address away from home removed"), "success");
+        } catch (err) {
+          toast(errorText(err), "error");
+        }
+      },
+    });
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap animate-slide-up">
@@ -238,6 +260,27 @@ export function JellyfinView() {
             <LogOut className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* Two ways to the same server: the direct one at home, and one from anywhere for a laptop out of the house. */}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-xl bg-ink-hi/[0.04] px-4 py-3 text-[13px] animate-slide-up">
+        <span className="text-ink-dim">{T("Address at home")}</span>
+        <span className="truncate text-ink-hi" title={status.home ?? undefined}>{status.home}</span>
+        <span />
+        <span className="text-ink-dim">{T("Address away from home")}</span>
+        {status.away ? (
+          <span className="truncate text-ink-hi" title={status.away}>{status.away}</span>
+        ) : (
+          <span className="text-ink-faint">{T("None yet: your music plays only at home. Enter the address of your tunnel or proxy.")}</span>
+        )}
+        <button onClick={editAway} className="h-8 rounded-full bg-ink-hi/[0.08] px-3.5 text-[12.5px] font-semibold text-ink-hi transition-colors hover:bg-ink-hi/[0.14]">
+          {status.away ? T("Change") : T("Add")}
+        </button>
+        {status.away && (
+          <span className={`col-span-3 text-[12px] font-semibold ${status.reach === "offline" ? "text-ink-faint" : "text-accent"}`}>
+            {status.reach === "away" ? T("Connected from away") : status.reach === "offline" ? T("Neither address answers right now") : T("Connected at home")}
+          </span>
+        )}
       </div>
 
       {refreshing && !lib?.tracks.length ? (
