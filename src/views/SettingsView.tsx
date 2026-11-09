@@ -7,7 +7,8 @@ import {
   Check,
   ChevronRight,
   Circle,
-  CircleCheck,
+  CircleAlert,
+  CircleCheck,
   Disc3,
   Download,
   Droplets,
@@ -17,7 +18,7 @@ import {
   FileUp,
   FolderOpen,
   FolderSync,
-  Gauge,
+  Gauge,
   Heart,
   Image,
   Infinity as InfinityIcon,
@@ -34,15 +35,15 @@ import {
   RefreshCw,
   Repeat,
   Server,
-  ShoppingBag,
+  ShoppingBag,
   SlidersVertical,
   Sparkles,
   Speaker,
   Squircle,
-  Trash2,
+  Trash2,
   UserRound,
   Volume2,
-  VolumeX,
+  VolumeX,
 } from "lucide-react";
 import {
   useSettings,
@@ -50,18 +51,21 @@ import {
   type Corners,
 } from "../stores/settings";
 import { installUpdate, lookNow, openReleasePage, startUpdate, useAppUpdate, useNewerVersion } from "../lib/newVersionWatch";
-import { isLinux, isMac } from "../lib/platform";
+import { isLinux, isMac, isWindows } from "../lib/platform";
 import { ParametricEqEditor } from "../components/ParametricEqEditor";
 import { useUI, type MenuItem } from "../stores/ui";
 import { EQ_BANDS, listOutputDevices } from "../lib/audio";
 import type { OutputDeviceChoice } from "../lib/audio-output";
 import type { DiscordStatus } from "../../electron/discord";
+import type { StartupState } from "../../electron/startup";
+import { discordAppId, SONGSTA_DISCORD_APP_ID } from "../lib/discordPresence";
 import type { JellyfinStatus } from "../../electron/jellyfin";
 import type { SubsonicStatus } from "../../electron/subsonic";
 import type { SoundStatus } from "../../electron/sound-library";
-import { refreshHomeSync, useHomeSync } from "../lib/homeSync";
+import { refreshHomeSync, searchSyncAgain, useHomeSync } from "../lib/homeSync";
 import { syncFavorites } from "../lib/serverSync";
 import type { SyncStatus } from "../lib/syncEngine";
+import { SYNC_UPDATE_COMMAND } from "../lib/syncService";
 import { LANGUAGES, storedLanguageChoice, storeLanguageChoice, T, type LanguageChoice } from "../lib/i18n";
 
 /* ============================================================ settings chrome
@@ -222,15 +226,17 @@ function SoundAnalysisRow() {
 const DISCORD_PORTAL = "https://discord.com/developers/applications";
 
 /**
- * Discord status (electron/discord.ts): the switch, the Application ID it
- * needs — an application the user creates, whose name Discord shows — and
- * how the connection is doing, polled while the switch is on.
+ * Discord status (electron/discord.ts): the switch, the button, an application
+ * of the user's own if they want another name than Songsta's, and how the
+ * connection is doing, polled while the switch is on.
  */
 function DiscordGroup() {
   const enabled = useSettings((s) => s.discordPresence);
-  const clientId = useSettings((s) => s.discordClientId);
+  const clientId = useSettings((s) => s.discordOwnAppId);
   const setEnabled = useSettings((s) => s.setDiscordPresence);
-  const setClientId = useSettings((s) => s.setDiscordClientId);
+  const setClientId = useSettings((s) => s.setDiscordOwnAppId);
+  const button = useSettings((s) => s.discordButton);
+  const setButton = useSettings((s) => s.setDiscordButton);
   const [status, setStatus] = useState<DiscordStatus | null>(null);
   useEffect(() => {
     const bridge = window.bytune;
@@ -250,23 +256,30 @@ function DiscordGroup() {
     };
   }, [enabled, clientId]);
 
-  const validId = /^\d{15,22}$/.test(clientId);
+  const builtIn = !!SONGSTA_DISCORD_APP_ID;
+  // What the main process says (electron/discord.ts) comes in English; the known lines have their translation.
+  const said = status?.message ? T(status.message) : undefined;
+  const validId = /^\d{15,22}$/.test(discordAppId(clientId));
   const subtitle = !enabled
     ? T("Show the song playing now as your Discord status")
     : !validId
       ? T("Add your Application ID below to connect")
       : status?.state === "connected"
-        ? `${status.user ? T("Connected as {user}", { user: status.user }) : T("Connected")} · ${status.message ?? T("shows while music plays")}`
+        ? `${status.user ? T("Connected as {user}", { user: status.user }) : T("Connected")} · ${said ?? T("shows while music plays")}`
         : status?.state === "unavailable"
-          ? T("{message} — connects once Discord is open", { message: status.message ?? T("Discord isn't running") })
+          ? T("{message} — connects once Discord is open", { message: said ?? T("Discord isn't running") })
           : status?.state === "error"
-            ? T("{message} — check the ID", { message: status.message ?? T("Discord refused the connection") })
+            ? T("{message} — check the ID", { message: said ?? T("Discord refused the connection") })
             : T("Connecting to Discord…");
 
   return (
     <SettingsGroup
       header={T("Discord")}
-      footer={T("Discord shows your application's name in “Listening to …”, so call it Songsta, for example. Only the Discord app on this computer gets the song title and artist; covers stay here.")}
+      footer={
+        builtIn
+          ? T("While Songsta runs on this computer, Discord also shows what plays on your other devices. Only the Discord app here gets title, artist and album. Covers come from MusicBrainz and iTunes, never from your server or your files.")
+          : `${T("Discord shows your application's name in “Listening to …”, so call it Songsta, for example.")} ${T("While Songsta runs on this computer, Discord also shows what plays on your other devices. Only the Discord app here gets title, artist and album. Covers come from MusicBrainz and iTunes, never from your server or your files.")}`
+      }
     >
       <SettingsRow
         icon={Radio}
@@ -279,14 +292,22 @@ function DiscordGroup() {
         <>
           <Divider />
           <SettingsRow
+            icon={Link2}
+            title={T("Button to Songsta's page")}
+            subtitle={T("Others see a button under your status that leads to Songsta on GitHub")}
+            trailing={<Switch checked={button} onChange={setButton} />}
+            onClick={() => setButton(!button)}
+          />
+          <Divider />
+          <SettingsRow
             icon={KeyRound}
-            title={T("Application ID")}
-            subtitle={T("From your application's General Information page")}
+            title={builtIn ? T("Your own application") : T("Application ID")}
+            subtitle={builtIn ? T("Optional: its name shows instead of Songsta's") : T("From your application's General Information page")}
             trailing={
               <input
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                placeholder={T("e.g. 1234567890123456789")}
+                placeholder={builtIn ? T("Songsta's own") : T("e.g. 1234567890123456789")}
                 inputMode="numeric"
                 spellCheck={false}
                 aria-label={T("Discord Application ID")}
@@ -296,15 +317,54 @@ function DiscordGroup() {
               />
             }
           />
-          <Divider />
-          <SettingsRow
-            icon={ExternalLink}
-            title={T("Create an application")}
-            subtitle={T("Discord Developer Portal → New Application → name it → copy its Application ID (free)")}
-            onClick={() => window.open(DISCORD_PORTAL, "_blank")}
-          />
+          {!builtIn && (
+            <>
+              <Divider />
+              <SettingsRow
+                icon={ExternalLink}
+                title={T("Create an application")}
+                subtitle={T("Discord Developer Portal → New Application → name it → copy its Application ID (free)")}
+                onClick={() => window.open(DISCORD_PORTAL, "_blank")}
+              />
+            </>
+          )}
         </>
       )}
+    </SettingsGroup>
+  );
+}
+
+/**
+ * Windows: Songsta at sign-in (electron/startup.ts), read from Windows' own list of startup apps each
+ * time. Only an installed Songsta offers it.
+ */
+function StartupGroup() {
+  const [startup, setStartup] = useState<StartupState | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void window.bytune?.startupState?.().then((state) => alive && setStartup(state)).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  if (!isWindows || !startup?.supported) return null;
+  const atSignIn = startup.openAtLogin && !startup.turnedOffByWindows;
+  const setAtSignIn = (on: boolean): void => {
+    void window.bytune?.setOpenAtLogin?.(on).then(setStartup).catch(() => undefined);
+  };
+  return (
+    <SettingsGroup header={T("Startup")}>
+      <SettingsRow
+        icon={Power}
+        title={T("Open Songsta when you sign in")}
+        subtitle={
+          startup.turnedOffByWindows
+            ? T("Switched off in Windows' startup apps. Switch it on here to allow it again.")
+            : T("Songsta starts with Windows and opens its window")
+        }
+        trailing={<Switch checked={atSignIn} onChange={setAtSignIn} />}
+        onClick={() => setAtSignIn(!atSignIn)}
+      />
     </SettingsGroup>
   );
 }
@@ -332,6 +392,10 @@ function ServerSyncGroup() {
   const syncAddress = useHomeSync((st) => st.address);
   const customAddress = useHomeSync((st) => st.customAddress);
   const syncNeedsUser = useHomeSync((st) => st.needsUser);
+  const syncVersion = useHomeSync((st) => st.service?.version);
+  const syncTooOld = useHomeSync((st) => !!st.serviceProblem);
+  // Never found for this server: it was looked for once, and "Search again" looks now.
+  const syncNotFound = useHomeSync((st) => st.status === "unreachable" && !st.linked);
   const openDialog = useUI((st) => st.openDialog);
   const toast = useUI((st) => st.toast);
   const [jf, setJf] = useState<JellyfinStatus | null>(null);
@@ -431,7 +495,7 @@ function ServerSyncGroup() {
           <SettingsRow
             icon={ListMusic}
             title={T("Playlists and where you stopped")}
-            subtitle={syncNeedsUser ? T("Waits for a user, chosen below") : syncPlaylists ? SYNC_LINE[syncStatus] : SYNC_LINE.off}
+            subtitle={syncNeedsUser ? T("Waits for a user, chosen below") : !syncPlaylists ? SYNC_LINE.off : syncNotFound ? T("No sync service found on your Jellyfin server") : SYNC_LINE[syncStatus]}
             trailing={<Switch checked={syncPlaylists} onChange={setSyncPlaylists} />}
             onClick={() => setSyncPlaylists(!syncPlaylists)}
           />
@@ -441,10 +505,39 @@ function ServerSyncGroup() {
               <SettingsRow
                 icon={Link2}
                 title={T("Sync service address")}
-                subtitle={customAddress ? T("Entered by you") : T("On your Jellyfin server")}
+                subtitle={[customAddress ? T("Entered by you") : T("On your Jellyfin server"), syncVersion ? T("version {version}", { version: syncVersion }) : ""].filter(Boolean).join(" · ")}
                 value={syncAddress ?? "—"}
                 onClick={editSyncAddress}
               />
+              {syncNotFound && (
+                <>
+                  <Divider />
+                  <SettingsRow
+                    icon={RefreshCw}
+                    title={T("Search again")}
+                    subtitle={T("A sync service keeps playlists and your library the same on all your devices: a small Docker container next to Jellyfin, songsta-sync.zip on the Releases page. Without one, each device keeps its own.")}
+                    onClick={searchSyncAgain}
+                  />
+                </>
+              )}
+              {/* Only with a linked service (lib/syncService.ts): without one, nothing is asked or said. */}
+              {syncTooOld && syncStatus === "connected" && (
+                <>
+                  <Divider />
+                  <SettingsRow
+                    icon={CircleAlert}
+                    title={T("The sync service needs an update")}
+                    subtitle={T("Until then, library order, groups and album edits stay on this device. To update it, run this in its folder on the server: {command}", { command: SYNC_UPDATE_COMMAND })}
+                    value={T("Copy the command")}
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(SYNC_UPDATE_COMMAND)
+                        .then(() => toast(T("Copied: {command}", { command: SYNC_UPDATE_COMMAND })))
+                        .catch(() => toast(SYNC_UPDATE_COMMAND));
+                    }}
+                  />
+                </>
+              )}
             </>
           )}
         </>
@@ -1412,6 +1505,8 @@ export function SettingsView() {
           }
         />
       </SettingsGroup>
+
+      <StartupGroup />
 
       <SettingsGroup header={T("Updates")} footer={T("Asking GitHub once a day which version is the newest is all that goes out for this. With both off, not even that.")}>
         <LookForUpdatesRow />

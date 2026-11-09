@@ -1,7 +1,12 @@
 # Next to a Jellyfin container: set JELLYFIN_NETWORK to the Docker network Jellyfin is on,
 # JELLYFIN_URL to its name there, and DATA_PATH to where the documents should live.
+#
+# The ready image comes with each Songsta release (amd64 and arm64, a Raspberry Pi too). Updating:
+#   docker compose pull && docker compose up -d
+# Without access to ghcr.io, `docker compose up -d --build` builds it from this folder instead.
 services:
   songsta-sync:
+    image: ghcr.io/steggi-bernd/songsta-sync:${SONGSTA_SYNC_TAG:-latest}
     build: .
     container_name: songsta-sync
     restart: unless-stopped

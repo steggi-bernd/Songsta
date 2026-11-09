@@ -1,15 +1,19 @@
 /**
  * Discord status: the song playing now on the user's Discord profile
- * ("Listening to …"). Off unless turned on in Settings, and it needs the
- * Application ID of a Discord application the user creates — that
- * application's name is what Discord shows ("Listening to ByTune").
+ * ("Listening to …"). Off unless turned on in Settings. It goes out under
+ * Songsta's own Discord application, or one of the user's own, and that
+ * application's name is what Discord shows ("Listening to Songsta").
  *
  * Only the Discord app on this computer is talked to, over its local IPC
  * pipe: frames of [opcode u32 LE][length u32 LE][JSON]. The handshake
  * ({ v: 1, client_id }) is answered by a READY dispatch; SET_ACTIVITY then
  * sets or clears the status. Discord allows 5 updates per 20 s, so updates
- * are spaced out and only the newest one is sent. Covers are not sent:
- * local ones have no web address, and a server's would carry its token.
+ * are spaced out and only the newest one is sent.
+ *
+ * Pictures go by public address only: the album's cover as the open databases
+ * have it (MusicBrainz's Cover Art Archive, iTunes; looked up by the caller),
+ * and Songsta's logo. Covers of local files have no web address and a server's
+ * would carry its token, so neither leaves the computer.
  */
 import * as net from "net";
 import * as path from "path";
@@ -18,6 +22,12 @@ import { randomUUID } from "crypto";
 export interface DiscordActivity {
   title: string;
   artist: string;
+  /** "" when the song has none */
+  album: string;
+  /** the album's own artist, for finding its cover; "" for the song's */
+  albumArtist: string;
+  /** a button to Songsta's page under the status, for others to see */
+  button: boolean;
   /** epoch ms the song started, its position taken into account */
   startedAt: number;
   /** epoch ms it ends; 0 when the length is unknown */
@@ -41,6 +51,12 @@ const OP_PING = 3;
 const OP_PONG = 4;
 /** RPC close code: Discord doesn't know the Application ID */
 const CLOSE_INVALID_CLIENT = 4000;
+
+/** Songsta's logo where Discord can fetch it: the repository's own app icon. */
+export const LOGO_URL = "https://raw.githubusercontent.com/steggi-bernd/Songsta/feat/local-player/build/icon.png";
+export const SONGSTA_PAGE = "https://github.com/steggi-bernd/Songsta";
+/** Discord takes picture addresses up to this long. */
+const MAX_IMAGE_URL = 256;
 
 const timing = {
   /** between two status updates — Discord's limit is 5 per 20 s */
@@ -67,8 +83,13 @@ let wanted: DiscordActivity | null = null;
 /** the last SET_ACTIVITY sent on this connection (null: none yet) */
 let sentKey: string | null = null;
 let lastSentAt = 0;
-/** "Listening to <song>" fields of newer Discords; dropped once a Discord rejects them */
-let listeningFields = true;
+/**
+ * What a Discord took: 0 everything, 1 without the "Listening to <song>" fields of newer
+ * Discords, 2 without pictures and button too. A refused status steps down once each.
+ */
+let fallback = 0;
+/** the album cover found for what's shown, by the song it was found for */
+let cover: { key: string; url: string } | null = null;
 let sendTimer: NodeJS.Timeout | null = null;
 let retryTimer: NodeJS.Timeout | null = null;
 let readyTimer: NodeJS.Timeout | null = null;
@@ -241,9 +262,9 @@ function onFrame(s: net.Socket, op: number, msg: unknown): void {
     return;
   }
   if (m.cmd === "SET_ACTIVITY" && m.evt === "ERROR") {
-    if (listeningFields) {
-      // An older Discord: the plain status (song and artist) still works.
-      listeningFields = false;
+    if (fallback < 2) {
+      // An older Discord: first without the Listening fields, then the plain status (song and artist).
+      fallback += 1;
       sentKey = null;
       scheduleSend();
       return;
@@ -263,6 +284,9 @@ function line(text: string): string {
   return out.length >= 2 ? out : out.padEnd(2, "​");
 }
 
+/** Which song a cover was found for. */
+const coverKey = (a: DiscordActivity): string => `${a.title}\n${a.artist}\n${a.album}`;
+
 function activityFor(a: DiscordActivity): Record<string, unknown> {
   const activity: Record<string, unknown> = {
     details: line(a.title),
@@ -271,7 +295,17 @@ function activityFor(a: DiscordActivity): Record<string, unknown> {
     instance: false,
   };
   // type 2 = "Listening", status_display_type 2 = the member list names the song.
-  if (listeningFields) Object.assign(activity, { type: 2, status_display_type: 2 });
+  if (fallback < 1) Object.assign(activity, { type: 2, status_display_type: 2 });
+  if (fallback < 2) {
+    // The album's cover with Songsta's logo in its corner; without a cover, the logo alone.
+    const art = cover && cover.key === coverKey(a) ? cover.url : null;
+    activity.assets = {
+      large_image: art ?? LOGO_URL,
+      large_text: line(a.album || "Songsta"),
+      ...(art ? { small_image: LOGO_URL, small_text: "Songsta" } : {}),
+    };
+    if (a.button) activity.buttons = [{ label: "Songsta", url: SONGSTA_PAGE }];
+  }
   return activity;
 }
 
@@ -309,7 +343,22 @@ export function sanitizeActivity(input: unknown): DiscordActivity | null {
   if (!title) return null;
   const startedAt = time(a.startedAt) || Date.now();
   const endsAt = time(a.endsAt);
-  return { title, artist: text(a.artist), startedAt, endsAt: endsAt > startedAt ? endsAt : 0 };
+  return {
+    title,
+    artist: text(a.artist),
+    album: text(a.album),
+    albumArtist: text(a.albumArtist),
+    button: a.button === true,
+    startedAt,
+    endsAt: endsAt > startedAt ? endsAt : 0,
+  };
+}
+
+/** The cover found for a song: shown if that song is still the one on the status. Public https addresses only. */
+export function setDiscordCover(forSong: DiscordActivity, url: string): void {
+  if (!/^https:\/\/[^\s"']+$/.test(url) || url.length > MAX_IMAGE_URL) return;
+  cover = { key: coverKey(forSong), url };
+  if (enabled && ready && wanted && coverKey(wanted) === cover.key) scheduleSend();
 }
 
 /** Turn the status on or off, or change the Application ID. */
@@ -320,7 +369,7 @@ export function configureDiscord(on: boolean, id: string): DiscordStatus {
   enabled = on;
   clientId = nextId;
   refused = false;
-  listeningFields = true;
+  fallback = 0;
   disconnect();
   setStatus({ state: "off" });
   if (on && nextId) void connect();

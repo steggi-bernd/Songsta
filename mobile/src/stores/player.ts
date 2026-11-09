@@ -860,10 +860,10 @@ function keepGoing(): void {
   // One end, one song: the player says it's at the end more than once.
   if (!autoplay || Date.now() - keptGoingAt < 2000) return;
   const { queue } = usePlayer.getState();
-  const { data, muted } = useLibrary.getState();
+  const { data, tracks, muted } = useLibrary.getState();
   const { kept } = useDownloads.getState();
   const offline = useConnection.getState().reach === "offline";
-  const pool = data.tracks.filter((t) => !muted.has(t.id) && (!offline || kept[t.id] || fileOfSong(t)));
+  const pool = tracks.filter((t) => !muted.has(t.id) && (!offline || kept[t.id] || fileOfSong(t)));
   const heard = new Set(queue.map((t) => t.id));
   const now = Date.now();
   if (dontRepeat) for (const [id, count] of Object.entries(data.counts)) if (now - (count.lastAt ?? 0) < HEARD_LATELY_MS) heard.add(id);

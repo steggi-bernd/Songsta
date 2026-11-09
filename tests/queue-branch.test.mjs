@@ -33,7 +33,8 @@ const out = await build({
           stub(`export const useLibrary = { getState: () => ({ isLiked: () => false, playlists: [], toggleLike() {}, addToPlaylist() {} }) };`)
         );
         b.onLoad({ filter: /[\\/]lib[\\/]downloads\.ts$/ }, () =>
-          stub(`export const SERVER_SONG = /^(jf|ss):/; export const downloadForOffline = () => 0; export const startDownload = async () => {}; export const getDownload = () => undefined;`)
+          stub(`export const SERVER_SONG = /^(jf|ss):/; export const downloadForOffline = () => 0; export const startDownload = async () => {}; export const getDownload = () => undefined;
+            export const downloadsReconciled = async () => undefined; export const removeOfflineCopy = async () => undefined;`)
         );
         // The "Play on" submenu: no devices around in this test.
         b.onLoad({ filter: /[\\/]lib[\\/]cast\.ts$/ }, () => stub(`export const useCast = { getState: () => ({ devices: [] }) };`));

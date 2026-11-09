@@ -9,8 +9,11 @@
  * settings gear).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpDown, Check, ChevronDown, ChevronRight, Disc3, Folder, Heart, Library, ListEnd, ListMusic, ListPlus, Music2, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Play, Shuffle, Sparkles, User, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ChevronRight, Disc3, Folder, FolderMinus, FolderPlus, Heart, Library, ListEnd, ListMusic, ListPlus, Music2, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Play, Plus, Shuffle, Sparkles, Ungroup, User, Trash2 } from "lucide-react";
 import { newestFirst, useLibraryIndex, type LibAlbum } from "../lib/catalogIndex";
+import { arrangeGroups, groupOf, newGroupId, newGroupName, withGroupNamed, withItemIn, withItemOut, withNewGroup, withoutGroup, type Group, type GroupPlace } from "../lib/libraryGroups";
+import { albumListKey, playlistListKey } from "../lib/keptLists";
+import { plural } from "../lib/format";
 import { useAlbumEditorRequest } from "./AlbumEditor";
 import { artistRoute, splitCredits } from "../lib/libraryTracks";
 import { RELEASE_LABEL } from "../lib/releases";
@@ -23,13 +26,13 @@ import { useLibraryOrder } from "../stores/libraryOrder";
 import { movePinned, orderRows } from "../lib/libraryOrder";
 import { useSmartPlaylists } from "../stores/smartPlaylists";
 import { useSmartEditor } from "./SmartPlaylistEditor";
-import { useUI } from "../stores/ui";
+import { useUI, type MenuItem } from "../stores/ui";
 import { EqBars } from "./primitives";
 import { LikedCover } from "./LikedCover";
 import { upgradeArtwork } from "../lib/artwork";
 import { CreateMenu } from "./CreateMenu";
 import { playlistFolderItems, playlistHeaderItems } from "../lib/trackActions";
-import { dragHasPlaylist, dragHasTrack, readPlaylist, readTrack } from "../lib/dnd";
+import { beginPlaylistDrag, dragHasPlaylist, dragHasTrack, readPlaylist, readTrack } from "../lib/dnd";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
 
@@ -47,17 +50,71 @@ const ORDER_LABEL: Record<LibraryOrder, string> = {
 /** A pinned row being dragged into another place among the pinned ones. */
 const PIN_MIME = "application/x-bytune-pin";
 const dragHasPin = (e: React.DragEvent): boolean => e.dataTransfer.types.includes(PIN_MIME);
+/**
+ * An album or a playlist dragged in the panel, by its list key, as in Discord: onto another one,
+ * the two make a group; onto a group, folded or open, it goes in; between a group's rows, it takes
+ * that place, which is how a group's own order changes (lib/libraryGroups.ts).
+ */
+const ITEM_MIME = "application/x-bytune-library-item";
+
+/** A group folded: its first covers in a small grid, the way Discord shows a folder of servers. */
+function GroupTile({ members, className }: { members: LibRow[]; className: string }) {
+  return (
+    <span className={`${className} grid grid-cols-2 grid-rows-2 gap-[3px] p-[5px] bg-accent/15`}>
+      {members.slice(0, 4).map((m) =>
+        m.thumb ? (
+          <img key={m.id} src={m.thumb} alt="" loading="lazy" decoding="async" className="w-full h-full max-w-none rounded-[3px] object-cover" />
+        ) : (
+          <span key={m.id} className="rounded-[3px] bg-ink-hi/[0.12]" />
+        )
+      )}
+    </span>
+  );
+}
+
+/** A small round button inside a row, which is a button itself: a span that acts as one. */
+function RowButton({ label, onPress, children }: { label: string; onPress: () => void; children: React.ReactNode }) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      title={label}
+      aria-label={label}
+      draggable={false}
+      onClick={(e) => {
+        e.stopPropagation();
+        onPress();
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        e.stopPropagation();
+        onPress();
+      }}
+      className="w-7 h-7 grid place-items-center rounded-full text-ink-hi/60 hover:text-ink-hi hover:bg-ink-hi/[0.1] transition-colors"
+    >
+      {children}
+    </span>
+  );
+}
 
 interface LibRow {
   id: string;
   title: string;
   subtitle: string;
   thumb?: string;
-  kind: "playlist" | "folder" | "album" | "smart" | "loose";
+  kind: "playlist" | "folder" | "album" | "smart" | "loose" | "group";
   /** album rows: the library album */
   release?: LibAlbum;
   /** album rows: false while none of its songs can be reached */
   available?: boolean;
+  /** album and playlist rows: the key a group knows them by ("album:…", "playlist:…") */
+  itemKey?: string;
+  /** group rows: the group, and the rows in it as the list has them, in the group's own order */
+  group?: Group;
+  members?: LibRow[];
+  /** rows shown inside an open group: that group's id */
+  inGroup?: string;
   /** playlists: the folder they're filed in; folders: their own id */
   folderId?: string;
   /** the Liked Songs row carries its pin state */
@@ -90,6 +147,7 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   const played = useLibraryOrder((s) => s.played);
   const pins = useLibraryOrder((s) => s.pins);
   const pinOrder = useLibraryOrder((s) => s.pinOrder);
+  const groups = useLibraryOrder((s) => s.groups);
   const available = useAvailabilityCheck();
 
   /** Spotify's filter chips: one category at a time, a second click shows everything again. */
@@ -132,6 +190,10 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   /** a pinned row being dragged into another place, and where it would land */
   const [pinDrag, setPinDrag] = useState<string | null>(null);
   const [pinDrop, setPinDrop] = useState<{ id: string; below: boolean } | null>(null);
+  /** the album or playlist being dragged, by its list key: onto another one, a group, or a place in a group */
+  const [itemDrag, setItemDrag] = useState<string | null>(null);
+  /** the place between a group's rows it would land in */
+  const [memberDrop, setMemberDrop] = useState<{ id: string; below: boolean } | null>(null);
 
   // A drag that ends anywhere (dropped outside a target) clears hover state.
   useEffect(() => {
@@ -139,6 +201,8 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
       setDropHover(null);
       setPinDrag(null);
       setPinDrop(null);
+      setItemDrag(null);
+      setMemberDrop(null);
     };
     window.addEventListener("dragend", clear);
     return () => window.removeEventListener("dragend", clear);
@@ -167,7 +231,11 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
     thumb: p.cover ?? p.artistThumb ?? p.tracks[0]?.thumb,
     kind: "playlist",
     folderId,
+    itemKey: playlistListKey(p.id),
   });
+
+  // What stands in a group stands there only: not among the pinned rows, not in a folder.
+  const grouped = useMemo(() => new Set(groups.flatMap((g) => g.items)), [groups]);
 
   // Pinned: Liked Songs and the playlists by their own pins, albums and smart
   // playlists by the panel's (stores/libraryOrder.ts). A playlist in a folder
@@ -176,9 +244,19 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   const isPinned = (r: LibRow): boolean =>
     r.singleKey
       ? singlePinned(r.singleKey)
-      : r.kind === "playlist"
-        ? !r.folderId && pinnedPlaylists.has(r.id)
-        : (r.kind === "album" || r.kind === "smart") && pins.includes(r.id);
+      : r.inGroup || (r.itemKey && grouped.has(r.itemKey))
+        ? false
+        : r.kind === "playlist"
+          ? !r.folderId && pinnedPlaylists.has(r.id)
+          : (r.kind === "album" || r.kind === "smart") && pins.includes(r.id);
+
+  /** "Group · 3 albums, 1 playlist" */
+  const groupLine = (members: LibRow[]): string => {
+    const albumCount = members.filter((m) => m.kind === "album").length;
+    const listCount = members.length - albumCount;
+    const parts = [albumCount ? plural(albumCount, T("album"), T("albums")) : "", listCount ? plural(listCount, T("playlist"), T("playlists")) : ""];
+    return T("Group · {count}", { count: parts.filter(Boolean).join(", ") });
+  };
 
   // Every top row in its own order — smart playlists, playlists, folders, the albums as sorted, Liked Songs first while pinned
   // and last when not — then the pinned ones lifted to the top as placed,
@@ -190,17 +268,36 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   if (looseCount) {
     top.push({ id: "__loose__", title: T("Songs without an album"), subtitle: `${looseCount} ${looseCount === 1 ? T("song") : T("songs")}`, kind: "loose" });
   }
-  for (const p of playlists) if (!p.folderId) top.push(playlistRow(p));
-  for (const f of folders) top.push({ id: f.id, title: f.name, subtitle: T("Folder"), kind: "folder", folderId: f.id });
-  for (const a of sortedAlbums) {
+  const albumRow = (a: LibAlbum): LibRow => ({
+    id: a.route,
+    title: a.title,
+    subtitle: `${RELEASE_LABEL[a.kind]} · ${a.artist}`,
+    thumb: a.thumb,
+    kind: "album",
+    release: a,
+    available: albumAvailable.get(a.route) ?? true,
+    itemKey: albumListKey(a.key),
+  });
+  // A group stands where its first member would, folded until it's opened; what's in it, in its own order.
+  const entries: LibRow[] = [
+    ...playlists.filter((p) => !p.folderId || grouped.has(playlistListKey(p.id))).map((p) => playlistRow(p)),
+    ...folders.map((f): LibRow => ({ id: f.id, title: f.name, subtitle: T("Folder"), kind: "folder", folderId: f.id })),
+    ...sortedAlbums.map(albumRow),
+  ];
+  for (const item of arrangeGroups(groups, entries, (r) => r.itemKey ?? `row:${r.id}`)) {
+    if ("entry" in item) {
+      top.push(item.entry);
+      continue;
+    }
+    const members = item.members.map((m) => ({ ...m, inGroup: item.group.id }));
     top.push({
-      id: a.route,
-      title: a.title,
-      subtitle: `${RELEASE_LABEL[a.kind]} · ${a.artist}`,
-      thumb: a.thumb,
-      kind: "album",
-      release: a,
-      available: albumAvailable.get(a.route) ?? true,
+      id: `group:${item.group.id}`,
+      title: item.group.name,
+      subtitle: groupLine(members),
+      kind: "group",
+      group: item.group,
+      members,
+      available: members.some((m) => m.available !== false),
     });
   }
   if (!likedRow.pinned) top.push(likedRow);
@@ -208,10 +305,14 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   for (const p of playlists) {
     if (p.folderId) folderPlayed.set(p.folderId, Math.max(folderPlayed.get(p.folderId) ?? 0, played[p.id] ?? 0));
   }
+  const groupPlayed = (r: LibRow): number => Math.max(0, ...(r.members ?? []).map((m) => played[m.id] ?? 0));
   const ordered = orderRows(top, {
     isPinned,
     pinOrder,
-    playedAt: libraryOrder === "played" ? (r) => (r.kind === "folder" ? folderPlayed.get(r.id) ?? 0 : played[r.id] ?? 0) : undefined,
+    playedAt:
+      libraryOrder === "played"
+        ? (r) => (r.kind === "folder" ? folderPlayed.get(r.id) ?? 0 : r.kind === "group" ? groupPlayed(r) : played[r.id] ?? 0)
+        : undefined,
   });
   /** every pinned row in its place, whatever the chips show — a drag reorders these */
   const pinnedIds = ordered.filter(isPinned).map((r) => r.id);
@@ -220,12 +321,22 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   const shelf = (r: LibRow): LibFilter => (r.kind === "album" ? "albums" : "playlists");
   const rows: LibRow[] = [];
   for (const r of ordered) {
+    if (r.kind === "group") {
+      // Under a chip, a group shows with what of it the chip shows; it plays whole all the same.
+      const members = (r.members ?? []).filter((m) => show(shelf(m)));
+      if (!members.length) continue;
+      rows.push(members.length === r.members?.length ? r : { ...r, members, subtitle: groupLine(members) });
+      if (expanded.has(r.id)) rows.push(...members);
+      continue;
+    }
     if (!show(shelf(r))) continue;
     rows.push(r);
     if (r.kind === "folder" && expanded.has(r.id)) {
-      for (const p of playlists) if (p.folderId === r.id) rows.push(playlistRow(p, r.id));
+      for (const p of playlists) if (p.folderId === r.id && !grouped.has(playlistListKey(p.id))) rows.push(playlistRow(p, r.id));
     }
   }
+  /** each group's rows, whatever the chips show */
+  const wholeGroups = new Map(ordered.filter((r) => r.group).map((r) => [r.group!.id, r.members ?? []]));
 
   /** Unpinning takes a row out of the pinned order too: pinned again, it comes last. */
   const unplace = (id: string): void => {
@@ -251,6 +362,9 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
     const name = lib.playlists.find((p) => p.id === id)?.name;
     if (!name) return;
     lib.setPlaylistFolder(id, folderId);
+    // Filed in a folder, it stands there, not in a group.
+    const o = useLibraryOrder.getState();
+    if (groupOf(o.groups, playlistListKey(id))) o.setGroups(withItemOut(o.groups, playlistListKey(id)));
     setExpanded((prev) => new Set(prev).add(folderId));
     toast(T("Moved “{name}” into the folder", { name }), "success");
     setPulse(folderId);
@@ -278,6 +392,131 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
     }
     setPulse(r.id);
     window.setTimeout(() => setPulse((cur) => (cur === r.id ? null : cur)), 650);
+  };
+
+  /* ---------------------------------------------------------- album groups */
+
+  const pulseRow = (id: string): void => {
+    setPulse(id);
+    window.setTimeout(() => setPulse((cur) => (cur === id ? null : cur)), 650);
+  };
+
+  const groupName = (n: number): string => T("Group {count}", { count: n });
+
+  /** A playlist put in a group stands there, not in its folder. */
+  const leaveFolder = (key: string): void => {
+    if (!key.startsWith("playlist:")) return;
+    const id = key.slice("playlist:".length);
+    const lib = useLibrary.getState();
+    if (lib.playlists.find((p) => p.id === id)?.folderId) lib.setPlaylistFolder(id, null);
+  };
+
+  /** Into a group there is, at its end or at a place among its rows. */
+  const putIn = (group: Group, key: string, place?: GroupPlace): void => {
+    const o = useLibraryOrder.getState();
+    const before = groupOf(o.groups, key)?.id;
+    leaveFolder(key);
+    o.setGroups(withItemIn(o.groups, group.id, key, place));
+    if (before !== group.id) useUI.getState().toast(T("Put in “{name}”", { name: group.name }), "success");
+    pulseRow(`group:${group.id}`);
+  };
+
+  /** A new group of these, named in a dialog first (lib/libraryGroups.ts). */
+  const askNewGroup = (keys: string[]): void => {
+    const suggested = newGroupName(useLibraryOrder.getState().groups, groupName);
+    openDialog({
+      title: T("New group"),
+      body: T("Give your group a name."),
+      initialValue: suggested,
+      placeholder: T("Group name"),
+      confirmLabel: T("Create"),
+      onConfirm: (value) => {
+        const o = useLibraryOrder.getState();
+        const id = newGroupId();
+        keys.forEach(leaveFolder);
+        o.setGroups(withNewGroup(o.groups, id, value.trim() || suggested, keys));
+        setExpanded((prev) => new Set(prev).add(`group:${id}`));
+      },
+    });
+  };
+
+  /**
+   * What the dragged album or playlist would do on this row: go into a group, folded or open
+   * ("join"); take a place among a group's rows ("place", also within its own group); or make a
+   * new group with another album or playlist ("pair").
+   */
+  const dropFor = (r: LibRow, key: string | null): "join" | "place" | "pair" | null => {
+    if (!key) return null;
+    if (r.kind === "group") return r.group && groupOf(groups, key)?.id !== r.group.id ? "join" : null;
+    if (!r.itemKey || r.itemKey === key || r.singleKey) return null;
+    return r.inGroup ? "place" : "pair";
+  };
+
+  const placeOn = (e: React.DragEvent, r: LibRow): GroupPlace | undefined => {
+    if (!r.itemKey) return undefined;
+    const box = e.currentTarget.getBoundingClientRect();
+    return e.clientY > box.top + box.height / 2 ? { after: r.itemKey } : { before: r.itemKey };
+  };
+
+  const dropItemOn = (key: string, r: LibRow, drop: "join" | "place" | "pair", place?: GroupPlace): void => {
+    const o = useLibraryOrder.getState();
+    if (drop === "join" && r.group) return putIn(r.group, key);
+    const theirs = r.inGroup ? o.groups.find((g) => g.id === r.inGroup) : undefined;
+    if (drop === "place" && theirs) return putIn(theirs, key, place);
+    if (drop !== "pair" || !r.itemKey) return;
+    const id = newGroupId();
+    const name = newGroupName(o.groups, groupName);
+    leaveFolder(key);
+    leaveFolder(r.itemKey);
+    o.setGroups(withNewGroup(o.groups, id, name, [r.itemKey, key]));
+    setExpanded((prev) => new Set(prev).add(`group:${id}`));
+    useUI.getState().toast(T("Made the group “{name}”", { name }), "success");
+    pulseRow(`group:${id}`);
+  };
+
+  /** An album's or a playlist's group entries: into a group (a new one or one there is), out of the one it's in. */
+  const groupItems = (key: string): MenuItem[] => {
+    const mine = groupOf(groups, key);
+    const others = groups.filter((g) => g.id !== mine?.id);
+    const items: MenuItem[] = [
+      {
+        label: T("Add to group"),
+        icon: FolderPlus,
+        separatorBefore: true,
+        children: [
+          { label: T("New group…"), icon: Plus, action: () => askNewGroup([key]) },
+          ...others.map((g, i) => ({ label: g.name, separatorBefore: i === 0, action: () => putIn(g, key) })),
+        ],
+      },
+    ];
+    if (mine) {
+      items.push({
+        label: T("Take out of “{name}”", { name: mine.name }),
+        icon: FolderMinus,
+        action: () => {
+          const o = useLibraryOrder.getState();
+          o.setGroups(withItemOut(o.groups, key));
+        },
+      });
+    }
+    return items;
+  };
+
+  /** Everything in a group that can play right now, album after album and playlist after playlist, in the group's own order. */
+  const groupSongs = (group: Group): Track[] =>
+    (wholeGroups.get(group.id) ?? [])
+      .flatMap((m) => (m.kind === "album" ? m.release?.tracks ?? [] : playlists.find((p) => p.id === m.id)?.tracks ?? []))
+      .filter((t) => available(t));
+
+  /** In the group's order, or shuffled. */
+  const playGroup = (group: Group, shuffled: boolean): void => {
+    const songs = groupSongs(group);
+    if (!songs.length) {
+      useUI.getState().toast(T("Nothing in “{name}” can play right now", { name: group.name }), "warning");
+      return;
+    }
+    usePlayer.setState({ shuffle: shuffled });
+    usePlayer.getState().playAll(songs, shuffled);
   };
 
   /**
@@ -310,7 +549,34 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
     return () => window.removeEventListener("dragend", clear);
   }, []);
 
+  /** A row's own name in the list: a group's rows are shown once, but the drop line needs to tell them apart. */
+  const rowKey = (r: LibRow): string => `${r.kind}-${r.inGroup ?? ""}-${r.id}`;
+
   const onRowDragOver = (e: React.DragEvent, r: LibRow): void => {
+    // An album or a playlist over another one, a group or a group's row: they'd go together.
+    // Among pinned rows, a pin moves. A playlist from the page goes into a group as well.
+    const pinMove = dragHasPin(e) && isPinned(r) && r.id !== pinDrag;
+    const drop = pinMove ? null : itemDrag ? dropFor(r, itemDrag) : r.kind === "group" && dragHasPlaylist(e) ? "join" : null;
+    if (drop) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = itemDrag ? "move" : "copy";
+      setPinDrop((d) => (d ? null : d));
+      if (drop === "place") {
+        const place = placeOn(e, r);
+        const below = !!place && "after" in place;
+        const id = rowKey(r);
+        setMemberDrop((d) => (d?.id === id && d.below === below ? d : { id, below }));
+        setDropHover(null);
+        return;
+      }
+      setMemberDrop((d) => (d ? null : d));
+      setDropHover(r.id);
+      // A folded group opens after a beat, so the drag can go on to a place inside it.
+      if (r.kind === "group") scheduleExpand(r.id);
+      return;
+    }
+    if (memberDrop) setMemberDrop(null);
     if (dragHasPin(e)) {
       // A pinned row moves among the pinned ones: the line shows where it lands.
       if (!isPinned(r) || r.id === pinDrag) {
@@ -346,12 +612,28 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setDropHover((cur) => (cur === r.id ? null : cur));
       setPinDrop((d) => (d?.id === r.id ? null : d));
+      setMemberDrop((d) => (d?.id === rowKey(r) ? null : d));
       cancelPendingExpand();
     }
   };
 
   const onRowDrop = (e: React.DragEvent, r: LibRow): void => {
     cancelPendingExpand();
+    if (!(dragHasPin(e) && isPinned(r))) {
+      const fromPage = !itemDrag && r.kind === "group" && dragHasPlaylist(e) ? readPlaylist(e) : null;
+      const key = itemDrag ?? (fromPage ? playlistListKey(fromPage.id) : null);
+      const drop = dropFor(r, key);
+      if (key && drop) {
+        e.preventDefault();
+        e.stopPropagation();
+        const place = drop === "place" ? placeOn(e, r) : undefined;
+        setDropHover(null);
+        setMemberDrop(null);
+        setItemDrag(null);
+        dropItemOn(key, r, drop, place);
+        return;
+      }
+    }
     if (dragHasPin(e)) {
       e.preventDefault();
       e.stopPropagation();
@@ -399,6 +681,7 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
         else navigate({ name: "playlist", param: r.id });
         break;
       case "folder":
+      case "group":
         toggleFolder(r.id);
         break;
       case "album":
@@ -413,8 +696,44 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
     }
   };
 
-  /** Right-click a row: pin/unpin shortcuts, album, playlist and folder options. */
+  /** Right-click a row: pin/unpin shortcuts, album, group, playlist and folder options. */
   const onRowContextMenu = (e: React.MouseEvent, r: LibRow): void => {
+    if (r.kind === "group" && r.group) {
+      const group = r.group;
+      e.preventDefault();
+      e.stopPropagation();
+      const none = groupSongs(group).length === 0;
+      openContextMenu(e.clientX, e.clientY, [
+        { label: T("Play in order"), icon: Play, disabled: none, action: () => playGroup(group, false) },
+        { label: T("Shuffle"), icon: Shuffle, disabled: none, action: () => playGroup(group, true) },
+        {
+          label: T("Rename group"),
+          icon: Pencil,
+          separatorBefore: true,
+          action: () =>
+            openDialog({
+              title: T("Rename group"),
+              initialValue: group.name,
+              placeholder: T("Group name"),
+              confirmLabel: T("Save"),
+              onConfirm: (value) => {
+                const o = useLibraryOrder.getState();
+                o.setGroups(withGroupNamed(o.groups, group.id, value));
+              },
+            }),
+        },
+        {
+          label: T("Dissolve group"),
+          icon: Ungroup,
+          action: () => {
+            const o = useLibraryOrder.getState();
+            o.setGroups(withoutGroup(o.groups, group.id));
+            useUI.getState().toast(T("What was in “{name}” stands on its own again", { name: group.name }));
+          },
+        },
+      ]);
+      return;
+    }
     if (r.kind === "album" && r.release) {
       const album = r.release;
       e.preventDefault();
@@ -455,6 +774,7 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
             navigate({ name: "album", param: album.route });
           },
         },
+        ...groupItems(albumListKey(album.key)),
         // One entry per credited artist — "A, B" are two artists, two pages.
         ...splitCredits(album.artist).map((name, i, all) => ({
           label: all.length === 1 ? T("Go to artist") : T("Go to {name}", { name }),
@@ -518,6 +838,7 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
         },
         ...playlistHeaderItems(playlist),
         ...playlistFolderItems(playlist),
+        ...groupItems(playlistListKey(playlist.id)),
       ]);
       return;
     }
@@ -678,28 +999,46 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
           <div className="px-3 py-8 text-center text-[13px] text-ink-hi/55">{T("Nothing here yet — play a track to fill your library.")}</div>
         ) : (
           rows.map((r) => {
-            const isCurrent = r.kind === "album" ? current?.albumId === r.id : current?.id === r.id;
+            const isCurrent =
+              r.kind === "album"
+                ? current?.albumId === r.id
+                : r.kind === "group"
+                  ? !!r.members?.some((m) => m.kind === "album" && m.id === current?.albumId)
+                  : current?.id === r.id;
             const pinnedRow = isPinned(r);
+            // A pinned row is dragged into its place among the pinned ones; an album or a playlist
+            // onto another one, a group, or a place among a group's rows; a playlist onto a folder.
+            const dragsItem = !!r.itemKey && !r.singleKey;
+            const line = pinDrop?.id === r.id ? pinDrop : memberDrop?.id === rowKey(r) ? memberDrop : null;
             return (
               <button
-                key={`${r.kind}-${r.id}`}
+                key={rowKey(r)}
                 onClick={() => onClickRow(r)}
-                // A pinned row is dragged into its place among the pinned ones.
-                draggable={pinnedRow}
+                draggable={pinnedRow || dragsItem}
                 onDragStart={
-                  pinnedRow
+                  pinnedRow || dragsItem
                     ? (e) => {
-                        e.dataTransfer.setData(PIN_MIME, r.id);
-                        e.dataTransfer.effectAllowed = "move";
-                        setPinDrag(r.id);
+                        if (r.kind === "playlist" && dragsItem) beginPlaylistDrag(e, { id: r.id, title: r.title, thumb: r.thumb });
+                        if (pinnedRow) {
+                          e.dataTransfer.setData(PIN_MIME, r.id);
+                          setPinDrag(r.id);
+                        }
+                        if (dragsItem) {
+                          e.dataTransfer.setData(ITEM_MIME, r.itemKey!);
+                          setItemDrag(r.itemKey!);
+                        }
+                        // A playlist is also filed in a folder: a copy, as drops from the page are.
+                        e.dataTransfer.effectAllowed = r.kind === "playlist" ? "copyMove" : "move";
                       }
                     : undefined
                 }
                 onDragEnd={
-                  pinnedRow
+                  pinnedRow || dragsItem
                     ? () => {
                         setPinDrag(null);
                         setPinDrop(null);
+                        setItemDrag(null);
+                        setMemberDrop(null);
                       }
                     : undefined
                 }
@@ -708,25 +1047,28 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
                 onDragLeave={(e) => onRowDragLeave(e, r)}
                 onDrop={(e) => onRowDrop(e, r)}
                 title={
-                  r.available === false ? T("{title} · not available right now", { title: r.title }) : collapsed
-                      ? `${r.title} · ${r.subtitle}`
+                  r.available === false
+                    ? T("{title} · not available right now", { title: r.title })
+                    : collapsed || r.kind === "group"
+                      ? // A group's line ("3 albums, 1 playlist") shares its room with its buttons.
+                        `${r.title} · ${r.subtitle}`
                       : undefined
                 }
                 aria-label={collapsed ? r.title : undefined}
                 // Hundreds of album rows: only the ones on screen are laid out and painted.
                 style={r.kind === "album" ? { contentVisibility: "auto", containIntrinsicSize: "auto 64px" } : undefined}
                 className={`group relative w-full flex items-center gap-3 rounded-lg text-left hover:bg-ink-hi/[0.05] active:bg-ink-hi/[0.09] transition-[background-color,transform,opacity] duration-150 ${
-                  pinDrag === r.id ? "opacity-40" : ""
+                  pinDrag === r.id || (dragsItem && itemDrag === r.itemKey) ? "opacity-40" : ""
                 } ${
-                  collapsed ? "justify-center p-1.5" : r.kind === "playlist" && r.folderId ? "p-2 pl-6" : "p-2"
-                } ${dropHover === r.id ? "ring-2 ring-inset ring-accent/60 bg-ink-hi/[0.08] scale-[1.02]" : ""} ${
+                  collapsed ? "justify-center p-1.5" : (r.kind === "playlist" && r.folderId) || r.inGroup ? "p-2 pl-6" : "p-2"
+                } ${r.inGroup && !collapsed ? "bg-ink-hi/[0.025]" : ""} ${dropHover === r.id ? "ring-2 ring-inset ring-accent/60 bg-ink-hi/[0.08] scale-[1.02]" : ""} ${
                   pulse === r.id ? "animate-drop-pulse" : ""
                 } ${r.available === false ? "opacity-40" : ""}`}
               >
-                {pinDrop?.id === r.id && (
+                {line && (
                   <span
                     aria-hidden
-                    className={`pointer-events-none absolute left-2 right-2 h-0.5 rounded-full bg-accent ${pinDrop.below ? "-bottom-[2px]" : "-top-[2px]"}`}
+                    className={`pointer-events-none absolute left-2 right-2 h-0.5 rounded-full bg-accent ${line.below ? "-bottom-[2px]" : "-top-[2px]"}`}
                   />
                 )}
                 {/* max-w-none on the artwork: the base styles cap images at
@@ -735,6 +1077,8 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
                     portrait rectangles. */}
                 {r.singleKey === "liked" ? (
                   <LikedCover className="w-12 h-12 rounded-md art-hairline shrink-0" />
+                ) : r.kind === "group" ? (
+                  <GroupTile members={r.members ?? []} className="w-12 h-12 rounded-lg art-hairline shrink-0" />
                 ) : r.kind === "folder" ? (
                   <span className="w-12 h-12 rounded-md bg-ink-hi/[0.06] art-hairline shrink-0 grid place-items-center">
                     <Folder className="w-5 h-5 text-ink-hi/55" />
@@ -785,8 +1129,19 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
                       <div className="text-[12.5px] text-ink-hi/55 truncate mt-0.5">{r.subtitle}</div>
                     </div>
                     {isCurrent && playing && <EqBars />}
+                    {r.kind === "group" && r.group && (
+                      // The group's own play buttons: all of it in its order, or shuffled.
+                      <span className="flex items-center shrink-0">
+                        <RowButton label={T("Play in order")} onPress={() => playGroup(r.group!, false)}>
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </RowButton>
+                        <RowButton label={T("Shuffle")} onPress={() => playGroup(r.group!, true)}>
+                          <Shuffle className="w-3.5 h-3.5" />
+                        </RowButton>
+                      </span>
+                    )}
                     {pinnedRow && <Pin className="w-3.5 h-3.5 text-accent shrink-0 fill-accent/20" aria-label={T("Pinned — drag to reorder")} />}
-                    {r.kind === "folder" &&
+                    {(r.kind === "folder" || r.kind === "group") &&
                       (expanded.has(r.id) ? (
                         <ChevronDown className="w-4 h-4 text-ink-hi/45 shrink-0" />
                       ) : (

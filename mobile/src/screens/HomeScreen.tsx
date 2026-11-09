@@ -66,6 +66,8 @@ export function HomeScreen() {
   const hasServer = useSession((s) => !!s.session);
   const offline = unreachable && hasServer;
   const data = useLibrary((s) => s.data);
+  // The songs as shown: album names, pictures and artists as edited, the same as on the computer.
+  const tracks = useLibrary((s) => s.tracks);
   const albums = useLibrary((s) => s.albums);
   const artists = useLibrary((s) => s.artists);
   const mixes = useLibrary((s) => s.mixes);
@@ -76,7 +78,7 @@ export function HomeScreen() {
     const lastAt = (a: LibAlbum): number => Math.max(0, ...a.tracks.map((t) => data.counts[t.id]?.lastAt ?? 0));
     const played = albums.filter((a) => lastAt(a) > 0).sort((a, b) => lastAt(b) - lastAt(a));
     const plays = new Map<string, number>();
-    for (const t of data.tracks) {
+    for (const t of tracks) {
       const n = data.counts[t.id]?.plays ?? 0;
       if (!n) continue;
       // Every credited artist earns the plays, as on the desktop.
@@ -90,12 +92,12 @@ export function HomeScreen() {
         .sort((a, b) => plays.get(b.name.toLowerCase())! - plays.get(a.name.toLowerCase())!)
         .slice(0, 12)
         .map((a) => ({ ...a, plays: plays.get(a.name.toLowerCase())! })),
-      recentSongs: data.tracks
+      recentSongs: tracks
         .filter((t) => data.counts[t.id]?.lastAt)
         .sort((a, b) => data.counts[b.id].lastAt - data.counts[a.id].lastAt)
         .slice(0, 14),
     };
-  }, [data, albums, artists]);
+  }, [data, tracks, albums, artists]);
 
   const quick = useMemo(() => {
     const tiles = recentAlbums.map((a) => ({

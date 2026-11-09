@@ -7,11 +7,15 @@
  * "Recently played" tab, not in the library.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Download, FileDown, FileUp, Folder, FolderOpen, Heart, ListMusic, Music2, Pin, PinOff, Play, Shuffle, Trash2, Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, FileDown, FileUp, Folder, FolderOpen, Heart, ListMusic, Music2, Pin, PinOff, Play, RotateCw, Shuffle, Trash2, Pencil } from "lucide-react";
 import { TrackList } from "../components/TrackList";
 import { Btn, EmptyState, Pills, PlayOverlay } from "../components/primitives";
 import { CreateMenu } from "../components/CreateMenu";
-import { useLibrary, type LibraryFolder, type Playlist } from "../stores/library";
+import { downloadForOffline } from "../lib/downloads";
+import { useLibrary, type DownloadStatus, type LibraryFolder, type Playlist } from "../stores/library";
+
+/** The download list's order: what's coming in first, then what failed, then what's here. */
+const DOWNLOAD_ORDER: Record<DownloadStatus, number> = { downloading: 0, queued: 1, failed: 2, done: 3, removed: 4 };
 import { usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
 import { dragHasPlaylist, readPlaylist, useDrag } from "../lib/dnd";
@@ -352,9 +356,19 @@ export function LibraryView() {
     setTab(tabFromParam(view.param));
   }, [view.name, view.param]);
 
-  const downloadedTracks: Track[] = Object.values(downloads)
-    .filter((d) => d.status === "done")
-    .map((d) => d.track);
+  // The computer sends no notifications: the list says how each download stands — what's on its
+  // way first, then what failed, then what's here.
+  const downloadRows = Object.values(downloads).filter((d) => d.status !== "removed");
+  const downloadedTracks: Track[] = downloadRows.filter((d) => d.status === "done").map((d) => d.track);
+  const listedDownloads: Track[] = [...downloadRows].sort((a, b) => DOWNLOAD_ORDER[a.status] - DOWNLOAD_ORDER[b.status]).map((d) => d.track);
+  const onItsWay = downloadRows.filter((d) => d.status === "downloading" || d.status === "queued").length;
+  const failedDownloads = downloadRows.filter((d) => d.status === "failed").map((d) => d.track);
+  const downloadStand = [
+    onItsWay === 1 ? T("1 song downloading") : onItsWay ? T("Downloading {count}", { count: plural(onItsWay, T("song"), T("songs")) }) : "",
+    failedDownloads.length ? T("{count} didn't download", { count: plural(failedDownloads.length, T("song"), T("songs")) }) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const unfiled = playlists.filter((p) => !p.folderId);
   const pinnedFirst = [...unfiled.filter((p) => p.pinned), ...unfiled.filter((p) => !p.pinned)];
@@ -528,14 +542,22 @@ export function LibraryView() {
 
       {tab === "downloaded" && (
         <div className="mt-6">
-          {downloadedTracks.length ? (
+          {listedDownloads.length ? (
             <>
-              <div className="flex items-center gap-2">
-                <Btn variant="white" size="md" icon={Play} onClick={() => usePlayer.getState().playAll(downloadedTracks)}>{T("Play all")}</Btn>
-                <Btn variant="glass" size="md" icon={Shuffle} onClick={() => shufflePlay(downloadedTracks)}>{T("Shuffle")}</Btn>
+              <div className="flex flex-wrap items-center gap-2">
+                {downloadedTracks.length > 0 && (
+                  <>
+                    <Btn variant="white" size="md" icon={Play} onClick={() => usePlayer.getState().playAll(downloadedTracks)}>{T("Play all")}</Btn>
+                    <Btn variant="glass" size="md" icon={Shuffle} onClick={() => shufflePlay(downloadedTracks)}>{T("Shuffle")}</Btn>
+                  </>
+                )}
+                {failedDownloads.length > 0 && (
+                  <Btn variant="glass" size="md" icon={RotateCw} onClick={() => downloadForOffline(failedDownloads)}>{T("Try again")}</Btn>
+                )}
+                {downloadStand && <p className="ml-2 text-[13px] text-ink-dim">{downloadStand}</p>}
               </div>
               <div className="mt-5">
-                <TrackList tracks={downloadedTracks} showAlbum emptyTitle={T("Nothing downloaded yet")} />
+                <TrackList tracks={listedDownloads} showAlbum emptyTitle={T("Nothing downloaded yet")} />
               </div>
             </>
           ) : (

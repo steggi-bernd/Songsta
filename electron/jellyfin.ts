@@ -6,7 +6,8 @@
  *    server dashboard; only the resulting token is kept, sealed with the OS
  *    keychain (secrets.ts)
  *  - the server's audio items are listed page by page and cached on disk, so
- *    the view renders instantly and only refreshes on request
+ *    the view renders instantly; they are listed again at each start, in the
+ *    background (stores/catalog.ts), and on request
  *  - audio streams through the local stream proxy and covers through the
  *    jfart:// scheme: the token stays in the main process, and plain-http
  *    LAN servers work without loosening the renderer's CSP
@@ -311,8 +312,26 @@ function artUrl(itemId: string, tag: string): string {
 
 const toTrack = (item: any): JellyfinTrack | null => jellyfinItemToTrack(item, artUrl);
 
-/** Re-list every audio item on the server and replace the cached library. */
-export async function refreshLibrary(): Promise<JellyfinLibrary> {
+/** A fresh listing, and whether its songs (or their covers) differ from the cached ones. */
+export type JellyfinListing = JellyfinLibrary & { changed: boolean };
+
+let listing: { token: string; done: Promise<JellyfinListing> } | null = null;
+
+/**
+ * Re-list every audio item on the server and replace the cached library. A call while a
+ * listing for the same login runs (the relist at start, the reload button) shares it.
+ */
+export function refreshLibrary(): Promise<JellyfinListing> {
+  const token = readConfig()?.token ?? "";
+  if (listing?.token === token) return listing.done;
+  const done: Promise<JellyfinListing> = listLibrary().finally(() => {
+    if (listing?.done === done) listing = null;
+  });
+  listing = { token, done };
+  return done;
+}
+
+async function listLibrary(): Promise<JellyfinListing> {
   const cfg = readConfig();
   const token = openSecret(cfg?.token);
   if (!cfg || !token) throw new Error("Not connected to a Jellyfin server");
@@ -338,9 +357,12 @@ export async function refreshLibrary(): Promise<JellyfinLibrary> {
     const total = Number(page?.TotalRecordCount) || 0;
     if (items.length < PAGE_SIZE || tracks.length >= total) break;
   }
+  // Signed out, or into another server, while the songs came: they aren't this login's.
+  if (readConfig()?.token !== cfg.token) throw new Error("Not connected to a Jellyfin server");
+  const before = readLibrary();
   const lib = { fetchedAt: Date.now(), tracks, v: LIB_VERSION };
   await persist.writeData(LIBRARY_STORE, lib);
-  return lib;
+  return { ...lib, changed: before.v !== LIB_VERSION || JSON.stringify(before.tracks) !== JSON.stringify(tracks) };
 }
 
 /* ------------------------------------------------------------ favorites & plays */
@@ -357,11 +379,11 @@ function syncUser(cfg: Config): string | null {
 }
 
 /** What the sync service needs of this login (home-sync.ts): the same header Jellyfin itself gets. */
-export function syncLogin(): { server: string; authorization: string; userId: string | null; deviceId: string } | null {
+export function syncLogin(): { server: string; serverId: string | null; authorization: string; userId: string | null; deviceId: string } | null {
   const cfg = readConfig();
   const token = openSecret(cfg?.token);
   if (!cfg || !token) return null;
-  return { server: cfg.server, authorization: authHeader(token, cfg.deviceId), userId: syncUser(cfg), deviceId: cfg.deviceId };
+  return { server: cfg.server, serverId: cfg.serverId ?? null, authorization: authHeader(token, cfg.deviceId), userId: syncUser(cfg), deviceId: cfg.deviceId };
 }
 
 export interface JellyfinUser {

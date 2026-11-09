@@ -40,7 +40,8 @@ export interface LibraryFolder {
   createdAt: number;
 }
 
-export type DownloadStatus = "queued" | "downloading" | "done" | "failed";
+/** `removed`: taken off by hand ("Remove download"); neither the check at start nor a kept list brings it back. */
+export type DownloadStatus = "queued" | "downloading" | "done" | "failed" | "removed";
 
 export interface DownloadItem {
   track: Track;

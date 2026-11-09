@@ -24,6 +24,8 @@ interface Saved {
 interface PlayedState extends Saved {
   restored: boolean;
   touch(key: string): void;
+  /** When things played on the other devices (lib/librarySync.ts): the later time of each stays. */
+  adopt(times: Record<string, number>): void;
 }
 
 function save(): void {
@@ -37,6 +39,18 @@ export const usePlayed = create<PlayedState>((set, get) => ({
   restored: false,
   touch(key) {
     set({ at: { ...get().at, [key]: Date.now() } });
+    save();
+  },
+  adopt(times) {
+    const now = get().at;
+    let next = now;
+    for (const [key, at] of Object.entries(times)) {
+      if ((next[key] ?? -1) >= at) continue;
+      if (next === now) next = { ...now };
+      next[key] = at;
+    }
+    if (next === now) return;
+    set({ at: next });
     save();
   },
 }));

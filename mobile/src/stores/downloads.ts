@@ -107,14 +107,25 @@ export const useDownloads = create<DownloadsState>((set, get) => ({
   listsNoted: false,
 
   async restore() {
+    // The notification counts on the native side, in the app's language.
+    void Player.downloadTexts({
+      channel: T("Downloads"),
+      loading: T("Downloading songs"),
+      progress: T("{done} of {total}"),
+      doneOne: T("1 song downloaded"),
+      doneMany: T("{count} songs downloaded"),
+      failed: T("{count} didn't download"),
+      wifi: T("Waiting for Wi-Fi"),
+    }).catch(() => undefined);
     const saved = await readJson<Saved>(FILE);
     if (!saved) {
       set({ restored: true });
       return;
     }
     const kept = saved.kept ?? {};
-    // Files cleared from outside are gone.
+    // Files cleared from outside are gone; the check at opening (checkDownloads) fetches them again.
     const found = new Set(await Player.downloadExisting(Object.values(kept).map((k) => k.file)).catch(() => Object.values(kept).map((k) => k.file)));
+    lost = Object.keys(kept).filter((id) => !found.has(kept[id].file));
     set({
       kept: Object.fromEntries(Object.entries(kept).filter(([, k]) => found.has(k.file))),
       loading: saved.loading ?? {},
@@ -214,6 +225,41 @@ function save(): void {
   writeJson(FILE, { kept, loading, covers, quality, overMobile, lists, notWanted, listsNoted });
 }
 
+/** Kept songs whose files were found cleared from outside when the app started. */
+let lost: string[] = [];
+
+/**
+ * When the app opens, and when it comes back after a while (stores/keptLists.ts): what should be
+ * on the phone and isn't goes on its way again by itself. A song whose file was cleared from
+ * outside comes back, unless it was taken off by hand; one that gave up after its tries gets new
+ * ones. A song the server doesn't have any more isn't asked for. Answers how many went on their
+ * way, or null while the phone hasn't read what it has yet.
+ */
+export function checkDownloads(): number | null {
+  const { loading, kept, notWanted, restored } = useDownloads.getState();
+  const { byId, loaded } = useLibrary.getState();
+  if (!restored || !loaded) return null;
+  const next = { ...loading };
+  let again = 0;
+  for (const [id, song] of Object.entries(loading)) {
+    if (!song.failed || !byId.has(id)) continue;
+    next[id] = { ...song, job: null, tries: 0, failed: false, wantsWifi: false };
+    again += 1;
+  }
+  for (const id of lost) {
+    if (notWanted[id] || kept[id] || next[id] || !byId.has(id) || byId.get(id)?.localPath) continue;
+    next[id] = { job: null, fileName: "", compact: false, tries: 0, wantsWifi: false, failed: false };
+    again += 1;
+  }
+  lost = [];
+  if (again) {
+    useDownloads.setState({ loading: next });
+    save();
+    followSoon();
+  }
+  return again;
+}
+
 function patch(id: string, change: Partial<LoadingSong>): void {
   const { loading } = useDownloads.getState();
   const song = loading[id];
@@ -281,6 +327,8 @@ async function finished(id: string, song: LoadingSong): Promise<void> {
 async function handOver(): Promise<void> {
   const session = useSession.getState().session;
   if (!session || useConnection.getState().reach === "offline") return;
+  // Until the library is read, no song can be found: they would all count as gone.
+  if (!useLibrary.getState().loaded) return;
   const { loading, quality, overMobile } = useDownloads.getState();
   let running = Object.values(loading).filter((song) => song.job !== null).length;
   for (const [id, song] of Object.entries(loading)) {
@@ -293,7 +341,7 @@ async function handOver(): Promise<void> {
     }
     const plan = downloadPlan(session, track, quality);
     try {
-      const job = await Player.downloadStart(plan.url, { Authorization: authHeader(session.deviceId, session.token) }, plan.fileName, !overMobile);
+      const job = await Player.downloadStart(plan.url, { Authorization: authHeader(session.deviceId, session.token) }, plan.fileName, !overMobile, track.title);
       patch(id, { job, fileName: plan.fileName, compact: plan.compact });
       running += 1;
     } catch (err) {

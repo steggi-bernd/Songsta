@@ -269,6 +269,7 @@ function FollowedCard() {
 function MusicSheet({ devices, onClose, onBrowse }: { devices: FoundDevice[]; onClose: () => void; onBrowse: () => void }) {
   const insets = useSafeAreaInsets();
   const data = useLibrary((s) => s.data);
+  const shownTracks = useLibrary((s) => s.tracks);
   const byId = useLibrary((s) => s.byId);
   const albums = useLibrary((s) => s.albums);
   const playlists = usePlaylists((s) => s.playlists);
@@ -290,9 +291,9 @@ function MusicSheet({ devices, onClose, onBrowse }: { devices: FoundDevice[]; on
     }
     for (const a of albums) if (wanted(a.title) || wanted(a.artist)) out.push({ key: a.key, title: a.title, line: T("Album · {artist}", { artist: a.artist }), tracks: a.tracks, art: <Cover uri={a.thumb} size={48} /> });
     // Songs by name, once somebody is looking for one.
-    if (query.trim()) for (const t of data.tracks) if (matchesQuery(t, query)) out.push({ key: t.id, title: t.title, line: T("Song · {artist}", { artist: t.artist }), tracks: [t], art: <Cover uri={t.thumb} size={48} /> });
+    if (query.trim()) for (const t of shownTracks) if (matchesQuery(t, query)) out.push({ key: t.id, title: t.title, line: T("Song · {artist}", { artist: t.artist }), tracks: [t], art: <Cover uri={t.thumb} size={48} /> });
     return out;
-  }, [query, queue, index, data, byId, albums, playlists]);
+  }, [query, queue, index, data, shownTracks, byId, albums, playlists]);
   const label = devices.map((d) => deviceName(d, names)).join(" + ");
   return (
     <Modal visible transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>

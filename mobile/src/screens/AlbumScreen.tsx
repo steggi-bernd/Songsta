@@ -2,11 +2,12 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { PullDownToClose } from "../components/PullDownToClose";
 import { LinearGradient } from "expo-linear-gradient";
-import { ChevronLeft, Pause, Play, Shuffle } from "lucide-react-native";
-import { useMemo } from "react";
+import { ChevronLeft, EllipsisVertical, Pause, Play, Shuffle } from "lucide-react-native";
+import { useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tinted } from "../color";
+import { AlbumMenu } from "../components/AlbumEditSheets";
 import { DownloadButton } from "../components/SongMenu";
 import { albumListKey } from "../shared";
 import { Cover, TrackRow } from "../components/ui";
@@ -31,11 +32,14 @@ export function AlbumScreen() {
     const first = album?.tracks[0];
     return first ? describePlayback(first) : null;
   }, [album]);
+  // Name and picture, artists, merging what the tags split: as the computer's album editor.
+  const [menu, setMenu] = useState(false);
 
   if (!album) return <View style={styles.root} />;
   const pause = playingHere && playWhenReady;
 
   return (
+    <>
 <PullDownToClose onClose={() => nav.goBack()}>
     <FlatList
       style={styles.root}
@@ -48,6 +52,9 @@ export function AlbumScreen() {
           <View style={[styles.top, { paddingTop: insets.top + 2 }]}>
             <Pressable onPress={() => nav.goBack()} accessibilityLabel={T("Go back")} style={styles.back}>
               <ChevronLeft size={28} color={colors.ink} />
+            </Pressable>
+            <Pressable onPress={() => setMenu(true)} accessibilityLabel={T("Edit album")} style={[styles.back, styles.more]}>
+              <EllipsisVertical size={22} color={colors.ink} />
             </Pressable>
           </View>
           <View style={styles.coverBox}>
@@ -104,6 +111,8 @@ export function AlbumScreen() {
       )}
     />
     </PullDownToClose>
+    <AlbumMenu album={album} visible={menu} onClose={() => setMenu(false)} />
+    </>
   );
 }
 
@@ -112,6 +121,7 @@ const styles = StyleSheet.create({
   wash: { position: "absolute", left: 0, right: 0, top: 0, height: 420 },
   top: { flexDirection: "row", paddingHorizontal: 6 },
   back: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  more: { marginLeft: "auto" },
   coverBox: { alignItems: "center", paddingTop: 2, paddingBottom: 18 },
   facts: { paddingHorizontal: 16 },
   title: { color: colors.ink, fontSize: 24, fontWeight: "800", letterSpacing: -0.6 },

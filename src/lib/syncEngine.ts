@@ -14,9 +14,18 @@
  *    service too, and one that isn't picked up within a minute is forgotten. A
  *    long list goes ahead as the queue document, and its command says to read it.
  *  - muted songs: one list for all devices; the newer list wins.
+ *  - finding it: until a service ever answered for this server (most people
+ *    have none), it's looked for once a start and when asked, and nothing else
+ *    is sent; once one has, it's kept in reach, retried within a minute.
+ *  - how the library is organised (lib/librarySync.ts): its order, the groups,
+ *    the album edits and their pictures, fetched and merged like the playlists,
+ *    each on its own. A service from before them doesn't list them: then they
+ *    stay on each device as before.
  */
+import { LIBRARY_DOC_KINDS, LIBRARY_DOCS, sameLibraryDoc, type LibraryDocName } from "./librarySync";
 import { mergePlaylistDocs, sameDoc, sameLikes, toPlaylistDoc, type PlaylistDoc, type WireTrack } from "./playlistSync";
 import type { QueueBranch } from "./queueSections";
+import { readServiceInfo, type SyncServiceInfo } from "./syncService";
 
 export interface SyncReply {
   status: number;
@@ -122,6 +131,18 @@ export interface MutedDoc {
 
 export type SyncStatus = "off" | "connecting" | "connected" | "unreachable" | "rejected";
 
+/** One of the library's documents as this device keeps it (lib/librarySync.ts says what's in each). */
+export interface LibraryDocHost {
+  /** As it is here; null while that can't be said yet (a picture still being read): it goes another time. */
+  read(): object | null;
+  /** The merged document, when it differs from what's here. */
+  apply(doc: object): void | Promise<void>;
+  /** The revision it was last merged at, kept across starts, and whether anything changed here since: unchanged on both sides, nothing to fetch. */
+  lastMerge?(): { rev: number; changed: boolean } | null;
+  /** Merged at this revision: what was read for it is there now. */
+  merged?(rev: number): void;
+}
+
 export interface SyncHost {
   deviceId: string;
   request: SyncRequest;
@@ -154,6 +175,21 @@ export interface SyncHost {
   onStatus?(status: SyncStatus): void;
   /** A round of listening is over: the moment to stop, if there's no reason to go on. */
   onListening?(): void;
+  /** How the library is organised, document by document; one this device doesn't keep isn't synced. */
+  library?: Partial<Record<LibraryDocName, LibraryDocHost>>;
+  /**
+   * What the service says about itself (lib/syncService.ts), once per start and only once it has
+   * answered: a device that isn't linked to one asks nothing. Null when it says nothing usable.
+   */
+  onService?(info: SyncServiceInfo | null): void;
+  /**
+   * Whether a sync service ever answered this device for this server. Until one has, it's looked
+   * for once a start, and again only when asked (retryNow: a new address, "Search again"), not
+   * every minute; nothing else is sent meanwhile. Without it, the service is looked for as always.
+   */
+  linked?(): boolean;
+  /** A service answered this device for this server: from now on it's kept in reach as always. */
+  onLinked?(): void;
 }
 
 const LONG_POLL_SEC = 25;
@@ -168,6 +204,7 @@ const PLAYBACK_WHILE_PLAYING_MS = 30_000;
 const LIKES_AFTER_CHANGE_MS = 3000;
 const MUTED_AFTER_CHANGE_MS = 800;
 const PRESENCE_AFTER_CHANGE_MS = 300;
+const LIBRARY_AFTER_CHANGE_MS = 1500;
 /** A device that says nothing for longer than this and a bit counts as gone: see DEVICE_ONLINE_MS. */
 /** No word from the service for this long: nobody counts as around, and a device being followed can't be steered anyway. */
 const NOBODY_HEARD_AFTER_MS = 30_000;
@@ -213,6 +250,13 @@ export function createSyncEngine(host: SyncHost) {
   let nobodyTimer: ReturnType<typeof setTimeout> | null = null;
   /** told that nobody is around: what the service says next is news, whatever its revision */
   let toldNobody = false;
+  /** the library's documents: the revision merged last, one merge at a time each, a change here waiting a moment */
+  const libraryKnown: Partial<Record<LibraryDocName, number>> = {};
+  const libraryBusy = new Set<LibraryDocName>();
+  const libraryAgain = new Set<LibraryDocName>();
+  const libraryTimers = new Map<LibraryDocName, ReturnType<typeof setTimeout>>();
+  /** not on this service (one from before them): asked again only at the next start */
+  const libraryMissing = new Set<LibraryDocName>();
 
   const setStatus = (next: SyncStatus): void => {
     if (next === status) return;
@@ -225,6 +269,13 @@ export function createSyncEngine(host: SyncHost) {
     return Object.assign(new Error(`The sync service answered ${reply.status}`), { status: reply.status });
   }
 
+  /** No service ever answered here, and none does now: nothing is sent but the look for one. */
+  const unlinked = (): boolean => status !== "connected" && host.linked?.() === false;
+
+  /** Every request but the look for the service: held back while none was ever found. */
+  const call: SyncRequest = (method, path, body, timeoutMs) =>
+    unlinked() ? Promise.reject(new Error("No sync service found here yet")) : host.request(method, path, body, timeoutMs);
+
   async function syncPlaylists(): Promise<void> {
     if (playlistsBusy) {
       playlistsAgain = true;
@@ -233,7 +284,7 @@ export function createSyncEngine(host: SyncHost) {
     playlistsBusy = true;
     try {
       for (let attempt = 0; attempt < MERGE_ATTEMPTS; attempt++) {
-        const got = await host.request("GET", "/v1/docs/playlists", undefined, REQUEST_TIMEOUT_MS);
+        const got = await call("GET", "/v1/docs/playlists", undefined, REQUEST_TIMEOUT_MS);
         if (got.status !== 200) throw refused(got);
         const remote = toPlaylistDoc(got.body.doc);
         // No await from reading to applying: an edit can't slip in between.
@@ -243,7 +294,7 @@ export function createSyncEngine(host: SyncHost) {
         known.playlists = got.body.rev;
         const nothingYet = !got.body.doc && !merged.playlists.length && !merged.folders.length;
         if (nothingYet || (got.body.doc && sameDoc(merged, remote))) return;
-        const put = await host.request("PUT", "/v1/docs/playlists", { rev: got.body.rev, doc: merged }, REQUEST_TIMEOUT_MS);
+        const put = await call("PUT", "/v1/docs/playlists", { rev: got.body.rev, doc: merged }, REQUEST_TIMEOUT_MS);
         if (put.status === 200) {
           known.playlists = put.body.rev;
           return;
@@ -267,16 +318,102 @@ export function createSyncEngine(host: SyncHost) {
     }, PLAYLISTS_AFTER_CHANGE_MS);
   }
 
+  /** One of the library's documents, the way the playlists go: fetched, merged with what's here, sent back if that differs. */
+  async function syncLibraryDoc(name: LibraryDocName): Promise<void> {
+    const side = host.library?.[name];
+    if (!side || libraryMissing.has(name)) return;
+    if (libraryBusy.has(name)) {
+      libraryAgain.add(name);
+      return;
+    }
+    libraryBusy.add(name);
+    const kind = LIBRARY_DOC_KINDS[name];
+    try {
+      for (let attempt = 0; attempt < MERGE_ATTEMPTS; attempt++) {
+        const got = await call("GET", `/v1/docs/${name}`, undefined, REQUEST_TIMEOUT_MS);
+        // A service from before this document: it stays on this device.
+        if (got.status === 404) {
+          libraryMissing.add(name);
+          return;
+        }
+        if (got.status !== 200) throw refused(got);
+        const remote = kind.read(got.body.doc);
+        let merged: object;
+        try {
+          // Not to be said yet: the next change here, or there, brings it.
+          const here = side.read();
+          if (!here) return;
+          merged = kind.merge(here, remote);
+          if (!sameLibraryDoc(merged, here)) await side.apply(merged);
+        } catch {
+          // Something here couldn't take it: tried again next round, the other documents go on.
+          return;
+        }
+        libraryKnown[name] = got.body.rev;
+        if (sameLibraryDoc(merged, remote)) {
+          side.merged?.(got.body.rev);
+          return;
+        }
+        const put = await call("PUT", `/v1/docs/${name}`, { rev: got.body.rev, doc: merged }, REQUEST_TIMEOUT_MS);
+        if (put.status === 200) {
+          libraryKnown[name] = put.body.rev;
+          side.merged?.(put.body.rev);
+          return;
+        }
+        if (put.status !== 409) throw refused(put);
+      }
+    } finally {
+      libraryBusy.delete(name);
+      if (libraryAgain.delete(name) && running) librarySoon(name);
+    }
+  }
+
+  function librarySoon(name: LibraryDocName): void {
+    const waiting = libraryTimers.get(name);
+    if (waiting) clearTimeout(waiting);
+    libraryTimers.set(
+      name,
+      setTimeout(() => {
+        libraryTimers.delete(name);
+        if (running) void syncLibraryDoc(name).catch(() => undefined);
+      }, LIBRARY_AFTER_CHANGE_MS)
+    );
+  }
+
+  /** The library's documents this round: at the first, all of them unless nothing changed on either side since the last merge. */
+  async function syncLibrary(revs: Record<string, number | undefined>, first: boolean): Promise<void> {
+    for (const name of LIBRARY_DOCS) {
+      const side = host.library?.[name];
+      const rev = revs[name];
+      // A service from before these documents doesn't list them.
+      if (!side || rev === undefined) continue;
+      if (first) {
+        const last = side.lastMerge?.();
+        if (last && last.rev === rev && !last.changed) {
+          libraryKnown[name] = rev;
+          continue;
+        }
+      } else if (rev === libraryKnown[name]) continue;
+      // One document going wrong (a picture too large for the service, say) doesn't hold up the rest.
+      try {
+        await syncLibraryDoc(name);
+      } catch (err) {
+        const code = (err as { status?: number }).status;
+        if (code === undefined || code === 401 || code === 403 || code >= 500) throw err;
+      }
+    }
+  }
+
   async function pushPlayback(evenIfSent = false): Promise<void> {
     const state = host.readPlayback();
     if (!state || (!evenIfSent && state.note.at <= sentAt)) return;
     lastPlaybackAt = Date.now();
     if (state.note.queueId !== sentQueueId) {
-      const put = await host.request("PUT", "/v1/docs/queue", { doc: state.queue() }, REQUEST_TIMEOUT_MS);
+      const put = await call("PUT", "/v1/docs/queue", { doc: state.queue() }, REQUEST_TIMEOUT_MS);
       if (put.status !== 200) throw refused(put);
       sentQueueId = state.note.queueId;
     }
-    const put = await host.request("PUT", "/v1/docs/position", { doc: state.note }, REQUEST_TIMEOUT_MS);
+    const put = await call("PUT", "/v1/docs/position", { doc: state.note }, REQUEST_TIMEOUT_MS);
     if (put.status !== 200) throw refused(put);
     known.position = put.body.rev;
     sentAt = state.note.at;
@@ -285,12 +422,12 @@ export function createSyncEngine(host: SyncHost) {
   }
 
   async function checkPlayback(): Promise<void> {
-    const got = await host.request("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.position = got.body.rev;
     const note = readNote(got.body.doc);
     if (!note || note.device.id === host.deviceId || !host.wantsPlayback(note)) return;
-    const queue = await host.request("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
+    const queue = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
     const doc = queue.status === 200 ? (queue.body.doc as QueueDoc | null) : null;
     // The wait for the queue may have changed things here.
     if (!host.wantsPlayback(note)) return;
@@ -301,7 +438,7 @@ export function createSyncEngine(host: SyncHost) {
   }
 
   async function pullLikes(): Promise<void> {
-    const got = await host.request("GET", "/v1/docs/likes", undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", "/v1/docs/likes", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.likes = got.body.rev;
     if (Array.isArray(got.body.doc?.tracks)) host.applyLikes?.(got.body.doc.tracks);
@@ -311,18 +448,18 @@ export function createSyncEngine(host: SyncHost) {
   async function pushLikes(): Promise<void> {
     const mine = host.readLikes?.();
     if (!mine) return;
-    const got = await host.request("GET", "/v1/docs/likes", undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", "/v1/docs/likes", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.likes = got.body.rev;
     if (sameLikes(mine, Array.isArray(got.body.doc?.tracks) ? got.body.doc.tracks : [])) return;
-    const put = await host.request("PUT", "/v1/docs/likes", { doc: { tracks: mine } }, REQUEST_TIMEOUT_MS);
+    const put = await call("PUT", "/v1/docs/likes", { doc: { tracks: mine } }, REQUEST_TIMEOUT_MS);
     if (put.status !== 200) throw refused(put);
     known.likes = put.body.rev;
   }
 
   async function pullMuted(): Promise<void> {
     if (!host.readMuted || !host.applyMuted) return;
-    const got = await host.request("GET", "/v1/docs/muted", undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", "/v1/docs/muted", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.muted = got.body.rev;
     const remote = got.body.doc as MutedDoc | null;
@@ -334,7 +471,7 @@ export function createSyncEngine(host: SyncHost) {
 
   async function pushMuted(): Promise<void> {
     if (!host.readMuted) return;
-    const put = await host.request("PUT", "/v1/docs/muted", { doc: host.readMuted() }, REQUEST_TIMEOUT_MS);
+    const put = await call("PUT", "/v1/docs/muted", { doc: host.readMuted() }, REQUEST_TIMEOUT_MS);
     if (put.status !== 200) throw refused(put);
     known.muted = put.body.rev;
   }
@@ -344,13 +481,13 @@ export function createSyncEngine(host: SyncHost) {
     const doc = host.readPresence();
     if (!doc) return;
     lastPresenceAt = Date.now();
-    const put = await host.request("PUT", `/v1/devices/${encodeURIComponent(host.deviceId)}`, { doc }, REQUEST_TIMEOUT_MS);
+    const put = await call("PUT", `/v1/devices/${encodeURIComponent(host.deviceId)}`, { doc }, REQUEST_TIMEOUT_MS);
     if (put.status !== 200) throw refused(put);
   }
 
   async function pullDevices(): Promise<void> {
     if (!host.applyDevices) return;
-    const got = await host.request("GET", "/v1/devices", undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", "/v1/devices", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     const list: { id: string; updatedAt: number; doc: DevicePresence }[] = Array.isArray(got.body.devices) ? got.body.devices : [];
     lastDevicesAt = Date.now();
@@ -363,7 +500,7 @@ export function createSyncEngine(host: SyncHost) {
 
   async function takeCommands(): Promise<void> {
     if (!host.onCommand) return;
-    const got = await host.request("GET", `/v1/devices/${encodeURIComponent(host.deviceId)}/commands`, undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", `/v1/devices/${encodeURIComponent(host.deviceId)}/commands`, undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     for (const command of Array.isArray(got.body.commands) ? got.body.commands : []) {
       // Going on from where another device stands needs that device's latest word.
@@ -375,7 +512,7 @@ export function createSyncEngine(host: SyncHost) {
 
   /** A command whose songs went ahead as the queue document. A newer list written over it wins. */
   async function takeList(command: DeviceCommand & WithSongs): Promise<void> {
-    const got = await host.request("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
     // That document isn't this device's own list now: it goes out again with its next word.
     sentQueueId = null;
     const doc = got.status === 200 ? (got.body.doc as QueueDoc | null) : null;
@@ -383,12 +520,12 @@ export function createSyncEngine(host: SyncHost) {
   }
 
   async function takeOver(): Promise<void> {
-    const got = await host.request("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
+    const got = await call("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.position = got.body.rev;
     const note = readNote(got.body.doc);
     if (note) {
-      const queue = await host.request("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
+      const queue = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
       const doc = queue.status === 200 ? (queue.body.doc as QueueDoc | null) : null;
       sentQueueId = note.queueId;
       sentAt = note.at;
@@ -396,6 +533,18 @@ export function createSyncEngine(host: SyncHost) {
       if (host.adoptPlayback(note, doc?.id === note.queueId && Array.isArray(doc.tracks) ? doc : null, true) === false) return;
     }
     host.onCommand?.({ action: "takeOver" });
+  }
+
+  /** What the service says about itself, asked once it's linked: whether it's too old for this app. */
+  async function checkService(mine: number): Promise<void> {
+    if (!host.onService) return;
+    try {
+      const got = await call("GET", "/health", undefined, REQUEST_TIMEOUT_MS);
+      if (!running || mine !== session) return;
+      host.onService(got.status === 200 ? readServiceInfo(got.body) : null);
+    } catch {
+      /* asked again at the next start */
+    }
   }
 
   /** With the service away nothing says who's still around: from a while on, nobody is. */
@@ -417,11 +566,12 @@ export function createSyncEngine(host: SyncHost) {
     nobodyTimer = null;
   }
 
-  function sleep(ms: number): Promise<void> {
+  /** A wait, cut short by retryNow, rest or stop; `null` waits for one of those alone. */
+  function sleep(ms: number | null): Promise<void> {
     return new Promise((resolve) => {
-      const timer = setTimeout(done, ms);
+      const timer = ms === null ? null : setTimeout(done, ms);
       function done(): void {
-        clearTimeout(timer);
+        if (timer !== null) clearTimeout(timer);
         wakeSleep = null;
         resolve();
       }
@@ -441,6 +591,8 @@ export function createSyncEngine(host: SyncHost) {
         if (!running || mine !== session) return;
         if (reply.status !== 200) throw refused(reply);
         setStatus("connected");
+        // Found: from now on it's kept in reach, also after it was away for a while.
+        if (host.linked?.() === false) host.onLinked?.();
         heardAgain();
         retry = FIRST_RETRY_MS;
         seq = reply.body.seq;
@@ -454,6 +606,7 @@ export function createSyncEngine(host: SyncHost) {
           } else if (!synced) await pushLikes();
         }
         if (revs.muted !== undefined && (!synced || revs.muted !== known.muted)) await pullMuted();
+        await syncLibrary(revs, !synced);
         hasDevices = revs.devices !== undefined;
         if (hasDevices) {
           if (reply.body.inbox > 0) await takeCommands();
@@ -464,6 +617,8 @@ export function createSyncEngine(host: SyncHost) {
           }
           if (!synced || Date.now() - lastPresenceAt > PRESENCE_EVERY_MS) await sendPresence();
         }
+        // Linked: the service answered. Once per start, what it says about itself.
+        if (!synced) void checkService(mine);
         synced = true;
         host.onListening?.();
       } catch (err) {
@@ -472,6 +627,11 @@ export function createSyncEngine(host: SyncHost) {
         const rejected = code === 400 || code === 401 || code === 403;
         setStatus(rejected ? "rejected" : "unreachable");
         nobodyHeardSoon(mine);
+        // Never found for this server: looked for once. Again at the next start, or when asked (a new address, "Search again").
+        if (!rejected && host.linked?.() === false) {
+          await sleep(null);
+          continue;
+        }
         await sleep(rejected ? REJECTED_RETRY_MS : retry);
         retry = Math.min(retry * 2, LAST_RETRY_MS);
       }
@@ -490,6 +650,8 @@ export function createSyncEngine(host: SyncHost) {
       known.likes = -1;
       known.muted = -1;
       known.devices = -1;
+      for (const name of LIBRARY_DOCS) delete libraryKnown[name];
+      libraryMissing.clear();
       setStatus("connecting");
       void run(session);
     },
@@ -511,12 +673,20 @@ export function createSyncEngine(host: SyncHost) {
       if (mutedTimer) clearTimeout(mutedTimer);
       if (presenceTimer) clearTimeout(presenceTimer);
       playlistsTimer = playbackTimer = likesTimer = mutedTimer = presenceTimer = null;
+      for (const timer of libraryTimers.values()) clearTimeout(timer);
+      libraryTimers.clear();
       wakeSleep?.();
       setStatus("off");
     },
 
     /** Something changed in the playlists here. */
     playlistsChanged: playlistsSoon,
+
+    /** Something changed here in how the library is organised: that document goes out in a moment. */
+    libraryChanged(name: LibraryDocName): void {
+      if (!enabled || !host.library?.[name]) return;
+      librarySoon(name);
+    },
 
     /** Liked Songs changed here: what was added, taken back or arranged anew. */
     likesChanged(): void {
@@ -583,7 +753,7 @@ export function createSyncEngine(host: SyncHost) {
     /** A word for another device; false when it couldn't be left for it. */
     async sendCommand(deviceId: string, command: DeviceCommand): Promise<boolean> {
       try {
-        const res = await host.request("POST", `/v1/devices/${encodeURIComponent(deviceId)}/commands`, { command }, REQUEST_TIMEOUT_MS);
+        const res = await call("POST", `/v1/devices/${encodeURIComponent(deviceId)}/commands`, { command }, REQUEST_TIMEOUT_MS);
         return res.status === 200;
       } catch {
         return false;
@@ -594,7 +764,7 @@ export function createSyncEngine(host: SyncHost) {
     async sendList(deviceId: string, tracks: WireTrack[], context: string | undefined, command: DeviceCommand): Promise<boolean> {
       const listId = `list${Date.now()}`;
       try {
-        const put = await host.request("PUT", "/v1/docs/queue", { doc: { id: listId, context, tracks } }, REQUEST_TIMEOUT_MS);
+        const put = await call("PUT", "/v1/docs/queue", { doc: { id: listId, context, tracks } }, REQUEST_TIMEOUT_MS);
         if (put.status !== 200) return false;
       } catch {
         return false;
@@ -611,6 +781,13 @@ export function createSyncEngine(host: SyncHost) {
 
     /** A retry now instead of at the end of the wait, say after a new address was entered. */
     retryNow(): void {
+      wakeSleep?.();
+    },
+
+    /** "Search again" in the settings: the service is looked for now, and that shows. */
+    searchAgain(): void {
+      if (!running || status !== "unreachable") return;
+      setStatus("connecting");
       wakeSleep?.();
     },
 

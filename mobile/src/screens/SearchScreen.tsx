@@ -31,7 +31,7 @@ export function SearchScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
-  const tracks = useLibrary((s) => s.data.tracks);
+  const tracks = useLibrary((s) => s.tracks);
   const albums = useLibrary((s) => s.albums);
   const artists = useLibrary((s) => s.artists);
   const playTracks = usePlayer((s) => s.playTracks);

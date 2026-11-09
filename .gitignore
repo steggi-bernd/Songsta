@@ -48,3 +48,9 @@ phase*-rect-results.json
 /.zcode/
 /.zcodeignore
 /sync-server/data/
+
+# The phone's signing key and its hand-over live outside the repo (scripts/phone-signing.mjs), never in it
+*.jks
+*.keystore
+*.lineage
+.songsta-signing/

@@ -6,7 +6,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { storage } from "../lib/persist";
-import { withMerge, withSplit, type AlbumEdits, type SongEdit } from "../lib/albumEdits";
+import { withAlias, withMerge, withSplit, type AlbumEdits, type SongEdit } from "../lib/albumEdits";
 
 interface AlbumEditsState extends AlbumEdits {
   /** an album's artist credit line; null goes back to its tags */
@@ -54,14 +54,7 @@ export const useAlbumEdits = create<AlbumEditsState>()(
       },
 
       setAlias(name, as) {
-        set((s) => {
-          const aliases = { ...s.aliases };
-          if (as && as !== name) aliases[name] = as;
-          else delete aliases[name];
-          // A name others pointed at now points on: no chains.
-          for (const [from, to] of Object.entries(aliases)) if (to === name && as && as !== name) aliases[from] = as;
-          return { aliases };
-        });
+        set((s) => ({ aliases: withAlias(s.aliases, name, as) }));
       },
 
       setSongs(edits) {

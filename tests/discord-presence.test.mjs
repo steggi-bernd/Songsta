@@ -8,8 +8,11 @@ import {
   __testing,
   configureDiscord,
   discordStatus,
+  LOGO_URL,
   sanitizeActivity,
   setDiscordActivity,
+  setDiscordCover,
+  SONGSTA_PAGE,
   stopDiscord,
 } from "../.test-build/discord.mjs";
 
@@ -20,7 +23,7 @@ const newPipe = () =>
     : path.join(os.tmpdir(), `bytune-test-${randomUUID()}.sock`);
 
 /** A fake Discord on `pipe`: decodes frames, answers the handshake, records SET_ACTIVITY. */
-function fakeDiscord({ pipe = newPipe(), refuseId = false, rejectListening = false } = {}) {
+function fakeDiscord({ pipe = newPipe(), refuseId = false, rejectListening = false, rejectAssets = false } = {}) {
   const frames = [];
   const sockets = new Set();
   const server = net.createServer((s) => {
@@ -51,6 +54,8 @@ function fakeDiscord({ pipe = newPipe(), refuseId = false, rejectListening = fal
           const a = msg.args.activity;
           if (rejectListening && a && "type" in a) {
             send(1, { cmd: "SET_ACTIVITY", evt: "ERROR", nonce: msg.nonce, data: { code: 4000, message: '"type" is not allowed' } });
+          } else if (rejectAssets && a && "assets" in a) {
+            send(1, { cmd: "SET_ACTIVITY", evt: "ERROR", nonce: msg.nonce, data: { code: 4000, message: '"assets" is not allowed' } });
           } else {
             send(1, { cmd: "SET_ACTIVITY", evt: null, nonce: msg.nonce, data: a ?? null });
           }
@@ -119,11 +124,75 @@ test("handshake carries the Application ID; the song shows as a Listening status
     assert.equal(a.state, "Artist");
     assert.equal(a.type, 2, "Listening, not Playing");
     assert.deepEqual(a.timestamps, { start, end: start + 180_000 });
-    assert.ok(!("assets" in a), "no covers leave the machine");
+    assert.deepEqual(a.assets, { large_image: LOGO_URL, large_text: "Songsta" }, "without an album and a cover: Songsta's logo");
+    assert.ok(!("buttons" in a), "no button unless asked for");
 
     setDiscordActivity(null);
     await until(() => d.activities().length === 2);
     assert.equal(d.activities()[1], null, "paused: the status is cleared");
+  } finally {
+    await d.close();
+  }
+});
+
+test("the album's cover from the open databases shows, with Songsta's logo in its corner; only public addresses go out", async () => {
+  const d = await fakeDiscord();
+  __testing.usePipes([d.pipe]);
+  try {
+    configureDiscord(true, ID);
+    await until(() => discordStatus().state === "connected");
+    const onNow = { ...song("Cover Song"), album: "Night Ferry", albumArtist: "" };
+    setDiscordActivity(onNow);
+    await until(() => d.activities().length === 1);
+    assert.deepEqual(d.activities()[0].assets, { large_image: LOGO_URL, large_text: "Night Ferry" }, "the album's name, the logo until a cover is known");
+
+    const cover = "https://coverartarchive.org/release-group/0d8ae6e1/front-500";
+    setDiscordCover(sanitizeActivity(onNow), cover);
+    await until(() => d.activities().length === 2);
+    assert.deepEqual(d.activities()[1].assets, { large_image: cover, large_text: "Night Ferry", small_image: LOGO_URL, small_text: "Songsta" });
+
+    // A cover that comes late for another song, or isn't a public https address, changes nothing.
+    setDiscordCover(sanitizeActivity({ ...song("Another Song"), album: "Another Album" }), "https://example.org/a.jpg");
+    setDiscordCover(sanitizeActivity(onNow), "http://192.168.1.2:8096/Items/1/Images/Primary");
+    setDiscordCover(sanitizeActivity(onNow), `https://example.org/${"a".repeat(300)}.jpg`);
+    await sleep(200);
+    assert.equal(d.activities().length, 2);
+    assert.equal(d.activities()[1].assets.large_image, cover);
+
+    // The next song starts with the logo again, until its own cover is found.
+    setDiscordActivity({ ...song("Next Song"), album: "Lanterns", albumArtist: "" });
+    await until(() => d.activities().length === 3);
+    assert.deepEqual(d.activities()[2].assets, { large_image: LOGO_URL, large_text: "Lanterns" });
+  } finally {
+    await d.close();
+  }
+});
+
+test("asked for, a button to Songsta's page", async () => {
+  const d = await fakeDiscord();
+  __testing.usePipes([d.pipe]);
+  try {
+    configureDiscord(true, ID);
+    setDiscordActivity({ ...song("Button Song"), button: true });
+    await until(() => d.activities().length === 1);
+    assert.deepEqual(d.activities()[0].buttons, [{ label: "Songsta", url: SONGSTA_PAGE }]);
+  } finally {
+    await d.close();
+  }
+});
+
+test("a Discord that refuses pictures as well gets the plain status, a step at a time", async () => {
+  const d = await fakeDiscord({ rejectListening: true, rejectAssets: true });
+  __testing.usePipes([d.pipe]);
+  try {
+    setDiscordActivity({ ...song("Plain Song"), album: "Album", button: true });
+    configureDiscord(true, ID);
+    await until(() => d.activities().length === 3);
+    const [, withoutListening, plain] = d.activities();
+    assert.ok(!("type" in withoutListening) && "assets" in withoutListening);
+    assert.equal(plain.details, "Plain Song");
+    assert.ok(!("assets" in plain) && !("buttons" in plain) && !("type" in plain));
+    assert.equal(discordStatus().state, "connected");
   } finally {
     await d.close();
   }
@@ -252,4 +321,8 @@ test("the renderer's input is checked: anything malformed means nothing playing"
   assert.ok(Math.abs(a.startedAt - Date.now()) < 1000);
   assert.equal(a.endsAt, 0);
   assert.equal(sanitizeActivity({ title: "T", startedAt: 2000, endsAt: 1000 }).endsAt, 0, "an end before the start is dropped");
+  const full = sanitizeActivity({ title: "T", artist: "A", album: "  Night Ferry ", albumArtist: 3, button: "yes" });
+  assert.equal(full.album, "Night Ferry");
+  assert.equal(full.albumArtist, "");
+  assert.equal(full.button, false, "only a real true asks for the button");
 });

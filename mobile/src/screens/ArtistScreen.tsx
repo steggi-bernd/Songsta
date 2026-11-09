@@ -32,7 +32,7 @@ export function ArtistScreen() {
   const { params } = useRoute<any>();
   const name: string = params?.name ?? "";
   const insets = useSafeAreaInsets();
-  const tracks = useLibrary((s) => s.data.tracks);
+  const tracks = useLibrary((s) => s.tracks);
   const albums = useLibrary((s) => s.albums);
   const counts = useLibrary((s) => s.data.counts);
   const photo = useArtistPhoto(name);

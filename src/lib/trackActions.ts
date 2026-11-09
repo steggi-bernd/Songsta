@@ -9,7 +9,7 @@ import {
   ListMusic,
   ListStart,
   Pencil,
-  Play,
+  Play,
   Search,
   Split,
   Trash2,
@@ -19,9 +19,11 @@ import {
   VolumeX,
   Speaker,
 } from "lucide-react";
-import { downloadForOffline, SERVER_SONG } from "./downloads";
+import { downloadForOffline, getDownload, removeOfflineCopy, SERVER_SONG } from "./downloads";
 import { playlistListKey } from "./keptLists";
 import { toggleKeptList } from "./keptListsWatch";
+import { withItemOut } from "./libraryGroups";
+import { useLibraryOrder } from "../stores/libraryOrder";
 import type { TrackSource } from "./dnd";
 import { versionsOf } from "../stores/catalog";
 import { useCast } from "./cast";
@@ -178,6 +180,15 @@ export function trackMenuItems(track: Track, from?: TrackSource): MenuItem[] {
       action: () => void downloadForOffline([track]),
     });
   }
+  // An offline copy made here: taken off by hand, it stays off (lib/downloads.ts).
+  const offline = versionsOf(track).find((v) => SERVER_SONG.test(v.id) && getDownload(v.id)?.status === "done");
+  if (offline) {
+    items.push({
+      label: T("Remove download"),
+      icon: Trash2,
+      action: () => void removeOfflineCopy(offline.id),
+    });
+  }
 
   if (track.albumId?.startsWith("lib:album:")) {
     items.push({
@@ -309,7 +320,12 @@ export function playlistFolderItems(playlist: Playlist): MenuItem[] {
     label: f.id === playlist.folderId ? `✓ ${f.name}` : T("Move to “{name}”", { name: f.name }),
     icon: FolderOpen,
     separatorBefore: i === 0,
-    action: () => useLibrary.getState().setPlaylistFolder(playlist.id, f.id),
+    action: () => {
+      useLibrary.getState().setPlaylistFolder(playlist.id, f.id);
+      // In a folder, it stands there, not in a group of the library panel.
+      const order = useLibraryOrder.getState();
+      order.setGroups(withItemOut(order.groups, playlistListKey(playlist.id)));
+    },
   }));
   if (playlist.folderId) {
     items.push({

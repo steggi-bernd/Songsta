@@ -1,14 +1,16 @@
 /**
  * Songsta's sync service: a small store next to Jellyfin for what Jellyfin has
- * no place for, the playlists and where playback stopped. It knows nothing
- * about music. Documents go in and come out with a revision number; merging
- * is the apps' job (src/lib/syncEngine.ts).
+ * no place for, the playlists, where playback stopped and how the library is
+ * organised. It knows nothing about music. Documents go in and come out with a
+ * revision number; merging is the apps' job (src/lib/syncEngine.ts,
+ * src/lib/librarySync.ts). An app that doesn't know a document never asks for
+ * it, and one that finds a document missing here keeps it to itself.
  *
  * A login here is a Jellyfin login: the header a client sends to Jellyfin is
  * asked of Jellyfin, and each Jellyfin user has their own documents. An API
  * key belongs to no user, so it names the user it acts for (X-Songsta-User).
  *
- *   GET  /health
+ *   GET  /health                  { ok, service, api, version, docs }: no login needed; the apps look here once they're linked
  *   GET  /v1/docs/:name           { rev, updatedAt, doc }   (rev 0: nothing yet)
  *   PUT  /v1/docs/:name           { rev?, doc } → { rev, seq, updatedAt }, 409 when rev is behind
  *   GET  /v1/changes?since&wait&device   { seq, revs, inbox }: answers at once when seq differs, else within `wait` seconds
@@ -23,6 +25,13 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+/**
+ * This service's version: the release it came with. The image says it from its tag (the
+ * SONGSTA_SYNC_VERSION it was built with); built from this folder, this file says it, and it goes
+ * up with each release like the apps' own.
+ */
+export const VERSION = process.env.SONGSTA_SYNC_VERSION || "1.5.0";
+
 /** `merged` documents are built on a revision and a write must say which; the rest is last writer wins. */
 const DOCS = {
   playlists: { merged: true, keepVersions: 20 },
@@ -30,6 +39,11 @@ const DOCS = {
   position: {},
   likes: {},
   muted: {},
+  // How the library is organised: pins, its sort and when things played; the groups; the album edits and their pictures.
+  order: { merged: true, keepVersions: 10 },
+  groups: { merged: true, keepVersions: 20 },
+  albumedits: { merged: true, keepVersions: 20 },
+  albumpictures: { merged: true, keepVersions: 5 },
 };
 const DEVICES_FILE = "devices.json";
 /** A device not heard of for this long is forgotten. */
@@ -286,7 +300,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     // Behind a proxy or tunnel it shares Jellyfin's name, under this path.
     const pathname = url.pathname.replace(/^\/songsta-sync(?=\/)/, "");
     if (req.method === "GET" && pathname === "/health") {
-      return send(res, 200, { ok: true, service: "songsta-sync", api: 1 });
+      return send(res, 200, { ok: true, service: "songsta-sync", api: 1, version: VERSION, docs: Object.keys(DOCS) });
     }
 
     const docMatch = /^\/v1\/docs\/([a-z]+)$/.exec(pathname);

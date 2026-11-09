@@ -70,6 +70,14 @@ export interface LocalFileInfo {
   lyrics?: string | null;
 }
 
+/** A file picked in Android's own dialogs (Documents.kt). */
+export interface PickedDocument {
+  uri: string;
+  name: string;
+  /** bytes; -1 when the place doesn't say */
+  size: number;
+}
+
 export interface DownloadJob {
   job: number;
   status: "waiting" | "wifi" | "running" | "done" | "failed";
@@ -80,6 +88,24 @@ export interface DownloadJob {
   loaded: number;
   /** -1 when the server doesn't say */
   total: number;
+}
+
+/** The download notification's words, counted on the native side so they hold while the app is out of sight. */
+export interface DownloadTexts {
+  /** the notification channel's name in Android's settings */
+  channel: string;
+  /** while songs download */
+  loading: string;
+  /** "{done} of {total}" */
+  progress: string;
+  /** when a round is through */
+  doneOne: string;
+  /** "{count} songs downloaded" */
+  doneMany: string;
+  /** "{count} didn't download" */
+  failed: string;
+  /** under the count while nothing is fetched and songs wait for Wi-Fi */
+  wifi: string;
 }
 
 type Events = {
@@ -127,6 +153,12 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   pickFolder(): Promise<{ uri: string; name: string } | null>;
   /** Android's own picker; the chosen picture as a small data: address, or null. */
   pickImage(): Promise<string | null>;
+  /** Android's own "save as": the file made where somebody chose, or null. `size` is -1 when the place doesn't say. */
+  pickSaveDocument(name: string, mimeType: string): Promise<PickedDocument | null>;
+  /** Android's own picker for a file to open, or null. */
+  pickDocument(mimeTypes: string[]): Promise<PickedDocument | null>;
+  /** Text into a file from pickSaveDocument, in place of what was in it. */
+  writeText(uri: string, text: string): Promise<void>;
   localScan(folder: string, known: Record<string, number>): Promise<LocalFileInfo[]>;
   localForget(folder: string): Promise<void>;
   readText(uri: string): Promise<string | null>;
@@ -149,7 +181,10 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   appUpdateAllowed(): Promise<boolean>;
   /** Android's page for that. */
   appUpdateAskToAllow(): Promise<void>;
-  downloadStart(url: string, headers: Record<string, string>, fileName: string, wifiOnly: boolean): Promise<number>;
+  /** `label`: the song's name, for the notification while it downloads. */
+  downloadStart(url: string, headers: Record<string, string>, fileName: string, wifiOnly: boolean, label: string): Promise<number>;
+  /** The download notification's words in the app's language (SongDownloads.kt). */
+  downloadTexts(texts: DownloadTexts): Promise<void>;
   downloadQuery(jobs: number[]): Promise<DownloadJob[]>;
   downloadFinish(job: number): Promise<{ file: string; bytes: number } | null>;
   downloadCancel(job: number): Promise<void>;

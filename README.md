@@ -55,7 +55,7 @@ Songsta comes in three parts. The desktop app stands on its own; the other two b
 |---|---|---|
 | **Desktop app** (Windows, Linux) | Your whole library, from local folders and servers, and everything under [Features](#features) | Nothing |
 | **[Android app](#on-your-phone)** | Your server's music and folders on your phone, downloads for when there's no connection, and steering the speakers at home | A Jellyfin server, folders on the phone, or both |
-| **[Sync service](#the-same-on-all-your-devices)** | Playlists, where you stopped, muted songs and the order of Liked Songs the same everywhere, and devices that see and steer each other | Docker next to Jellyfin |
+| **[Sync service](#the-same-on-all-your-devices)** | Playlists, where you stopped, muted songs, the order of Liked Songs and how your library is organised (pins, sort, groups, album edits) the same everywhere, and devices that see and steer each other | Docker next to Jellyfin |
 
 All three are on the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest); [Install](#install) says how to set each of them up.
 
@@ -67,7 +67,7 @@ All three are on the [Releases page](https://github.com/steggi-bernd/Songsta/rel
 ### One library, every source
 
 - **Local folders**, watched while the app runs: new, changed and deleted files show up without a rescan.
-- **Jellyfin** (user name and password, or an API key) and **Navidrome or any Subsonic server**. Streams pass through a local proxy, so plain-http servers on your network work too.
+- **Jellyfin** (user name and password, or an API key) and **Navidrome or any Subsonic server**. Streams pass through a local proxy, so plain-http servers on your network work too. What's new on the server, songs and the covers it found, comes in at every start; the button on the server's page fetches it at once.
 - **Duplicates become one song.** A song you have as a local FLAC and on your server is listed once, with its plays added up. It plays from the local file and streams only when that file can't be reached.
 - **Offline copies of server songs.** *Download for offline* on a song, album or playlist fetches the original into a library folder. An album or playlist downloaded as a whole stays whole: what's added later, or didn't make it, comes by itself.
 - **Unreachable songs are greyed out** — an unplugged drive, a server that doesn't answer — and come back by themselves.
@@ -103,9 +103,9 @@ All three are on the [Releases page](https://github.com/steggi-bernd/Songsta/rel
 
 ![The album editor: the album's name and picture, its artists as chips, and a split "Bonus Tracks" album offered for merging](docs/screenshots/local/album-editor.jpg)
 
-Tags aren't always right. The album editor — the pencil on an album page, or right-click an album in the library panel — lets you
+Tags aren't always right. The album editor — the pencil on an album page, or right-click an album in the library panel; on the phone, the ⋯ on an album page — lets you
 
-- **give an album another name or picture**, on this computer, with your files staying as they are,
+- **give an album another name or picture**, with your files staying as they are,
 - **add or remove artists** on an album, with one click back to what the tags say, and
 - **merge albums** that show up as several (a "Disc 2", bonus tracks, one song with a different album artist), and separate them again.
 
@@ -113,7 +113,7 @@ Songs whose tags name no album gather under **Songs without an album** in the li
 
 ![Make an album: three songs without an album tag, with the album's title taken from their folder, the artist, a year and the order](docs/screenshots/local/make-album.jpg)
 
-Songsta keeps these edits itself; your files and servers stay exactly as they are.
+Songsta keeps these edits itself; your files and servers stay exactly as they are. With the [sync service](#the-same-on-all-your-devices) they're the same on all your devices, made on whichever one.
 
 ![Library check: three songs on no album, and an album in two parts with a button to merge them](docs/screenshots/local/library-check.jpg)
 
@@ -129,6 +129,7 @@ Songsta keeps these edits itself; your files and servers stay exactly as they ar
 - **Mini player:** an always-on-top picture-in-picture window.
 - **Where it comes from:** the panel beside the page names the album, playlist or Liked Songs playing, over the cover; a click leads back there.
 - **On the taskbar:** the window's preview has previous, play/pause and next, on Windows.
+- **With Windows, if you like:** *Settings → Startup* opens Songsta with its window when you sign in, as Spotify can.
 - **Replay:** your listening over time — top artists and songs, hours listened, monthly and hourly patterns.
 
 ### A queue that does what you asked
@@ -159,13 +160,11 @@ The import and your decisions are kept until you start over, so they survive res
 
 ## Discord status (optional)
 
-Show what you're listening to on Discord: title, artist and a progress bar, as *Listening to …*. It is off until you switch it on, because Discord wants an application of your own — free, and done in a minute:
+Show what you're listening to on Discord: title, artist, the album with its cover, and a progress bar, as *Listening to Songsta*. It is off until you switch it on under **Settings → Discord**.
 
-1. Open the [Discord Developer Portal](https://discord.com/developers/applications), choose **New Application** and name it, for example *Songsta* — Discord shows this name.
-2. Copy the **Application ID** from *General Information*.
-3. In Songsta, open **Settings → Discord**, switch on *Discord status* and paste the ID.
+The Discord desktop app has to be running; Songsta connects as soon as it starts and clears the status when you pause. While Songsta is open on this computer, the status also shows what plays on your phone or another computer of yours. Only the Discord app on your computer receives the title, artist and album. The cover is a public picture from iTunes or MusicBrainz's Cover Art Archive, never your server's or your files'. A button to Songsta's page under your status is optional.
 
-The Discord desktop app has to be running; Songsta connects as soon as it starts and clears the status when you pause. Only the Discord app on your computer receives the title and artist — no covers.
+Rather see another name than *Songsta* there? Make an application of your own in the [Discord Developer Portal](https://discord.com/developers/applications) (**New Application**, name it, copy its **Application ID**) and paste the ID under *Your own application*.
 
 ## On your phone
 
@@ -187,7 +186,7 @@ The app is young and has run in an emulator far more than on real phones, so ple
 
 ## The same on all your devices
 
-Which songs you like and how often they played go through your server's own favorites and play counts (**Settings → Server sync**). Playlists, where you stopped and the order of Liked Songs need a small [sync service](sync-server/README.md) next to Jellyfin: a Docker container without any music in it, signed in to with your Jellyfin login ([how to set it up](#sync-service)). With it running, a playlist made on one device arrives on the others within moments, the phone lists Liked Songs in the order you have them on the computer, and muted songs stay muted everywhere.
+Which songs you like and how often they played go through your server's own favorites and play counts (**Settings → Server sync**). Playlists, where you stopped and the order of Liked Songs need a small [sync service](sync-server/README.md) next to Jellyfin: a Docker container without any music in it, signed in to with your Jellyfin login ([how to set it up](#sync-service)). With it running, a playlist made on one device arrives on the others within moments, the phone lists Liked Songs in the order you have them on the computer, and muted songs stay muted everywhere. Your library looks the same on each of them: what's pinned and in which order, how it's sorted, the groups, and albums merged, renamed or given a picture, whichever device you did it on.
 
 There is one stream, like Spotify Connect: a device that isn't playing shows what another one plays and steers it, itself silent. Pause on the phone and the computer pauses; start a song or change the volume there and the computer does that, and the computer can steer a phone in your pocket the same way. *This phone* or *This computer* under Devices brings the music over: it stops there and goes on here. Only when you choose *Start a second stream* on that same tile does each device go its own way, with its own songs, until you end it. With no device playing, one picks up where another stopped, paused until you press play.
 
@@ -252,19 +251,19 @@ The Linux packages are built by GitHub Actions for every release; this edition i
 For Android 7 or newer on a 64-bit phone, which is nearly all of them. Get `Songsta.apk` from the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest) and open it on the phone; Android asks once whether your browser may install apps. A new version installs over the old one the same way.
 
 - The app isn't on a store. Google Play Protect may ask whether you trust it: *More details → Install anyway*.
-- It's signed with the standard development key, not one of its own. That's fine for your own phone, but should a later version get a real key, it needs one fresh install.
+- It's signed with Songsta's own key, SHA-256 `abe89dfcdab384e4ddb238ef03dc6b36a6140900aa83d03f2e433fa5a6fc45d2`; `apksigner verify --print-certs Songsta.apk` shows it. Up to 1.5 it was the standard development key, which handed over to the new one, so a new version still installs over an old one as an update, with nothing to do. Android 7 and 8 know no hand-over and keep checking the old key.
 - From version 1.4 on, **Settings → This app** fetches a new version and hands it to Android, which asks before it installs anything. With *Automatic updates* on, it fetches by itself over Wi-Fi and asks when it's there.
 - The first start asks where your music is: a folder on the phone, your Jellyfin server, or both; either can be added later in Settings. Then it asks for what's of use, if Android hasn't got an answer yet: notifications, and whether Songsta may install its own updates. Navidrome is the desktop app's only.
 
 ### Sync service
 
-On the machine with your Jellyfin container, from `songsta-sync.zip` on the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest) or the [`sync-server`](sync-server) folder here:
+It comes as a ready image for amd64 and arm64 (a Raspberry Pi too) with each release. On the machine with your Jellyfin container, from `songsta-sync.zip` on the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest) or the [`sync-server`](sync-server) folder here:
 
 ```bash
-JELLYFIN_NETWORK=<network Jellyfin is on> DATA_PATH=/path/for/its/data docker compose up -d --build
+JELLYFIN_NETWORK=<network Jellyfin is on> DATA_PATH=/path/for/its/data docker compose up -d
 ```
 
-The apps then find it by themselves on your Jellyfin server's host, port 8196, and sign in with your Jellyfin login. [sync-server/README.md](sync-server/README.md) has the settings and how to reach it from outside your home.
+The apps then find it by themselves on your Jellyfin server's host, port 8196, and sign in with your Jellyfin login. Updating it is `docker compose pull && docker compose up -d` in its folder; [Watchtower](https://containrrr.dev/watchtower/) can do that by itself if you like. When a new app needs a newer service, the app's settings say so, and what stays on the device until then; without a sync service nothing is asked. [sync-server/README.md](sync-server/README.md) has the settings, updating, and how to reach it from outside your home.
 
 ## Build from source
 
@@ -307,7 +306,7 @@ Shortcuts never fire while you're typing in a text field.
 - **No account, no sign-in, no ads, no analytics.** Your library, likes, playlists and listening history stay on your own devices, and on your own server if you run the sync service.
 - **Passwords aren't stored:** Jellyfin keeps a session token (or your API key), Navidrome a salt/token pair — sealed by Windows (on Linux, your desktop's keyring) through Electron's safeStorage.
 - **What goes online:** your own servers; the devices on your own network, which fetch songs from your server or this computer themselves; the open-database lookups above, paced to MusicBrainz's one request per second and cached; lyrics providers for songs without lyrics of their own, on the phone LRCLIB; Genius for what's known about a song; the AutoEQ index when you search for headphones; GitHub once a day, for the newest version's number, and for the update itself when there is one (Settings can turn that off); and, only if you switch it on, the animated canvas behind the player (a community index and TIDAL's public search).
-- **Discord status** talks to the Discord app on your computer, not to the internet.
+- **Discord status** talks to the Discord app on your computer, not to the internet; its covers are looked up in the open databases like the others.
 
 ## Credits and license
 

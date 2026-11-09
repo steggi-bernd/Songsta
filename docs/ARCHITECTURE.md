@@ -60,7 +60,7 @@ Folders are imported through an approved-directories list, scanned with tag + ar
 
 ## Updates
 
-Both apps ask GitHub once a day for the newest version (`src/lib/newVersion.ts`). On Windows the desktop app can replace itself: `electron/app-update.ts` wraps electron-updater, which reads `latest.yml` and fetches only what changed since the installed version if the old release has its `.blockmap`. The installer starts on the app's `quit` event, after everything is saved. On the phone, `mobile/src/newVersion.ts` fetches the `Songsta.apk` of the release and hands it to Android (`AppUpdate.kt`). Android only takes it if it's signed with the same key as what's installed, and `versionCode` has to go up.
+Both apps ask GitHub once a day for the newest version (`src/lib/newVersion.ts`). On Windows the desktop app can replace itself: `electron/app-update.ts` wraps electron-updater, which reads `latest.yml` and fetches only what changed since the installed version if the old release has its `.blockmap`. The installer starts on the app's `quit` event, after everything is saved. On the phone, `mobile/src/newVersion.ts` fetches the `Songsta.apk` of the release and hands it to Android (`AppUpdate.kt`). Android only takes it if it's signed with the same key as what's installed, or with a key that one handed over to, and `versionCode` has to go up. Releases carry both: the old debug key for Android 7 and 8, and Songsta's own key with the hand-over (APK key rotation) for Android 9 and newer, signed by `scripts/phone-signing.mjs` after the Gradle build.
 
 Looking, fetching by itself (`autoUpdate`) and telling about it (`checkNewVersion`) are separate: the look runs if either wants it.
 

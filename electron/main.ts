@@ -36,6 +36,7 @@ import { proxyUrlForJellyfin, proxyUrlForLocalTrack, proxyUrlForSubsonic, startS
 import * as transcode from "./transcode";
 import * as transition from "./data-transition";
 import { buildAppMenu, type MenuCommand, type MenuPlaybackState, type MenuWiring } from "./mac-menu";
+import * as startup from "./startup";
 import type { Track } from "../src/types";
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
@@ -428,6 +429,8 @@ const RENDERER_STORES = new Set([
   "spotify-import",
   "album-edits",
   "library-order",
+  // when each part of how the library is organised changed (lib/libraryDocs.ts)
+  "library-sync",
   "muted",
   "device-names",
   "server-sync",
@@ -570,6 +573,9 @@ function registerIpc(): void {
   ipc.handle("jellyfin:disconnect", () => jellyfin.disconnect());
   ipc.handle("jellyfin:library", () => jellyfin.readLibrary());
   ipc.handle("jellyfin:refresh", () => jellyfin.refreshLibrary());
+  // The relist at start (stores/catalog.ts) only needs to hear whether anything changed; null: the
+  // server couldn't be listed (expected right after signing in to Windows), tried again later.
+  ipc.handle("jellyfin:relist", () => jellyfin.refreshLibrary().then((listed) => listed.changed, () => null));
 
   // AutoEQ headphone correction profiles for the parametric EQ.
   ipc.handle("autoeq:search", (_e, q: string) => autoeq.searchAutoEq(String(q ?? "")));
@@ -583,6 +589,7 @@ function registerIpc(): void {
   ipc.handle("subsonic:disconnect", () => subsonic.disconnect());
   ipc.handle("subsonic:library", () => subsonic.readLibrary());
   ipc.handle("subsonic:refresh", () => subsonic.refreshLibrary());
+  ipc.handle("subsonic:relist", () => subsonic.refreshLibrary().then((listed) => listed.changed, () => null));
 
   // The sync service: the page decides what to say (lib/homeSync.ts), the login stays here.
   ipc.handle("homeSync:info", () => homeSync.info());
@@ -648,7 +655,23 @@ function registerIpc(): void {
     discord.configureDiscord(enabled === true, typeof clientId === "string" ? clientId.slice(0, 64) : "")
   );
   ipc.handle("discord:status", () => discord.discordStatus());
-  ipc.on("discord:activity", (_e, activity: unknown) => discord.setDiscordActivity(activity));
+  ipc.on("discord:activity", (_e, activity: unknown) => {
+    discord.setDiscordActivity(activity);
+    // The album's cover from the open databases, as a public address Discord can fetch at once
+    // (metadata.ts discordCover): nothing of the server or the files.
+    const shown = discord.sanitizeActivity(activity);
+    if (!shown?.album) return;
+    void meta
+      .discordCover(shown.albumArtist || shown.artist, shown.album)
+      .then((url) => {
+        if (url) discord.setDiscordCover(shown, url);
+      })
+      .catch(() => undefined);
+  });
+
+  // Songsta at sign-in, on Windows (startup.ts).
+  ipc.handle("startup:state", () => startup.startupState());
+  ipc.handle("startup:setOpenAtLogin", (_e, on: unknown) => startup.setOpenAtLogin(on === true));
 
   ipc.handle("stats:playcounts", () => stats.playCounts());
   // The listening history (listens.ts): on this computer only — read a page, export it as CSV.
@@ -890,6 +913,21 @@ function registerIpc(): void {
   });
   ipc.handle("download:cancel", (_e, id: string) => downloads.cancelDownload(String(id ?? "")));
   ipc.handle("download:queue", () => downloads.queueSnapshot());
+  // The check at start (lib/keptListsWatch.ts): which offline copies are gone from the disk.
+  // Only paths in approved folders are looked at; anything else is never reported gone.
+  ipc.handle("download:missing", async (_e, paths: unknown) => {
+    if (!Array.isArray(paths) || paths.length > 100_000) return [];
+    const asked = paths.filter((p): p is string => typeof p === "string" && !!p && isApprovedPath(p));
+    const gone = await Promise.all(asked.map((p) => fs.promises.access(p).then(() => false, () => true)));
+    return asked.filter((_, i) => gone[i]);
+  });
+  // "Remove download": the copy goes to the recycle bin, and only from the offline copies' folder.
+  ipc.handle("download:remove", async (_e, p: unknown) => {
+    if (typeof p !== "string" || !downloads.isOfflineCopy(p)) throw new Error("Not an offline copy");
+    if (!fs.existsSync(p)) return true;
+    await shell.trashItem(path.resolve(p));
+    return true;
+  });
   downloads.addDownloadListener((e) => {
     try {
       mainWindow?.webContents.send("download:event", e);

@@ -151,15 +151,17 @@ export function Card({
   subtitle,
   width = CARD_SIZE,
   onPress,
+  onLongPress,
 }: {
   art: ReactNode;
   title: string;
   subtitle?: string;
   width?: number;
   onPress: () => void;
+  onLongPress?: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={{ width }}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} style={{ width }}>
       {art}
       <Text numberOfLines={1} style={styles.cardTitle}>
         {title}

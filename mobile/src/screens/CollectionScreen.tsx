@@ -35,6 +35,7 @@ export function CollectionScreen() {
   const params = useRoute<any>().params as Params;
   const insets = useSafeAreaInsets();
   const data = useLibrary((s) => s.data);
+  const shownTracks = useLibrary((s) => s.tracks);
   const byId = useLibrary((s) => s.byId);
   const mixes = useLibrary((s) => s.mixes);
   const genres = useLibrary((s) => s.genres);
@@ -58,7 +59,7 @@ export function CollectionScreen() {
   }, [playlistId, playlist, nav]);
 
   const artistName = params.kind === "artistLiked" ? params.name : "";
-  const artistSongs = useMemo(() => (artistName ? artistTracks(data.tracks, artistName) : []), [artistName, data.tracks]);
+  const artistSongs = useMemo(() => (artistName ? artistTracks(shownTracks, artistName) : []), [artistName, shownTracks]);
   const artistLiked = useLiked(artistSongs);
   const photo = useArtistPhoto(artistName);
 
@@ -74,7 +75,7 @@ export function CollectionScreen() {
           tracks: [...onItsWay.split("|"), ...Object.keys(kept)].map((id) => byId.get(id)).filter((t): t is Track => !!t),
         };
       case "local":
-        return { title: T("On this phone"), tracks: data.tracks.filter((t) => t.localPath) };
+        return { title: T("On this phone"), tracks: shownTracks.filter((t) => t.localPath) };
       case "mix": {
         const mix = mixes.find((m) => m.id === params.id);
         return { title: mix?.title ?? T("Mix"), tracks: mix?.tracks ?? [] };
@@ -86,7 +87,7 @@ export function CollectionScreen() {
       case "artistLiked":
         return { title: T("Liked songs by {name}", { name: params.name }), tracks: artistLiked };
     }
-  }, [params, playlist, data.tracks, data.favorites, byId, mixes, genres, artistLiked, kept, onItsWay]);
+  }, [params, playlist, shownTracks, data.favorites, byId, mixes, genres, artistLiked, kept, onItsWay]);
   // What can play: a playlist's song this library doesn't have stays in the list only.
   const tracks = useMemo(() => shown.filter((t) => !t.missing), [shown]);
   // Looking for one song: it still plays on through the whole list from there.

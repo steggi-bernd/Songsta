@@ -1,13 +1,15 @@
 /** What a song's menu offers, and the download buttons of a song and of a whole list. */
-import { ArrowDown, CircleArrowDown, Disc3, ListPlus, ListStart, Share2, Speaker, Undo2, User, Volume2, VolumeX, type LucideIcon } from "lucide-react-native";
+import { ArrowDown, CircleArrowDown, Disc3, DiscAlbum, ListPlus, ListStart, Share2, Speaker, Split, Undo2, User, Volume2, VolumeX, type LucideIcon } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Share, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { create } from "zustand";
 import { albumKeyOf } from "../playingFrom";
 import { leadArtist, plural, type Track } from "../shared";
+import { useAlbumEdits, usePutOnAlbum } from "../stores/albumEdits";
 import { useConnection } from "../stores/connection";
 import { downloadOf, percentOf, useDownloads } from "../stores/downloads";
+import { listDownloads, takeListOff } from "../stores/keptLists";
 import { useLibrary } from "../stores/library";
 import { usePlayer } from "../stores/player";
 import { usePlaylists } from "../stores/playlists";
@@ -85,6 +87,7 @@ export function SongMenu() {
   const { track, extras, plain, goTo, close } = useSongMenu();
   const download = useDownloadAction(track);
   const albumKey = track ? albumKeyOf(track) : null;
+  const handPut = useAlbumEdits((s) => !!track && !!s.songs[track.id]);
   const muted = useLibrary((s) => !!track && s.muted.has(track.id));
   const [playOn, setPlayOn] = useState<Track | null>(null);
   const found = useZones((s) => s.found);
@@ -115,6 +118,17 @@ export function SongMenu() {
     }
     if (playable.length > 0) rows.push({ label: T("Play on a device"), Icon: Speaker, run: () => setPlayOn(track) });
     if (albumKey) rows.push({ label: T("Go to album"), Icon: Disc3, run: () => goTo?.("Album", { albumKey }) });
+    // As on the computer: a song whose tags name no album goes on one by hand, and comes off again.
+    if (handPut) {
+      rows.push({
+        label: T("Take off this album"),
+        Icon: Split,
+        run: () => {
+          useAlbumEdits.getState().clearSongs([track.id]);
+          toast(T("{n} {value} without an album again", { n: 1, value: T("song is") }));
+        },
+      });
+    } else if (!albumKey) rows.push({ label: T("Put on an album…"), Icon: DiscAlbum, run: () => usePutOnAlbum.getState().open(track) });
     rows.push({ label: T("Go to artist"), Icon: User, run: () => goTo?.("Artist", { name: leadArtist(track.artist) }) });
     rows.push({ label: muted ? T("Play again (unmute)") : T("Mute song"), Icon: muted ? Volume2 : VolumeX, run: () => void useLibrary.getState().toggleMuted(track) });
     rows.push({ label: T("Share"), Icon: Share2, run: () => void Share.share({ message: `${track.title} · ${track.artist}` }) });
@@ -213,7 +227,7 @@ export function DownloadButton({ tracks, list, size = 24, style }: { tracks: Tra
   });
   const [kept, loading] = counts.split("/").map(Number);
   const all = tracks.length > 0 && kept === tracks.length;
-  const { remove, keepList, dropList } = useDownloads.getState();
+  const { keepList } = useDownloads.getState();
   const label = all ? T("Remove download") : loading ? T("Downloading") : T("Download");
   return (
     <Pressable
@@ -221,16 +235,18 @@ export function DownloadButton({ tracks, list, size = 24, style }: { tracks: Tra
       onPress={() => {
         if (!tracks.length) return;
         if (all || loading) {
-          showDialog(all ? T("Remove these downloads?") : T("Stop these downloads?"), T("{count} from this phone. They stay on your server.", { count: plural(kept + loading, T("song"), T("songs")) }), [
+          // What another downloaded list has stays on the phone (stores/keptLists.ts).
+          const { going, staying } = listDownloads(list, tracks);
+          const body = [
+            going.length ? T("{count} from this phone. They stay on your server.", { count: plural(going.length, T("song"), T("songs")) }) : "",
+            staying.length === 1 ? T("1 song stays, because it's on another downloaded list too.") : "",
+            staying.length > 1 ? T("{count} songs stay, because they're on other downloaded lists too.", { count: staying.length }) : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          showDialog(all ? T("Remove these downloads?") : T("Stop these downloads?"), body, [
             { text: T("Cancel"), style: "cancel" },
-            {
-              text: T("Remove"),
-              style: "destructive",
-              onPress: () => {
-                if (list) dropList(list);
-                remove(tracks, false);
-              },
-            },
+            { text: T("Remove"), style: "destructive", onPress: () => takeListOff(list, tracks) },
           ]);
         } else {
           if (list) keepList(list);

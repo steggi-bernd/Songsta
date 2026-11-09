@@ -240,8 +240,26 @@ function toTrack(s: any): SubsonicTrack | null {
   };
 }
 
-/** Re-list every song on the server and replace the cached library. */
-export async function refreshLibrary(): Promise<SubsonicLibrary> {
+/** A fresh listing, and whether its songs (or their covers) differ from the cached ones. */
+export type SubsonicListing = SubsonicLibrary & { changed: boolean };
+
+let listing: { auth: string; done: Promise<SubsonicListing> } | null = null;
+
+/**
+ * Re-list every song on the server and replace the cached library. A call while a listing
+ * for the same login runs (the relist at start, the reload button) shares it.
+ */
+export function refreshLibrary(): Promise<SubsonicListing> {
+  const auth = readConfig()?.auth ?? "";
+  if (listing?.auth === auth) return listing.done;
+  const done: Promise<SubsonicListing> = listLibrary().finally(() => {
+    if (listing?.done === done) listing = null;
+  });
+  listing = { auth, done };
+  return done;
+}
+
+async function listLibrary(): Promise<SubsonicListing> {
   const s = session();
   if (!s) throw new Error("Not connected to a Navidrome/Subsonic server");
   const tracks: SubsonicTrack[] = [];
@@ -321,9 +339,12 @@ export async function refreshLibrary(): Promise<SubsonicLibrary> {
     const facts = t.albumId ? albumFacts.get(t.albumId) : undefined;
     if (facts) Object.assign(t, facts);
   }
+  // Signed out, or into another server, while the songs came: they aren't this login's.
+  if (readConfig()?.auth !== s.cfg.auth) throw new Error("Not connected to a Navidrome/Subsonic server");
+  const before = readLibrary();
   const lib = { fetchedAt: Date.now(), tracks, v: LIB_VERSION };
   await persist.writeData(LIBRARY_STORE, lib);
-  return lib;
+  return { ...lib, changed: before.v !== LIB_VERSION || JSON.stringify(before.tracks) !== JSON.stringify(tracks) };
 }
 
 const SONG_ID = /^[\w.:-]{1,128}$/;

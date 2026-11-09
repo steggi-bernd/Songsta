@@ -179,6 +179,7 @@ export async function resetAppData(): Promise<void> {
         "spotify-import",
         "album-edits",
         "library-order",
+        "library-sync",
         "muted",
         "device-names",
         "server-sync",

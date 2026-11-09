@@ -11,6 +11,8 @@ import * as persist from "./persist";
 const STORE = "home-sync";
 const MAX_TIMEOUT_MS = 60_000;
 const ALLOWED_PATH = /^\/v1\/(docs\/[a-z]+|changes\?since=-?\d+&wait=\d+(&device=[A-Za-z0-9._%:-]+)?|devices(\/[A-Za-z0-9._%:-]+(\/commands)?)?)$/;
+/** What the service says about itself: its version and documents, asked once it's linked. */
+const HEALTH_PATH = "/health";
 
 export interface HomeSyncInfo {
   /** a Jellyfin login with a user to sync for */
@@ -21,6 +23,8 @@ export interface HomeSyncInfo {
   deviceName: string;
   address: string | null;
   customAddress: string;
+  /** which server this is, whatever address it's reached at: another server is looked for afresh */
+  serverKey: string | null;
 }
 
 function customAddress(): string {
@@ -41,6 +45,7 @@ export function info(): HomeSyncInfo {
     deviceName: os.hostname(),
     address: addressFor(login?.server),
     customAddress: customAddress(),
+    serverKey: login ? `${login.serverId || login.server}|${customAddress()}` : null,
   };
 }
 
@@ -51,7 +56,8 @@ export async function setAddress(value: string): Promise<HomeSyncInfo> {
 }
 
 export async function request(method: unknown, path: unknown, body: unknown, timeoutMs: unknown): Promise<{ status: number; body: unknown }> {
-  if ((method !== "GET" && method !== "PUT" && method !== "POST") || typeof path !== "string" || !ALLOWED_PATH.test(path)) {
+  if (method !== "GET" && method !== "PUT" && method !== "POST") throw new Error("Not a request for the sync service");
+  if (typeof path !== "string" || !(ALLOWED_PATH.test(path) || (method === "GET" && path === HEALTH_PATH))) {
     throw new Error("Not a request for the sync service");
   }
   const login = jellyfin.syncLogin();

@@ -210,6 +210,40 @@ export function lookupRelease(artist: string, album: string): Promise<ReleaseMet
   });
 }
 
+/** The Cover Art Archive's pictures by their final address, for this run only: archive.org moves them between its servers. */
+const directCovers = new Map<string, string | null>();
+
+/** Where a picture's address ends up after its redirects; null unless that is a picture on https within Discord's 256 characters. */
+async function directAddress(url: string): Promise<string | null> {
+  if (directCovers.has(url)) return directCovers.get(url) ?? null;
+  let direct: string | null = null;
+  try {
+    const res = await fetch(url, { method: "HEAD", headers: { "User-Agent": UA }, redirect: "follow", signal: AbortSignal.timeout(10000) });
+    const type = res.headers.get("content-type") ?? "";
+    if (res.ok && type.startsWith("image/") && /^https:\/\/[^\s"']+$/.test(res.url) && res.url.length <= 256) direct = res.url;
+  } catch {
+    /* none this time; the next song asks again */
+    return null;
+  }
+  directCovers.set(url, direct);
+  return direct;
+}
+
+/**
+ * The album's cover for the Discord status. Discord fetches the picture itself and gives up on an
+ * address that redirects, as the Cover Art Archive's do (twice, to archive.org), and then shows
+ * the application's icon. So iTunes is asked first, whose pictures come straight from a CDN, and
+ * the archive's picture goes by its final address.
+ */
+export async function discordCover(artist: string, album: string): Promise<string | null> {
+  if (isPlaceholder(artist) || isPlaceholder(album)) return null;
+  const fromItunes = await cached(`itc:${norm(leadArtist(artist))}|${norm(album)}`, () => releaseFromItunes(artist, album));
+  if (fromItunes?.coverUrl) return fromItunes.coverUrl;
+  const release = await lookupRelease(artist, album).catch(() => null);
+  if (!release?.coverUrl) return null;
+  return /^https:\/\/coverartarchive\.org\//.test(release.coverUrl) ? directAddress(release.coverUrl) : release.coverUrl;
+}
+
 interface ReleaseCandidate {
   title: string;
   rgId: string;

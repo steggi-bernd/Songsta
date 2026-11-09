@@ -1,6 +1,7 @@
 /**
  * The desktop's side of the sync service: playlists and where playback stopped,
- * the same on all devices. The conversation itself is lib/syncEngine.ts, one
+ * the same on all devices, and how the library is organised (lib/libraryDocs.ts:
+ * pins, sort, groups, album edits). The conversation itself is lib/syncEngine.ts, one
  * copy with the phone; here is what it reads and changes on this computer. The
  * requests go through the main process, which holds the login.
  *
@@ -22,7 +23,9 @@ import { jumpTarget, lineInList, listAround, placeOf } from "./queueSections";
 import { followClock, handOverToCast, takeBackFromCast } from "./audio";
 import { useCast } from "./cast";
 import { syncFavorites } from "./serverSync";
+import { libraryDocHosts, librarySyncReady, onLibrarySyncReady, watchLibraryDocs } from "./libraryDocs";
 import { createSyncEngine, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "./syncEngine";
+import { problemKey, serviceProblem, type SyncServiceInfo, type SyncServiceProblem } from "./syncService";
 import { T } from "./i18n";
 
 /** A pause a moment ago is a person between songs, not somebody done here. */
@@ -40,6 +43,11 @@ const FOLLOW_TICK_MS = 1000;
 const FOLLOW_DRIFT_MS = 1500;
 const AT_KEY = "songsta.sync.at";
 const QUEUE_KEY = "songsta.sync.queueId";
+/** the service's problem last told as a note: told once, again only when it's another */
+const NOTED_KEY = "songsta.sync.serviceNoted";
+/** the servers a sync service ever answered for (home-sync's serverKey), latest last */
+const LINKED_KEY = "songsta.sync.linked";
+const LINKED_KEPT = 20;
 
 /** Another device whose music this computer shows and steers, itself silent. */
 export interface FollowedDevice {
@@ -58,9 +66,25 @@ interface HomeSyncState {
   followed: FollowedDevice | null;
   /** this computer plays its own music next to another device's, by request */
   secondStream: boolean;
+  /** what the linked service says about itself, and why it's too old for this app (lib/syncService.ts) */
+  service: SyncServiceInfo | null;
+  serviceProblem: SyncServiceProblem | null;
+  /** a sync service ever answered this computer for this server: until one has, it's only looked for now and then */
+  linked: boolean;
 }
 
-export const useHomeSync = create<HomeSyncState>(() => ({ status: "off", address: null, customAddress: "", needsUser: false, others: [], followed: null, secondStream: false }));
+export const useHomeSync = create<HomeSyncState>(() => ({
+  status: "off",
+  address: null,
+  customAddress: "",
+  needsUser: false,
+  others: [],
+  followed: null,
+  secondStream: false,
+  service: null,
+  serviceProblem: null,
+  linked: false,
+}));
 
 export const isAround = (device: RemoteDevice): boolean => device.ageMs < DEVICE_ONLINE_MS;
 
@@ -107,6 +131,39 @@ function store(key: string, value: string): void {
   } catch {
     /* a convenience: without it another device's note just counts as newer */
   }
+}
+
+function linkedServers(): string[] {
+  try {
+    const list = JSON.parse(readStored(LINKED_KEY) || "[]");
+    return Array.isArray(list) ? list.filter((k): k is string => typeof k === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+const isLinked = (serverKey: string | null): boolean => !!serverKey && linkedServers().includes(serverKey);
+
+function markLinked(serverKey: string | null): void {
+  if (!serverKey) return;
+  store(LINKED_KEY, JSON.stringify([...linkedServers().filter((k) => k !== serverKey), serverKey].slice(-LINKED_KEPT)));
+}
+
+/** "Search again" in Settings: no service ever answered this computer, and it's looked for now. */
+let searchNow: () => void = () => undefined;
+export const searchSyncAgain = (): void => searchNow();
+
+/** What the linked service said about itself: a service too old for this app is said once, and in Settings. */
+function hearService(info: SyncServiceInfo | null): void {
+  const problem = serviceProblem(info);
+  useHomeSync.setState({ service: info, serviceProblem: problem });
+  if (!problem) {
+    store(NOTED_KEY, "");
+    return;
+  }
+  if (readStored(NOTED_KEY) === problemKey(problem)) return;
+  store(NOTED_KEY, problemKey(problem));
+  useUI.getState().toast(T("Your sync service is out of date: library order, groups and album edits stay on this device until it's updated. Settings say how."), "warning", 9000);
 }
 
 let finder: { byId: Map<string, Track>; find: (wire: WireTrack) => Track | undefined } | null = null;
@@ -169,6 +226,12 @@ export function watchHomeSync(): () => void {
   let heldUntil = 0;
   let volumeTimer: number | null = null;
   let volumeWanted: number | null = null;
+  /** which server, and the address the service was last looked for at */
+  let serverKey: string | null = null;
+  let lookedAt: string | null = null;
+  /** a service answered while this ran, for this server: known, whether or not it could be written down */
+  let linkedHere = false;
+  const linked = (): boolean => linkedHere || isLinked(serverKey);
 
   function inSameSong(note: PlaybackNote): boolean {
     const { queue, index } = usePlayer.getState();
@@ -596,27 +659,41 @@ export function watchHomeSync(): () => void {
   async function refresh(): Promise<void> {
     const info = await bridge!.homeSyncInfo();
     if (closed) return;
-    useHomeSync.setState({ address: info.address, customAddress: info.customAddress, needsUser: info.needsUser });
+    if ((info.serverKey ?? null) !== serverKey) linkedHere = false;
+    serverKey = info.serverKey ?? null;
+    useHomeSync.setState({ address: info.address, customAddress: info.customAddress, needsUser: info.needsUser, linked: linked() });
     device = { id: info.deviceId, name: info.deviceName };
+    // A new address (another one entered, or away from home and back) is worth a look at once; nothing else is.
+    const moved = info.address !== lookedAt;
+    lookedAt = info.address;
     const wanted =
       info.ready &&
       useSettings.getState().syncPlaylists &&
       useCatalog.getState().loaded &&
       useLibrary.persist.hasHydrated() &&
-      usePlayer.persist.hasHydrated();
+      usePlayer.persist.hasHydrated() &&
+      librarySyncReady();
     if (!wanted) {
       engine?.stop();
       engine = null;
-      useHomeSync.setState({ status: "off" });
+      // Not linked any more: nothing to say about a service.
+      useHomeSync.setState({ status: "off", service: null, serviceProblem: null });
       return;
     }
     if (engine) {
-      engine.retryNow();
+      if (moved) engine.retryNow();
       return;
     }
     engine = createSyncEngine({
       deviceId: info.deviceId,
       request: (method, path, body, timeoutMs) => bridge!.homeSyncRequest(method, path, body, timeoutMs),
+      // Most people have no sync service: until one answered for this server, it's looked for once a start and when asked.
+      linked,
+      onLinked() {
+        linkedHere = true;
+        markLinked(serverKey);
+        useHomeSync.setState({ linked: true });
+      },
       readPlaylists: () => toPlaylistDoc(useLibrary.getState()),
       applyPlaylists(doc) {
         applying = true;
@@ -637,6 +714,8 @@ export function watchHomeSync(): () => void {
         applying = false;
       },
       onStatus: (status) => useHomeSync.setState({ status }),
+      library: libraryDocHosts(),
+      onService: hearService,
     });
     otherDevices.send = (id, command) => engine?.sendCommand(id, command) ?? Promise.resolve(false);
     otherDevices.sendTo = async (id) => {
@@ -677,6 +756,9 @@ export function watchHomeSync(): () => void {
 
   const refreshQuietly = (): void => void refresh().catch(() => undefined);
   refreshNow = refreshQuietly;
+  searchNow = () => engine?.searchAgain();
+  // Away from home and back: the address moved, and the service is looked for at the new one.
+  const offReach = bridge.onJellyfinReach?.(() => refreshQuietly()) ?? (() => undefined);
 
   // What the stores read from disk at the start isn't anything somebody just did.
   const offLibrary = useLibrary.subscribe((s, prev) => {
@@ -722,6 +804,9 @@ export function watchHomeSync(): () => void {
       playerRead = true;
       refreshQuietly();
     }),
+    onLibrarySyncReady(refreshQuietly),
+    // How the library is organised: pins, sort, groups, album edits and pictures (lib/libraryDocs.ts).
+    watchLibraryDocs((name) => engine?.libraryChanged(name)),
   ];
   const onFocus = (): void => void engine?.checkPlayback();
   const onLeave = (): void => void engine?.flushPlayback();
@@ -733,6 +818,8 @@ export function watchHomeSync(): () => void {
   return () => {
     closed = true;
     refreshNow = () => undefined;
+    searchNow = () => undefined;
+    offReach();
     setSteering(null);
     engine?.stop();
     if (followTimer !== null) window.clearInterval(followTimer);

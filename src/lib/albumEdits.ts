@@ -13,11 +13,12 @@
  *    (views/LooseSongsView.tsx)
  *  - titles, covers: an album's name and picture as the user wants them
  *
- * Pure, so the grouping rules are testable on their own.
+ * Pure, so the grouping rules are testable on their own, and one copy for the
+ * desktop and the phone; they travel between them (lib/librarySync.ts).
  */
 import type { Track } from "../types";
 import { foldTag } from "./duplicates";
-import { albumKeyOf, albumRoute, artistRoute, leadArtist, parseRoute, splitCredits } from "./libraryTracks";
+import { albumKeyOf, albumRoute, artistRoute, leadArtist, parseRoute, splitCredits } from "./libraryCore";
 
 export interface AlbumEdits {
   /** album key → artist credit line ("A, B") */
@@ -126,6 +127,21 @@ export function withMerge(mergedInto: Record<string, string>, from: string, into
   const next: Record<string, string> = { ...mergedInto, [from]: target };
   for (const [k, v] of Object.entries(next)) if (v === from) next[k] = target;
   return next;
+}
+
+/** `name` shown as `as` (null: as tagged again); a name others pointed at now points on, so there are no chains. */
+export function withAlias(aliases: Record<string, string>, name: string, as: string | null): Record<string, string> {
+  const next = { ...aliases };
+  if (as && as !== name) next[name] = as;
+  else delete next[name];
+  for (const [from, to] of Object.entries(next)) if (to === name && as && as !== name) next[from] = as;
+  return next;
+}
+
+/** The album's artist line from these names; none left goes back to its tags. */
+export function creditLine(names: readonly string[]): string | null {
+  const clean = names.map((n) => n.trim()).filter(Boolean);
+  return clean.length ? clean.join(", ") : null;
 }
 
 /** Show `from` as its own album again — albums merged into it stay with it. */

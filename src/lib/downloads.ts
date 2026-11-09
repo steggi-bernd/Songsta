@@ -87,6 +87,35 @@ export function createProgressBuffer(
 }
 
 /**
+ * "Remove download": the offline copy goes to the recycle bin and stays off.
+ * Neither the check at start nor a list kept whole brings it back
+ * (lib/keptListsWatch.ts), until it's downloaded by hand again.
+ */
+export async function removeOfflineCopy(serverId: string): Promise<void> {
+  const item = getDownload(serverId);
+  if (!item) return;
+  try {
+    if (item.path) await requireBridge().removeOfflineCopy(item.path);
+  } catch {
+    useUI.getState().toast(T("The download couldn't be removed"), "error");
+    return;
+  }
+  useLibrary.getState().patchDownload(serverId, { status: "removed", progress: 0 });
+  useUI.getState().toast(T("Download removed"), "info");
+  // The copy leaves the library, and the song plays from the server again.
+  void requireBridge()
+    .scanLibrary(useSettings.getState().filterNonMusicAudio)
+    .then((lib) => window.dispatchEvent(new CustomEvent("bytune:local-library-updated", { detail: lib })))
+    .catch(() => undefined);
+}
+
+/** Done once the rows of the last session are reconciled (listenForDownloadProgress). */
+let reconciled: Promise<void> = Promise.resolve();
+export function downloadsReconciled(): Promise<void> {
+  return reconciled;
+}
+
+/**
  * Boot reconciliation: the main process queue is memory-only, so registry
  * rows persisted as "queued"/"downloading" describe work that died with the
  * previous session — no event will ever update them, and startDownload
@@ -154,7 +183,7 @@ export function downloadForOffline(tracks: Track[]): number {
 /** Subscribe to queue lifecycle events from the main process. */
 export function listenForDownloadProgress(): () => void {
   if (!window.bytune) return () => undefined;
-  void reconcileStaleDownloads();
+  reconciled = reconcileStaleDownloads();
   const applyProgress = (id: string, downloaded: number, total: number): void => {
     useLibrary.getState().patchDownload(id, {
       status: "downloading",

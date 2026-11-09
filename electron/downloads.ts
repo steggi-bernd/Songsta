@@ -16,6 +16,7 @@ import * as path from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import * as jellyfin from "./jellyfin";
+import { isUnderPath, samePath } from "./local-paths";
 import * as subsonic from "./subsonic";
 import type { Track } from "../src/types";
 
@@ -29,6 +30,13 @@ export const SERVER_SONG = /^(jf|ss):/;
  */
 export function offlineDir(): string {
   return path.join(app.getPath("music"), "Songsta Offline");
+}
+
+/** A file inside the offline copies' folder, the only place "Remove download" takes one from. */
+export function isOfflineCopy(file: string): boolean {
+  if (!file) return false;
+  const resolved = path.resolve(file);
+  return isUnderPath(resolved, offlineDir()) && !samePath(resolved, offlineDir());
 }
 
 /** The extension a server names its file with (Content-Disposition), if any. */

@@ -16,14 +16,29 @@ import { ArtistLinks } from "./ArtistLinks";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
 
-/** Download state glyph for a track row — spinner / green check / red fail. */
+/** How much of a download is in: a ring the size of the row's other glyphs. */
+function ProgressRing({ value }: { value: number }) {
+  const r = 6.5;
+  const around = 2 * Math.PI * r;
+  const share = Math.min(1, Math.max(0, value));
+  return (
+    <svg viewBox="0 0 16 16" className="w-4 h-4 -rotate-90" aria-hidden>
+      <circle cx="8" cy="8" r={r} fill="none" stroke="currentColor" strokeOpacity={0.2} strokeWidth="2" />
+      <circle cx="8" cy="8" r={r} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray={around} strokeDashoffset={around * (1 - share)} />
+    </svg>
+  );
+}
+
+/** Download state glyph for a track row — spinner or filling ring / green check / red fail. */
 export function DownloadBadge({ id }: { id: string }) {
   const dl = useLibrary((s) => s.downloads[id]);
-  if (!dl) return null;
+  if (!dl || dl.status === "removed") return null;
   if (dl.status === "downloading" || dl.status === "queued") {
+    // A ring that fills as the song comes in; a spinner while it waits or its size isn't known.
+    const percent = dl.status === "downloading" && dl.total > 0 ? Math.round(dl.progress * 100) : null;
     return (
-      <span className="p-1.5 rounded-md text-ink-hi" title={T("Downloading…")}>
-        <Loader2 className="w-4 h-4 animate-spin" />
+      <span className="p-1.5 rounded-md text-ink-hi" title={percent === null ? T("Downloading…") : T("Downloading {percent}%", { percent })}>
+        {percent === null ? <Loader2 className="w-4 h-4 animate-spin" /> : <ProgressRing value={dl.progress} />}
       </span>
     );
   }

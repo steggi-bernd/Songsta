@@ -78,10 +78,12 @@ interface SettingsState {
   autoUpdate: boolean;
   /** the version that ran last, for the note after an update */
   lastVersion: string;
-  /** the song playing now as the Discord status (needs the user's own Discord application) */
+  /** the song playing now as the Discord status (lib/discordPresence.ts) */
   discordPresence: boolean;
-  /** that application's ID, from the Discord Developer Portal */
-  discordClientId: string;
+  /** the ID of an application of the user's own, for another name than Songsta's; empty uses Songsta's */
+  discordOwnAppId: string;
+  /** a button to Songsta's page under the Discord status */
+  discordButton: boolean;
   /** Liked Songs ↔ the Jellyfin/Navidrome favorites, both ways (lib/serverSync.ts) */
   serverSync: boolean;
   /** playlists and where playback stopped through the sync service (lib/homeSync.ts) */
@@ -149,7 +151,8 @@ interface SettingsState {
   setAutoUpdate(v: boolean): void;
   setLastVersion(v: string): void;
   setDiscordPresence(v: boolean): void;
-  setDiscordClientId(id: string): void;
+  setDiscordOwnAppId(id: string): void;
+  setDiscordButton(v: boolean): void;
   setServerSync(v: boolean): void;
   setSyncPlaylists(v: boolean): void;
   setServerPlays(v: boolean): void;
@@ -215,7 +218,8 @@ export const useSettings = create<SettingsState>()(
       autoUpdate: true,
       lastVersion: "",
       discordPresence: false,
-      discordClientId: "",
+      discordOwnAppId: "",
+      discordButton: false,
       serverSync: true,
       syncPlaylists: true,
       serverPlays: true,
@@ -278,7 +282,8 @@ export const useSettings = create<SettingsState>()(
       setLastVersion: (lastVersion) => set({ lastVersion }),
       setDiscordPresence: (discordPresence) => set({ discordPresence }),
       // Only the digits survive a paste ("ID: 1234…", spaces, a trailing newline).
-      setDiscordClientId: (id) => set({ discordClientId: id.replace(/\D/g, "").slice(0, 22) }),
+      setDiscordOwnAppId: (id) => set({ discordOwnAppId: id.replace(/\D/g, "").slice(0, 22) }),
+      setDiscordButton: (discordButton) => set({ discordButton }),
       setServerSync: (serverSync) => set({ serverSync }),
       setSyncPlaylists: (syncPlaylists) => set({ syncPlaylists }),
       setServerPlays: (serverPlays) => set({ serverPlays }),
@@ -300,8 +305,12 @@ export const useSettings = create<SettingsState>()(
       // The panel used to sort only its albums ("librarySort"): a title or
       // artist order chosen there stays; the old default gives way to
       // Recently played.
+      // An Application ID saved before Songsta had its own Discord application
+      // ("discordClientId") was one the user had to make, named ByTune as the
+      // app said then: Discord would go on showing that name, so it is let go.
       merge: (persisted, current) => {
-        const saved = (persisted ?? {}) as Partial<SettingsState> & { librarySort?: string };
+        const saved = { ...(persisted ?? {}) } as Partial<SettingsState> & { librarySort?: string; discordClientId?: unknown };
+        delete saved.discordClientId;
         const libraryOrder: LibraryOrder =
           saved.libraryOrder ?? (saved.librarySort === "alpha" || saved.librarySort === "artist" ? saved.librarySort : "played");
         return { ...current, ...saved, libraryOrder };

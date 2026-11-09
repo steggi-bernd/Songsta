@@ -4,6 +4,7 @@ import type { HomeSyncInfo } from "./home-sync";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { Track } from "../src/types";
 import type { DiscordStatus } from "./discord";
+import type { StartupState } from "./startup";
 import type { JellyfinStatus, JellyfinTrack, JellyfinUser } from "./jellyfin";
 import type { SubsonicTrack } from "./subsonic";
 import type { ArchiveImport } from "./archive-import";
@@ -97,8 +98,13 @@ const api = {
     ipcRenderer.invoke("discord:configure", enabled, clientId) as Promise<DiscordStatus>,
   discordStatus: () => ipcRenderer.invoke("discord:status") as Promise<DiscordStatus>,
   /** null clears it (paused, nothing playing); the main process spaces updates out */
-  discordActivity: (activity: { title: string; artist: string; startedAt: number; endsAt: number } | null) =>
-    ipcRenderer.send("discord:activity", activity),
+  discordActivity: (
+    activity: { title: string; artist: string; album: string; albumArtist: string; startedAt: number; endsAt: number; button: boolean } | null
+  ) => ipcRenderer.send("discord:activity", activity),
+
+  // Songsta at sign-in (Windows)
+  startupState: () => ipcRenderer.invoke("startup:state") as Promise<StartupState>,
+  setOpenAtLogin: (on: boolean) => ipcRenderer.invoke("startup:setOpenAtLogin", on) as Promise<StartupState>,
 
   // Open metadata (MusicBrainz · Cover Art Archive · iTunes · Wikidata/Wikipedia)
   metaArtist: (name: string) => ipcRenderer.invoke("meta:artist", name),
@@ -140,6 +146,8 @@ const api = {
   jellyfinDisconnect: () => ipcRenderer.invoke("jellyfin:disconnect"),
   jellyfinLibrary: () => ipcRenderer.invoke("jellyfin:library"),
   jellyfinRefresh: () => ipcRenderer.invoke("jellyfin:refresh"),
+  /** the server's songs listed again (the relist at start): whether anything changed; null when they couldn't be listed */
+  jellyfinRelist: () => ipcRenderer.invoke("jellyfin:relist") as Promise<boolean | null>,
 
   // AutoEQ headphone profiles (index cached for a week in the main process)
   autoEqSearch: (q: string) =>
@@ -153,6 +161,7 @@ const api = {
   subsonicDisconnect: () => ipcRenderer.invoke("subsonic:disconnect"),
   subsonicLibrary: () => ipcRenderer.invoke("subsonic:library"),
   subsonicRefresh: () => ipcRenderer.invoke("subsonic:refresh"),
+  subsonicRelist: () => ipcRenderer.invoke("subsonic:relist") as Promise<boolean | null>,
 
   // The sync service: playlists and where playback stopped (lib/homeSync.ts); the login stays in the main process
   homeSyncInfo: () => ipcRenderer.invoke("homeSync:info") as Promise<HomeSyncInfo>,
@@ -329,6 +338,10 @@ const api = {
   startDownload: (track: Track, dir?: string) => ipcRenderer.invoke("download:start", track, dir),
   cancelDownload: (id: string) => ipcRenderer.invoke("download:cancel", id),
   downloadQueue: () => ipcRenderer.invoke("download:queue"),
+  /** of these offline copies, the ones gone from the disk (the check at start) */
+  downloadsMissing: (paths: string[]) => ipcRenderer.invoke("download:missing", paths) as Promise<string[]>,
+  /** "Remove download": the offline copy goes to the recycle bin */
+  removeOfflineCopy: (path: string) => ipcRenderer.invoke("download:remove", path) as Promise<boolean>,
   onDownloadEvent: (cb: (e: { type: string; id: string; downloaded?: number; total?: number; path?: string; reason?: string }) => void): (() => void) => {
     const listener = (_e: unknown, ev: { type: string; id: string }): void => cb(ev);
     ipcRenderer.on("download:event", listener as never);

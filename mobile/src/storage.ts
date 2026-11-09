@@ -7,6 +7,13 @@ import { File, Paths } from "expo-file-system";
 
 const nextOf = (name: string): File => new File(Paths.document, `${name}.next`);
 
+/** A backup was put back (phoneBackup.ts): nothing still running here writes over it before the app starts anew. */
+let held = false;
+
+export function holdFiles(): void {
+  held = true;
+}
+
 export async function readJson<T>(name: string): Promise<T | null> {
   for (const file of [new File(Paths.document, name), nextOf(name)]) {
     try {
@@ -19,6 +26,7 @@ export async function readJson<T>(name: string): Promise<T | null> {
 }
 
 export function writeJson(name: string, value: unknown): void {
+  if (held) return;
   try {
     const next = nextOf(name);
     if (next.exists) next.delete();
@@ -33,6 +41,7 @@ export function writeJson(name: string, value: unknown): void {
 }
 
 export function removeJson(name: string): void {
+  if (held) return;
   try {
     for (const file of [new File(Paths.document, name), nextOf(name)]) {
       if (file.exists) file.delete();

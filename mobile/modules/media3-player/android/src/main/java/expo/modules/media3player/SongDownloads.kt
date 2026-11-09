@@ -10,7 +10,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -40,7 +43,9 @@ internal object SongDownloads {
     val url: String,
     val headers: Map<String, String>,
     val fileName: String,
-    val wifiOnly: Boolean
+    val wifiOnly: Boolean,
+    /** the song's name, for the notification */
+    val label: String
   ) {
     @Volatile var status = "waiting"
     @Volatile var reason = 0
@@ -49,6 +54,8 @@ internal object SongDownloads {
     @Volatile var total = -1L
     @Volatile var file: File? = null
     @Volatile var cancelled = false
+    /** when it last started fetching: the notification names the song that started last */
+    @Volatile var startedAt = 0L
   }
 
   private class Refused(val code: Int) : IOException("The server answered $code")
@@ -60,21 +67,94 @@ internal object SongDownloads {
   private fun songs(context: Context): File =
     File(context.getExternalFilesDir(null) ?: context.filesDir, "songs").apply { mkdirs() }
 
-  private fun working(job: Job): Boolean = job.status == "waiting" || job.status == "wifi" || job.status == "running"
+  /**
+   * The notification's words in the app's language, handed over by the app (stores/downloads.ts):
+   * channel, loading, progress ("{done} of {total}"), doneOne, doneMany and failed ("{count}").
+   */
+  @Volatile var texts: Map<String, String> = emptyMap()
 
-  fun start(context: Context, url: String, headers: Map<String, String>, fileName: String, wifiOnly: Boolean): Long {
+  fun text(key: String, fallback: String): String = texts[key]?.takeIf { it.isNotBlank() } ?: fallback
+
+  /**
+   * This round of downloads, by file: from the first song handed over while nothing was under
+   * way to the last one through. Counted here, not by the app, whose timers stand still while
+   * it's out of sight: "going", "done" or "failed". Its lock also guards [open] and starting
+   * and stopping the service, so a song handed over just as the last one comes through can't
+   * be left without it.
+   */
+  internal val round = LinkedHashMap<String, String>()
+
+  /** Songs handed over whose turn hasn't come and gone yet, taken off ones too: at 0 the round is over. */
+  private var open = 0
+
+  /** How the round stands: songs through (done or failed), songs in it, songs done, songs failed. */
+  fun roundCount(): IntArray = synchronized(round) {
+    val done = round.values.count { it == "done" }
+    val failed = round.values.count { it == "failed" }
+    intArrayOf(done + failed, round.size, done, failed)
+  }
+
+  /** What the notification shows, worked out from the songs themselves whenever it looks. */
+  class Standing(
+    val through: Int,
+    val all: Int,
+    /** how far the songs being fetched are, each from 0 to 1, added up */
+    val partly: Double,
+    /** the song that started last, while one is being fetched */
+    val song: String?,
+    /** nothing is being fetched, and something waits for Wi-Fi */
+    val forWifi: Boolean
+  )
+
+  fun standing(): Standing {
+    val counts = roundCount()
+    var partly = 0.0
+    var song: String? = null
+    var latest = Long.MIN_VALUE
+    var forWifi = false
+    for (job in jobs.values) {
+      if (job.cancelled) continue
+      if (job.status == "wifi") forWifi = true
+      if (job.status != "running") continue
+      val total = job.total
+      if (total > 0) partly += min(1.0, job.loaded.toDouble() / total)
+      if (job.startedAt > latest) {
+        latest = job.startedAt
+        song = job.label
+      }
+    }
+    return Standing(counts[0], counts[1], partly, song, forWifi && song == null)
+  }
+
+  fun start(context: Context, url: String, headers: Map<String, String>, fileName: String, wifiOnly: Boolean, label: String): Long {
     val app = context.applicationContext
-    val job = Job(nextId.incrementAndGet(), url, headers, fileName, wifiOnly)
+    val job = Job(nextId.incrementAndGet(), url, headers, fileName, wifiOnly, label)
     jobs[job.id] = job
-    SongDownloadService.keepAlive(app)
+    synchronized(round) {
+      if (open == 0) round.clear()
+      open += 1
+      round[fileName] = "going"
+      SongDownloadService.keepAlive(app)
+    }
+    SongDownloadService.nudge()
     pool.execute {
       run(app, job)
-      if (!busy()) SongDownloadService.letGo()
+      // The round's count once it's over, read before a new round can start.
+      val through = synchronized(round) {
+        open -= 1
+        // Taken off by hand: it doesn't count (cancel took it out of the round).
+        if (!job.cancelled) round[job.fileName] = if (job.status == "done") "done" else "failed"
+        if (open == 0) {
+          SongDownloadService.letGo()
+          roundCount()
+        } else {
+          null
+        }
+      }
+      if (through != null) SongDownloadService.roundOver(app, through[2], through[3]) else SongDownloadService.nudge()
     }
     return job.id
   }
-
-  fun busy(): Boolean = jobs.values.any(::working)
 
   private fun run(context: Context, job: Job) {
     val folder = songs(context)
@@ -95,6 +175,8 @@ internal object SongDownloads {
       }
       try {
         job.status = "running"
+        job.startedAt = System.nanoTime()
+        SongDownloadService.nudge()
         fetch(job, part)
         if (job.cancelled) break
         if (!part.renameTo(done)) throw IOException("The finished file couldn't be moved")
@@ -194,7 +276,9 @@ internal object SongDownloads {
     if (job != null) {
       job.cancelled = true
       File(songs(context), "${job.fileName}.part").delete()
-      if (!busy()) SongDownloadService.letGo()
+      // Out of the count at once; its turn still comes and goes (start), and then the round may be over.
+      synchronized(round) { round.remove(job.fileName) }
+      SongDownloadService.nudge()
     } else {
       runCatching { context.getSystemService(DownloadManager::class.java).remove(id) }
     }
@@ -208,22 +292,55 @@ internal object SongDownloads {
   fun existing(paths: List<String>): List<String> = paths.filter { File(it).exists() }
 }
 
-/** Keeps the app's process going while songs download and nobody is looking. */
+/**
+ * Keeps the app's process going while songs download and nobody is looking. Its notification
+ * says how far the round is ("12 of 30 · Departure Bell", with a bar that moves along with the
+ * songs being fetched), and when the round is through a note of its own says how many came and
+ * how many didn't. Tapping either opens the app.
+ *
+ * The notification follows the songs from here, not from the app: a look every second, and one
+ * right away when a song starts or comes through. It shows at once: newer Androids otherwise hold
+ * a service's notification back for ten seconds, and songs were through before it said anything.
+ * Android also takes only a handful of changes a second from an app and quietly drops the rest,
+ * the last one too; so the service starts once per round instead of once per song, a change shows
+ * at most every half second, and the latest one always does.
+ */
 class SongDownloadService : Service() {
+  private val tick = object : Runnable {
+    override fun run() {
+      refreshSoon()
+      main.postDelayed(this, TICK_MS)
+    }
+  }
+
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    val note = notification()
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-    else startForeground(NOTE_ID, note)
-    running = this
-    // Only now: stopped before it went to the foreground, Android would take the whole app down.
-    if (!SongDownloads.busy()) stopSelf()
+    val note = progressNote(this)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startForeground(NOTE_ID, note.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+    else startForeground(NOTE_ID, note.build())
+    shown = note.key
+    shownAt = SystemClock.uptimeMillis()
+    synchronized(SongDownloads.round) {
+      running = this
+      starting = false
+      // The round was over before the service came up. Only now: stopped before it went to the
+      // foreground, Android would take the whole app down.
+      if (!wanted) stopSelf()
+    }
+    main.removeCallbacks(tick)
+    main.postDelayed(tick, TICK_MS)
     return START_NOT_STICKY
   }
 
   override fun onDestroy() {
-    running = null
+    main.removeCallbacks(tick)
+    synchronized(SongDownloads.round) {
+      if (running === this) running = null
+    }
+    shown = null
+    // A count shown while it was stopping mustn't stay behind.
+    runCatching { getSystemService(NotificationManager::class.java).cancel(NOTE_ID) }
     super.onDestroy()
   }
 
@@ -232,41 +349,137 @@ class SongDownloadService : Service() {
     stopSelf()
   }
 
-  private fun notification(): Notification {
-    val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val channel = NotificationChannel(CHANNEL, "Downloads", NotificationManager.IMPORTANCE_LOW)
-      getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-      Notification.Builder(this, CHANNEL)
-    } else {
-      @Suppress("DEPRECATION")
-      Notification.Builder(this)
-    }
-    val open = packageManager.getLaunchIntentForPackage(packageName)?.let {
-      android.app.PendingIntent.getActivity(this, 0, it, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-    }
-    return builder
-      .setSmallIcon(R.drawable.notification_mark)
-      .setContentTitle("Downloading songs")
-      .setOngoing(true)
-      .setContentIntent(open)
-      .build()
-  }
+  /** A notification, with what tells it apart from the one shown before. */
+  private class Note(val key: String, val build: () -> Notification)
 
   companion object {
     private const val NOTE_ID = 7402
+    /** The note once a round is through, apart from the one that goes with the work. */
+    private const val DONE_ID = 7403
     private const val CHANNEL = "downloads"
-    @Volatile private var running: SongDownloadService? = null
+    private const val TICK_MS = 1000L
+    /** Changes come at most this often; Android drops what comes faster than about five a second. */
+    private const val GAP_MS = 500L
 
-    /** Not allowed from the background on newer Androids: then it goes on for as long as the app is left alone. */
-    fun keepAlive(context: Context) {
-      runCatching {
-        val intent = Intent(context, SongDownloadService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent) else context.startService(intent)
+    private val main = Handler(Looper.getMainLooper())
+
+    // Guarded by SongDownloads.round, like the round itself.
+    private var running: SongDownloadService? = null
+    /** asked to start for this round, and not asked to stop since */
+    private var wanted = false
+    /** asked to start, not up yet: songs handed over meanwhile don't ask again */
+    private var starting = false
+
+    // The main thread's own.
+    private var shown: String? = null
+    private var shownAt = 0L
+    private var coming = false
+
+    private fun builder(context: Context): Notification.Builder {
+      val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(CHANNEL, SongDownloads.text("channel", "Downloads"), NotificationManager.IMPORTANCE_LOW)
+        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        Notification.Builder(context, CHANNEL)
+      } else {
+        @Suppress("DEPRECATION")
+        Notification.Builder(context)
+      }
+      val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
+        android.app.PendingIntent.getActivity(context, 0, it, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+      }
+      return builder.setSmallIcon(R.drawable.notification_mark).setContentIntent(open)
+    }
+
+    private fun progressNote(context: Context): Note {
+      val now = SongDownloads.standing()
+      val count = SongDownloads.text("progress", "{done} of {total}").replace("{done}", "${now.through}").replace("{total}", "${now.all}")
+      val line = when {
+        now.song != null -> "$count · ${now.song}"
+        now.forWifi -> "$count · ${SongDownloads.text("wifi", "Waiting for Wi-Fi")}"
+        else -> count
+      }
+      // The bar moves along with the songs being fetched, in thousandths of the round.
+      val bar = if (now.all == 0) 0 else (((now.through + now.partly) / now.all) * 1000).toInt().coerceIn(0, 1000)
+      val title = SongDownloads.text("loading", "Downloading songs")
+      return Note("$title|$line|$bar") {
+        val builder = builder(context)
+          .setContentTitle(title)
+          .setContentText(line)
+          .setProgress(1000, bar, now.all == 0)
+          .setOngoing(true)
+          .setOnlyAlertOnce(true)
+          .setShowWhen(false)
+          .setCategory(Notification.CATEGORY_PROGRESS)
+        // Shown at once, not after the ten seconds newer Androids wait with a service's notification.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+        builder.build()
       }
     }
 
+    /**
+     * A round has songs: the service starts, once per round. Called with SongDownloads.round held.
+     * Not allowed from the background on newer Androids: then it goes on for as long as the app is left alone.
+     */
+    fun keepAlive(context: Context) {
+      // Up, or on its way up. Stopped by Android meanwhile (its daily limit), it starts again here.
+      if (wanted && (running != null || starting)) return
+      wanted = true
+      starting = true
+      runCatching {
+        val intent = Intent(context, SongDownloadService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent) else context.startService(intent)
+      }.onFailure {
+        wanted = false
+        starting = false
+      }
+    }
+
+    /** The round is over: the service stops. Called with SongDownloads.round held. */
     fun letGo() {
+      wanted = false
       running?.stopSelf()
+    }
+
+    /** Something changed: the notification follows right away, or as soon as it may. */
+    fun nudge() {
+      main.post { refreshSoon() }
+    }
+
+    private fun refreshSoon() {
+      if (coming) return
+      val wait = GAP_MS - (SystemClock.uptimeMillis() - shownAt)
+      if (wait <= 0) {
+        refresh()
+        return
+      }
+      coming = true
+      main.postDelayed({
+        coming = false
+        refresh()
+      }, wait)
+    }
+
+    private fun refresh() {
+      val service = synchronized(SongDownloads.round) { running?.takeIf { wanted } } ?: return
+      val note = progressNote(service)
+      if (note.key == shown) return
+      shown = note.key
+      shownAt = SystemClock.uptimeMillis()
+      runCatching { service.getSystemService(NotificationManager::class.java).notify(NOTE_ID, note.build()) }
+    }
+
+    /** The round is through: a note says how many came and how many didn't (the work's notification goes with the service). */
+    fun roundOver(context: Context, done: Int, failed: Int) {
+      if (done + failed == 0) return
+      val missing = SongDownloads.text("failed", "{count} didn't download").replace("{count}", "$failed")
+      val title = when {
+        done == 1 -> SongDownloads.text("doneOne", "1 song downloaded")
+        done > 1 -> SongDownloads.text("doneMany", "{count} songs downloaded").replace("{count}", "$done")
+        else -> missing
+      }
+      val note = builder(context).setContentTitle(title).setAutoCancel(true)
+      if (done > 0 && failed > 0) note.setContentText(missing)
+      runCatching { context.getSystemService(NotificationManager::class.java).notify(DONE_ID, note.build()) }
     }
   }
 }

@@ -6,9 +6,11 @@
 import { create } from "zustand";
 import { blurhashColor, type Rgb } from "../color";
 import { artistPhotoUrl, fetchLibrary, isNoAnswer, markPlayed, setFavorite, type ServerLibrary, type Session } from "../jellyfin";
-import { allMixes, buildAlbums, buildArtists, buildGenres, likedInOrder, oneCopyEach, sameSong, songFinder, songIdentity, toWireTrack, type LibAlbum, type LibArtist, type LibGenre, type Mix, type Track, type WireTrack } from "../shared";
+import { allMixes, applyAlbumLooks, applyAlbumMerges, applyArtistAliases, applySongEdits, buildAlbums, buildArtists, buildGenres, likedInOrder, oneCopyEach, sameSong, songFinder, songIdentity, toWireTrack, type LibAlbum, type LibArtist, type LibGenre, type Mix, type Track, type WireTrack } from "../shared";
 import { readJson, removeJson, writeJson } from "../storage";
+import { albumEditsNow, useAlbumEdits } from "./albumEdits";
 import { useConnection } from "./connection";
+import { useLibrarySync } from "./librarySync";
 import { localSongs, setServerSongFiles, useLocalMusic } from "./localMusic";
 import { useSession } from "./session";
 import { useSettings } from "./settings";
@@ -32,6 +34,8 @@ interface LibraryState {
   refreshing: boolean;
   error: string | null;
   data: ServerLibrary;
+  /** the songs as shown, with the album edits applied (stores/albumEdits.ts); `data` keeps what the server says */
+  tracks: Track[];
   byId: Map<string, Track>;
   albums: LibAlbum[];
   artists: LibArtist[];
@@ -62,16 +66,27 @@ interface LibraryState {
 
 const EMPTY: ServerLibrary = { tracks: [], hashes: {}, favorites: [], counts: {}, artistIds: {} };
 
+/**
+ * The songs as shown, as on the computer: put on albums by hand, artists as spelled, albums merged,
+ * named and pictured as edited (stores/albumEdits.ts). What's kept on the phone is what the server says.
+ */
+function shown(tracks: Track[]): Track[] {
+  const { songs, aliases, mergedInto, titles, covers } = albumEditsNow();
+  return applyAlbumLooks(applyAlbumMerges(applyArtistAliases(applySongEdits(tracks, songs), aliases), mergedInto), titles, covers);
+}
+
 function derive(data: ServerLibrary) {
-  const albums = buildAlbums(data.tracks);
+  const tracks = shown(data.tracks);
+  const albums = buildAlbums(tracks, albumEditsNow().artists);
   return {
     data,
-    byId: new Map(data.tracks.map((t) => [t.id, t])),
+    tracks,
+    byId: new Map(tracks.map((t) => [t.id, t])),
     albums,
-    artists: buildArtists(data.tracks, albums),
-    genres: buildGenres(data.tracks),
+    artists: buildArtists(tracks, albums),
+    genres: buildGenres(tracks),
     // The sound analysis lives on the desktop: no Calm and Upbeat mixes here yet.
-    mixes: allMixes(data.tracks, data.counts, () => undefined),
+    mixes: allMixes(tracks, data.counts, () => undefined),
     favorites: new Set(data.favorites),
   };
 }
@@ -181,6 +196,8 @@ export const useLibrary = create<LibraryState>((set, get) => ({
       readJson<WireTrack[]>(LIKED_ORDER_FILE),
       readJson<Outbox>(OUTBOX_FILE),
       readJson<{ at: number; tracks: WireTrack[] }>(MUTED_FILE),
+      // The albums are shown as edited from the first look.
+      useAlbumEdits.getState().restore(),
     ]);
     if (likedOrder) set({ likedOrder });
     if (savedOutbox) outbox = savedOutbox;
@@ -312,6 +329,9 @@ export const useLibrary = create<LibraryState>((set, get) => ({
     removeJson(LIKED_ORDER_FILE);
     removeJson(OUTBOX_FILE);
     removeJson(MUTED_FILE);
+    // The album edits belong to the account, like its playlists: the next login brings its own.
+    useAlbumEdits.getState().clear();
+    useLibrarySync.getState().clear();
     outbox = { likes: {}, plays: [] };
     set({ muted: new Set<string>(), mutedTracks: [], mutedAt: 0 });
     set({ ...derive(withLocal(EMPTY)), likedOrder: [], loaded: false, error: null });
@@ -327,6 +347,13 @@ export function onLikesSent(listener: (() => void) | null): void {
 // Another folder, a rescan, or the filter for what's music.
 useLocalMusic.subscribe((s, prev) => {
   if (s.files !== prev.files) useLibrary.getState().applyLocal();
+});
+
+// An album merged, renamed, given a picture or other artists, here or on another device: shown at once.
+useAlbumEdits.subscribe((s, prev) => {
+  if (s.artists === prev.artists && s.mergedInto === prev.mergedInto && s.aliases === prev.aliases && s.songs === prev.songs && s.titles === prev.titles && s.covers === prev.covers) return;
+  const { data, loaded } = useLibrary.getState();
+  if (loaded || data.tracks.length) useLibrary.setState(derive(data));
 });
 useSettings.subscribe((s, prev) => {
   if (s.filterNonMusic !== prev.filterNonMusic) useLibrary.getState().applyLocal();

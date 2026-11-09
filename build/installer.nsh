@@ -324,6 +324,15 @@ Function songstaOwnProgress
 FunctionEnd
 !endif
 
+; Taken out for good, not for an update: Songsta's entry among the startup apps goes with it
+; (electron/startup.ts writes it under this name).
+!macro customUnInstall
+  ${ifNot} ${isUpdated}
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Songsta"
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run" "Songsta"
+  ${endIf}
+!macroend
+
 ; After that small box went up and before anything else happens.
 !macro customCheckAppRunning
   !ifndef BUILD_UNINSTALLER

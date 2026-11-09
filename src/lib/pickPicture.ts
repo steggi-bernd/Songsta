@@ -82,3 +82,24 @@ export async function pickPlaylistPicture(): Promise<string | null> {
   if (!file) return null;
   return asDataUrl(await shrunk(file, { maxSide: 1000, square: false, maxBytes: 200_000 }));
 }
+
+/**
+ * An album's picture as it goes to the other devices (lib/librarySync.ts): small, written into the
+ * document. The bytes come from the main process: the page may not fetch localart:// itself.
+ */
+export async function albumPictureToShare(cover: string): Promise<string> {
+  const bytes = (await window.bytune?.localArtBytes(cover)) as Uint8Array | null | undefined;
+  if (!bytes?.length) throw new Error("unreadable");
+  return asDataUrl(await shrunk(new Blob([new Uint8Array(bytes)]), { maxSide: 600, square: true, maxBytes: 120_000 }));
+}
+
+/** An album's picture from another device, kept on this computer like one chosen here; resolves to its localart:// address. */
+export async function keepSharedAlbumPicture(data: string): Promise<string> {
+  const base64 = data.slice(data.indexOf(",") + 1);
+  const raw = atob(base64);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  const url = await window.bytune?.saveArtwork(bytes);
+  if (!url) throw new Error("not saved");
+  return url;
+}

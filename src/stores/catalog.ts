@@ -18,6 +18,7 @@ import type { SubsonicStatus } from "../../electron/subsonic";
 import { applyAlbumLooks, applyAlbumMerges, applyArtistAliases, applySongEdits } from "../lib/albumEdits";
 import { mergeDuplicates } from "../lib/duplicates";
 import { loadAllLibraryTracks } from "../lib/libraryTracks";
+import { relistOnce } from "../lib/serverRelist";
 import { useAlbumEdits } from "./albumEdits";
 import { useSettings } from "./settings";
 import type { Track } from "../types";
@@ -153,34 +154,48 @@ export function sameSong(a: string | null | undefined, b: string | null | undefi
 /** Library sources announce changes with these window events. */
 export const CATALOG_EVENTS = ["bytune:local-library-updated", "bytune:remote-library-updated"] as const;
 
+/** After a listing failed (the server can't be reached yet), the waits before the next tries. */
+const RELIST_WAITS_MS = [30_000, 120_000, 600_000];
+
+/** The main process answers null when a server couldn't be listed: a failed try, to be repeated. */
+function listed(changed: boolean | null): boolean {
+  if (changed === null) throw new Error("The server couldn't be listed");
+  return changed;
+}
+
 /**
- * Libraries read by an older version lack fields this one uses (release
- * types, track totals, the servers' media info): bring them up to date once,
- * in the background — the cached libraries keep working meanwhile.
+ * In the background after each start: the servers' songs are listed again
+ * (lib/serverRelist.ts), so what was added on a server and the covers it found
+ * since show up by themselves, while the cached lists keep working. A local
+ * library read by an older version lacks fields this one uses (release types,
+ * track totals): a rescan of the folders brings it up to date once. Answers a
+ * stop for relist tries still to come.
  */
-async function upgradeStaleSources(): Promise<void> {
+async function freshenSources(): Promise<() => void> {
   const bridge = window.bytune;
-  if (!bridge) return;
+  if (!bridge) return () => undefined;
+  const stops: Array<() => void> = [];
   try {
     const [jf, ss] = (await Promise.all([bridge.jellyfinStatus(), bridge.subsonicStatus()])) as [
       JellyfinStatus | null,
       SubsonicStatus | null,
     ];
-    await Promise.all([
-      jf?.stale ? bridge.jellyfinRefresh().then(announceRemoteLibraryChange) : null,
-      ss?.stale ? bridge.subsonicRefresh().then(announceRemoteLibraryChange) : null,
-    ]);
+    if (jf?.connected) stops.push(relistOnce(() => bridge.jellyfinRelist().then(listed), announceRemoteLibraryChange, RELIST_WAITS_MS));
+    if (ss?.connected) stops.push(relistOnce(() => bridge.subsonicRelist().then(listed), announceRemoteLibraryChange, RELIST_WAITS_MS));
   } catch {
-    /* an unreachable server keeps its cached library */
+    /* no word on the servers: their cached libraries stay as they are */
   }
-  try {
-    if (await bridge.libraryNeedsRescan()) {
-      const lib = await bridge.scanLibrary(useSettings.getState().filterNonMusicAudio);
-      window.dispatchEvent(new CustomEvent("bytune:local-library-updated", { detail: lib }));
+  void (async () => {
+    try {
+      if (await bridge.libraryNeedsRescan()) {
+        const lib = await bridge.scanLibrary(useSettings.getState().filterNonMusicAudio);
+        window.dispatchEvent(new CustomEvent("bytune:local-library-updated", { detail: lib }));
+      }
+    } catch {
+      /* the next scan fills the fields in */
     }
-  } catch {
-    /* the next scan fills the fields in */
-  }
+  })();
+  return () => stops.forEach((stop) => stop());
 }
 
 /**
@@ -204,11 +219,20 @@ export function watchCatalog(): () => void {
   };
   void useCatalog.getState().load();
   for (const e of CATALOG_EVENTS) window.addEventListener(e, reload);
-  const upgrade = window.setTimeout(() => void upgradeStaleSources(), 3000);
+  let stopFreshening: (() => void) | null = null;
+  let unmounted = false;
+  const freshen = window.setTimeout(() => {
+    void freshenSources().then((stop) => {
+      if (unmounted) stop();
+      else stopFreshening = stop;
+    });
+  }, 3000);
   return () => {
+    unmounted = true;
     for (const e of CATALOG_EVENTS) window.removeEventListener(e, reload);
     if (timer !== null) window.clearTimeout(timer);
-    window.clearTimeout(upgrade);
+    window.clearTimeout(freshen);
+    stopFreshening?.();
   };
 }
 

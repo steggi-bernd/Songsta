@@ -27,15 +27,21 @@ const Tabs = createBottomTabNavigator();
 const Pages = createNativeStackNavigator();
 
 const pageOptions = { headerShown: false, contentStyle: { backgroundColor: colors.base } };
+/**
+ * A page closed by pulling it down (components/PullDownToClose.tsx) lies see-through over the one
+ * it was opened from: that one shows beneath while the page goes down, and stays where it is once
+ * the page is gone, with no second animation.
+ */
+const pullDownPage = { presentation: "transparentModal", animation: "slide_from_right", contentStyle: { backgroundColor: "transparent" } } as const;
 
 function tabStack(name: string, First: ComponentType) {
   return function TabStack() {
     return (
       <Pages.Navigator screenOptions={pageOptions}>
         <Pages.Screen name={name} component={First} />
-        <Pages.Screen name="Album" component={AlbumScreen} />
-        <Pages.Screen name="Artist" component={ArtistScreen} />
-        <Pages.Screen name="Collection" component={CollectionScreen} />
+        <Pages.Screen name="Album" component={AlbumScreen} options={pullDownPage} />
+        <Pages.Screen name="Artist" component={ArtistScreen} options={pullDownPage} />
+        <Pages.Screen name="Collection" component={CollectionScreen} options={pullDownPage} />
         <Pages.Screen name="Settings" component={SettingsScreen} />
         <Pages.Screen name="Equalizer" component={EqualizerScreen} />
       </Pages.Navigator>
@@ -68,7 +74,7 @@ export function AppNavigation() {
       <Root.Navigator screenOptions={pageOptions}>
         <Root.Screen name="Main" component={Main} />
         <Root.Screen name="Lyrics" component={LyricsScreen} options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
-        <Root.Screen name="Devices" component={DevicesScreen} options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
+        <Root.Screen name="Devices" component={DevicesScreen} options={{ ...pullDownPage, animation: "slide_from_bottom" }} />
         <Root.Screen
           name="Queue"
           component={QueueScreen}

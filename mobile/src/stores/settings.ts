@@ -3,7 +3,7 @@ import { create } from "zustand";
 import Player from "../../modules/media3-player";
 import { readJson, writeJson } from "../storage";
 import { colors } from "../theme";
-import { NO_VERSION_MEMORY, T, type LanguageChoice, type NewVersionMemory, type DeviceLink } from "../shared";
+import { NO_VERSION_MEMORY, readGroups, T, type Group, type LanguageChoice, type NewVersionMemory, type DeviceLink } from "../shared";
 
 const FILE = "settings.json";
 
@@ -68,6 +68,8 @@ export interface Settings {
   language: LanguageChoice;
   /** what stands on top in Your Library, first pinned first: "album:…", "mix:…", "artist:…" (playlists carry their own pin) */
   pins: string[];
+  /** albums and playlists put together in groups that fold, this phone's own (lib/libraryGroups.ts) */
+  libraryGroups: Group[];
   /** a short note and a dot when a newer version is out (newVersion.ts) */
   checkNewVersion: boolean;
   newVersion: NewVersionMemory;
@@ -110,6 +112,7 @@ const DEFAULTS: Settings = {
   filterNonMusic: true,
   language: "auto",
   pins: [],
+  libraryGroups: [],
   checkNewVersion: true,
   newVersion: NO_VERSION_MEMORY,
   setupDone: false,
@@ -149,8 +152,10 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
 /** Before anything draws: the colours go into every screen's styles as those are made. */
 export async function restoreSettings(): Promise<void> {
-  const saved = await readJson<Partial<Settings>>(FILE).catch(() => null);
-  const settings = { ...DEFAULTS, ...saved };
+  const saved = await readJson<Partial<Settings> & { albumGroups?: unknown }>(FILE).catch(() => null);
+  const { albumGroups, ...rest } = saved ?? {};
+  // Groups read with care; the test builds' albums-only groups ("albumGroups") come along.
+  const settings = { ...DEFAULTS, ...rest, libraryGroups: readGroups(rest.libraryGroups ?? albumGroups) };
   useSettings.setState(settings);
   const accent = ACCENTS[settings.accent] ?? ACCENTS.violet;
   colors.accent = accent.color;

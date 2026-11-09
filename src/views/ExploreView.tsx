@@ -4,10 +4,16 @@
  * turns the order round), filters as you type and shows as a table or as
  * tiles; tab, layout and every tab's order are remembered. Opened from the
  * record in the search field, where ByTune always had its browse button.
+ * Each tab has groups of its own, apart from the library panel's: what's in
+ * one stands folded in it until it's opened (components/ExploreGroups.tsx).
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, DiscAlbum, LayoutGrid, List, Play, Search, User, X } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, DiscAlbum, LayoutGrid, List, Play, Search, Shuffle, User, X } from "lucide-react";
 import { AlbumTile, ArtistTile, CoverCollage, GenreTile, playCollection, useArtistPhoto, useSeen } from "../components/LibraryCards";
+import { DropLine, GroupButton, GroupCard, GroupCover, useExploreGroups, type ExploreGroupsUi } from "../components/ExploreGroups";
+import { albumListKey } from "../lib/keptLists";
+import { arrangeGroups, artistGroupKey, genreGroupKey, type Arranged, type Group } from "../lib/libraryGroups";
+import type { Track } from "../types";
 import { Artwork, EmptyState, Pills } from "../components/primitives";
 import { artistTracks, useLibraryGenres, useLibraryIndex, type LibArtist } from "../lib/catalogIndex";
 import {
@@ -46,29 +52,48 @@ type Column<T> = ExploreOrder<T> & ColumnLook<T>;
 
 const columnsOf = <T,>(orders: ExploreOrder<T>[], looks: Record<string, ColumnLook<T>>): Column<T>[] => orders.map((o) => ({ ...o, ...looks[o.key] }));
 
+/* ------------------------------------------------------------ the groups */
+
+/** A tab's groups as its list and its tiles show them. */
+interface TabGroups<T> {
+  ui: ExploreGroupsUi;
+  /** what a group knows a row by */
+  keyOf: (row: T) => string;
+  /** a row's picture in a group's small grid */
+  cover: (row: T) => string;
+  /** "Group · 3 albums" */
+  line: (count: number) => string;
+  /** everything in the group, in its order: also what a filter hides */
+  songs: (group: Group) => Track[];
+  /** groups stand open while a filter is typed, to show what matched */
+  forceOpen: boolean;
+  round?: boolean;
+}
+
 /* ------------------------------------------------------------ the table */
 
 function Table<T>({
   label,
-  rows,
+  entries,
   columns,
   sort,
   onSort,
-  rowKey,
   lead,
   open,
   play,
+  groups,
 }: {
   label: string;
-  rows: T[];
+  /** the rows, with the groups standing among them (lib/libraryGroups.ts arrangeGroups) */
+  entries: Arranged<T>[];
   columns: Column<T>[];
   sort: ExploreSort;
   onSort: (col: Column<T>) => void;
-  rowKey: (row: T) => string;
   /** the picture at the row's start */
   lead: (row: T) => ReactNode;
   open: (row: T) => void;
   play: (row: T) => void;
+  groups: TabGroups<T>;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(1200);
@@ -103,42 +128,126 @@ function Table<T>({
           );
         })}
       </div>
-      {rows.map((r) => (
-        <div
-          key={rowKey(r)}
-          role="row"
-          onClick={() => open(r)}
-          // Thousands of rows: only those on screen are laid out and painted.
-          style={{ contentVisibility: "auto", containIntrinsicSize: "auto 56px" }}
-          className="group flex items-center gap-4 h-14 px-3 rounded-lg cursor-pointer select-none hover:bg-ink-hi/[0.05] transition-colors"
-        >
-          <div className="relative w-10 h-10 shrink-0">
-            {lead(r)}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                play(r);
-              }}
-              title={T("Play")}
-              aria-label={T("Play")}
-              className="absolute inset-0 hidden group-hover:grid place-items-center rounded-md bg-black/45 text-white"
-            >
-              <Play className="w-4 h-4 fill-current" />
-            </button>
-          </div>
-          {shown.map((c, i) => (
+      {entries.map((e) => {
+        if ("entry" in e) return rowOf(e.entry);
+        const { group, members } = e;
+        const isOpen = groups.forceOpen || groups.ui.isOpen(group.id);
+        return (
+          <Fragment key={`group:${group.id}`}>
             <div
-              key={c.key}
-              role="cell"
-              className={`${c.className} truncate ${i === 0 ? "text-[15px] font-semibold text-ink-hi" : "text-[13.5px] text-ink-dim"} ${
-                c.right ? "text-right tabular-nums" : ""
-              }`}
+              role="row"
+              aria-expanded={isOpen}
+              onClick={() => groups.ui.toggle(group.id)}
+              {...groups.ui.groupProps(group, () => groups.songs(group))}
+              className={`group flex items-center gap-4 h-14 px-3 rounded-lg cursor-pointer select-none hover:bg-ink-hi/[0.05] transition-colors ${
+                isOpen ? "bg-ink-hi/[0.035]" : ""
+              } ${groups.ui.groupLook(group)}`}
             >
-              {c.cell(r)}
+              <GroupCover covers={members.map(groups.cover)} round={groups.round} className="w-10 h-10 rounded-md shrink-0" />
+              <div role="cell" className="min-w-0 flex-1 flex items-baseline gap-3">
+                <span className="text-[15px] font-semibold text-ink-hi truncate">{group.name}</span>
+                <span className="text-[13.5px] text-ink-dim truncate">{groups.line(members.length)}</span>
+              </div>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <GroupButton label={T("Play in order")} onPress={() => groups.ui.play(group, groups.songs(group), false)}>
+                  <Play className="w-4 h-4 fill-current" />
+                </GroupButton>
+                <GroupButton label={T("Shuffle")} onPress={() => groups.ui.play(group, groups.songs(group), true)}>
+                  <Shuffle className="w-4 h-4" />
+                </GroupButton>
+                {isOpen ? <ChevronDown className="w-4 h-4 text-ink-hi/45" /> : <ChevronRight className="w-4 h-4 text-ink-hi/45" />}
+              </div>
             </div>
-          ))}
+            {isOpen && members.map((m) => rowOf(m, group.id))}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+
+  function rowOf(r: T, inGroup?: string) {
+    const key = groups.keyOf(r);
+    return (
+      <div
+        key={`${inGroup ?? ""}:${key}`}
+        role="row"
+        onClick={() => open(r)}
+        {...groups.ui.itemProps(key, inGroup)}
+        // Thousands of rows: only those on screen are laid out and painted.
+        style={{ contentVisibility: "auto", containIntrinsicSize: "auto 56px" }}
+        className={`group relative flex items-center gap-4 h-14 px-3 rounded-lg cursor-pointer select-none hover:bg-ink-hi/[0.05] transition-colors ${
+          inGroup ? "pl-10 bg-ink-hi/[0.025]" : ""
+        } ${groups.ui.look(key)}`}
+      >
+        <DropLine at={groups.ui.lineAt(key)} across={false} />
+        <div className="relative w-10 h-10 shrink-0">
+          {lead(r)}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              play(r);
+            }}
+            title={T("Play")}
+            aria-label={T("Play")}
+            className="absolute inset-0 hidden group-hover:grid place-items-center rounded-md bg-black/45 text-white"
+          >
+            <Play className="w-4 h-4 fill-current" />
+          </button>
         </div>
-      ))}
+        {shown.map((c, i) => (
+          <div
+            key={c.key}
+            role="cell"
+            className={`${c.className} truncate ${i === 0 ? "text-[15px] font-semibold text-ink-hi" : "text-[13.5px] text-ink-dim"} ${
+              c.right ? "text-right tabular-nums" : ""
+            }`}
+          >
+            {c.cell(r)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+}
+
+/* ------------------------------------------------------------ the tiles */
+
+/** The tiles, with the groups standing among them; an open group shows what's in it right under it, across the page. */
+function Tiles<T>({ entries, tile, groups }: { entries: Arranged<T>[]; tile: (row: T) => ReactNode; groups: TabGroups<T> }) {
+  const cell = (r: T, inGroup?: string) => {
+    const key = groups.keyOf(r);
+    return (
+      <div key={`${inGroup ?? ""}:${key}`} {...groups.ui.itemProps(key, inGroup)} className={`relative rounded-xl ${groups.ui.look(key)}`}>
+        <DropLine at={groups.ui.lineAt(key)} across />
+        {tile(r)}
+      </div>
+    );
+  };
+  return (
+    <div className="flex flex-wrap gap-y-2 -mx-2">
+      {entries.map((e) => {
+        if ("entry" in e) return cell(e.entry);
+        const { group, members } = e;
+        const isOpen = groups.forceOpen || groups.ui.isOpen(group.id);
+        return (
+          <Fragment key={`group:${group.id}`}>
+            <GroupCard
+              group={group}
+              covers={members.map(groups.cover)}
+              line={groups.line(members.length)}
+              open={isOpen}
+              ui={groups.ui}
+              songs={() => groups.songs(group)}
+              round={groups.round}
+            />
+            {isOpen && (
+              <div className="basis-full px-2">
+                <div className="flex flex-wrap gap-y-2 rounded-2xl bg-ink-hi/[0.035] py-1">{members.map((m) => cell(m, group.id))}</div>
+              </div>
+            )}
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -193,6 +302,11 @@ const genreColumns = columnsOf<GenreRow>(genreOrders, {
 
 /* ------------------------------------------------------------ the page */
 
+/** What a group knows a row of each tab by (lib/libraryGroups.ts). */
+const albumKeyOf = (r: AlbumRow): string => albumListKey(r.album.key);
+const artistKeyOf = (r: ArtistRow): string => artistGroupKey(r.artist.name);
+const genreKeyOf = (r: GenreRow): string => genreGroupKey(r.genre.key);
+
 const TABS: { key: ExploreTab; label: string }[] = [
   { key: "albums", label: T("Albums") },
   { key: "artists", label: T("Artists") },
@@ -213,6 +327,7 @@ export function ExploreView() {
   const setSort = useSettings((s) => s.setExploreSort);
   const [query, setQuery] = useState("");
   const sortButton = useRef<HTMLButtonElement | null>(null);
+  const ui = useExploreGroups(tab, layout === "grid");
 
   const albumRows = useMemo(() => albumRowsOf(albums, playCounts), [albums, playCounts]);
   const artistRows = useMemo(() => artistRowsOf(artists, tracks, playCounts), [artists, tracks, playCounts]);
@@ -220,18 +335,52 @@ export function ExploreView() {
 
   const q = query.trim().toLowerCase();
   const sort = sorts[tab];
+  // A group whose name is typed shows with all that's in it.
+  const named = useMemo(() => new Set(q ? ui.groups.filter((g) => g.name.toLowerCase().includes(q)).flatMap((g) => g.items) : []), [ui.groups, q]);
   const shownAlbums = useMemo(
-    () => sortRows(albumRows.filter((r) => !q || r.album.title.toLowerCase().includes(q) || r.album.artist.toLowerCase().includes(q)), albumColumns, sorts.albums),
-    [albumRows, q, sorts.albums]
+    () =>
+      sortRows(
+        albumRows.filter((r) => !q || r.album.title.toLowerCase().includes(q) || r.album.artist.toLowerCase().includes(q) || named.has(albumKeyOf(r))),
+        albumColumns,
+        sorts.albums
+      ),
+    [albumRows, q, sorts.albums, named]
   );
   const shownArtists = useMemo(
-    () => sortRows(artistRows.filter((r) => !q || r.artist.name.toLowerCase().includes(q)), artistColumns, sorts.artists),
-    [artistRows, q, sorts.artists]
+    () => sortRows(artistRows.filter((r) => !q || r.artist.name.toLowerCase().includes(q) || named.has(artistKeyOf(r))), artistColumns, sorts.artists),
+    [artistRows, q, sorts.artists, named]
   );
   const shownGenres = useMemo(
-    () => sortRows(genreRows.filter((r) => !q || r.genre.name.toLowerCase().includes(q)), genreColumns, sorts.genres),
-    [genreRows, q, sorts.genres]
+    () => sortRows(genreRows.filter((r) => !q || r.genre.name.toLowerCase().includes(q) || named.has(genreKeyOf(r))), genreColumns, sorts.genres),
+    [genreRows, q, sorts.genres, named]
   );
+
+  // What a group of this tab holds, found by key, also what a filter hides.
+  const albumByKey = useMemo(() => new Map(albumRows.map((r) => [albumKeyOf(r), r])), [albumRows]);
+  const artistByKey = useMemo(() => new Map(artistRows.map((r) => [artistKeyOf(r), r])), [artistRows]);
+  const genreByKey = useMemo(() => new Map(genreRows.map((r) => [genreKeyOf(r), r])), [genreRows]);
+  const groupSongs = (group: Group): Track[] =>
+    group.items.flatMap((k) => {
+      if (tab === "albums") return albumByKey.get(k)?.album.tracks ?? [];
+      if (tab === "artists") {
+        const artist = artistByKey.get(k)?.artist;
+        return artist ? artistTracks(tracks, artist.name) : [];
+      }
+      return genreByKey.get(k)?.genre.tracks ?? [];
+    });
+  const groupLine = (n: number): string =>
+    T("Group · {count}", {
+      count: tab === "albums" ? plural(n, T("album"), T("albums")) : tab === "artists" ? plural(n, T("artist"), T("artists")) : plural(n, T("genre"), T("genres")),
+    });
+  const groupsOf = <R,>(keyOf: (row: R) => string, cover: (row: R) => string, round = false): TabGroups<R> => ({
+    ui,
+    keyOf,
+    cover,
+    line: groupLine,
+    songs: groupSongs,
+    forceOpen: !!q,
+    round,
+  });
 
   const tabColumns: { key: string; label: string; numeric?: boolean }[] = { albums: albumColumns, artists: artistColumns, genres: genreColumns }[tab];
   const sortBy = (col: { key: string; numeric?: boolean }): void => setSort(tab, nextSort(sort, col));
@@ -257,6 +406,10 @@ export function ExploreView() {
   if (!tracks.length) {
     return <EmptyState icon={DiscAlbum} title={T("Nothing to explore yet")} body={T("Add a music folder or connect a server — your albums, artists and genres show up here.")} />;
   }
+
+  const albumGroups = groupsOf(albumKeyOf, (r) => r.album.thumb);
+  const artistGroups = groupsOf(artistKeyOf, (r) => r.artist.thumb, true);
+  const genreGroups = groupsOf(genreKeyOf, (r) => r.genre.tracks.find((t) => t.thumb)?.thumb ?? "");
 
   const counts = { albums: albums.length, artists: artists.length, genres: genres.length };
   const shown = { albums: shownAlbums.length, artists: shownArtists.length, genres: shownGenres.length }[tab];
@@ -332,49 +485,52 @@ export function ExploreView() {
       {shown === 0 ? (
         <EmptyState icon={Search} title={T("No {tab} match “{trim}”", { tab, trim: query.trim() })} body={T("Try another word.")} />
       ) : layout === "grid" ? (
-        <div className="flex flex-wrap gap-y-2 -mx-2">
-          {tab === "albums" && shownAlbums.map((r) => <AlbumTile key={r.album.key} album={r.album} />)}
-          {tab === "artists" &&
-            shownArtists.map((r) => (
-              <ArtistTile key={r.artist.route} name={r.artist.name} route={r.artist.route} subtitle={plural(r.artist.trackCount, T("song"), T("songs"))} fallbackThumb={r.artist.thumb} />
-            ))}
-          {tab === "genres" && shownGenres.map((r) => <GenreTile key={r.genre.key} genre={r.genre} />)}
-        </div>
+        tab === "albums" ? (
+          <Tiles entries={arrangeGroups(ui.groups, shownAlbums, albumKeyOf)} groups={albumGroups} tile={(r) => <AlbumTile album={r.album} />} />
+        ) : tab === "artists" ? (
+          <Tiles
+            entries={arrangeGroups(ui.groups, shownArtists, artistKeyOf)}
+            groups={artistGroups}
+            tile={(r) => <ArtistTile name={r.artist.name} route={r.artist.route} subtitle={plural(r.artist.trackCount, T("song"), T("songs"))} fallbackThumb={r.artist.thumb} />}
+          />
+        ) : (
+          <Tiles entries={arrangeGroups(ui.groups, shownGenres, genreKeyOf)} groups={genreGroups} tile={(r) => <GenreTile genre={r.genre} />} />
+        )
       ) : tab === "albums" ? (
         <Table
           label={T("Albums")}
-          rows={shownAlbums}
+          entries={arrangeGroups(ui.groups, shownAlbums, albumKeyOf)}
           columns={albumColumns}
           sort={sorts.albums}
           onSort={sortBy}
-          rowKey={(r) => r.album.key}
           lead={(r) => <Artwork src={r.album.thumb} rounded="rounded-md" className="w-10 h-10" iconClassName="w-4 h-4" />}
           open={(r) => navigate({ name: "album", param: r.album.route })}
           play={(r) => playCollection(r.album.tracks)}
+          groups={albumGroups}
         />
       ) : tab === "artists" ? (
         <Table
           label={T("Artists")}
-          rows={shownArtists}
+          entries={arrangeGroups(ui.groups, shownArtists, artistKeyOf)}
           columns={artistColumns}
           sort={sorts.artists}
           onSort={sortBy}
-          rowKey={(r) => r.artist.route}
           lead={(r) => <ArtistPhoto artist={r.artist} />}
           open={(r) => navigate({ name: "artist", param: r.artist.route })}
           play={(r) => playCollection(artistTracks(tracks, r.artist.name))}
+          groups={artistGroups}
         />
       ) : (
         <Table
           label={T("Genres")}
-          rows={shownGenres}
+          entries={arrangeGroups(ui.groups, shownGenres, genreKeyOf)}
           columns={genreColumns}
           sort={sorts.genres}
           onSort={sortBy}
-          rowKey={(r) => r.genre.key}
           lead={(r) => <CoverCollage tracks={r.genre.tracks} className="w-10 h-10 rounded-md" />}
           open={(r) => navigate({ name: "genre", param: r.genre.route })}
           play={(r) => playCollection(r.genre.tracks, true)}
+          groups={genreGroups}
         />
       )}
     </div>

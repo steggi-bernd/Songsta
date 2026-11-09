@@ -71,6 +71,26 @@ export {
 } from "../../src/lib/devicePower";
 export { TV_PAIRING_PORT, TV_REMOTE_PORT, TvCodeRefused, TvPairing, tvSecret, tvState, tvSwitchOff } from "../../src/lib/tvRemote";
 export { albumListKey, completeLists, KEPT_LISTS_LOOK_EVERY_MS, LIKED_LIST, missingFromLists, playlistListKey } from "../../src/lib/keptLists";
+export {
+  arrangeGroups,
+  artistGroupKey,
+  genreGroupKey,
+  groupOf,
+  newGroupId,
+  newGroupName,
+  NO_EXPLORE_GROUPS,
+  readExploreGroups,
+  readGroups,
+  withGroupNamed,
+  withItemIn,
+  withItemMoved,
+  withItemOut,
+  withNewGroup,
+  withoutGroup,
+  type Arranged,
+  type ExploreGroups,
+  type Group,
+} from "../../src/lib/libraryGroups";
 export { utf8Bytes, utf8Text, type CastSocket } from "../../src/lib/castV2";
 export { devicesFromMdns, MDNS_ADDRESS, MDNS_PORT, mdnsQuery, readMdns, SSDP_ADDRESS, SSDP_PORT, SSDP_SEARCH, type MdnsService, type NetDevice } from "../../src/lib/netScan";
 export { Zone, type ZoneDriver, type ZoneMember, type ZonePlayState, type ZoneSong } from "../../src/lib/zoneEngine";
@@ -80,3 +100,46 @@ export { RELEASE_LABEL } from "../../src/lib/releases";
 export { isNewerVersion, latestApk, latestVersion, lookForNewVersion, NEW_VERSION_FIRST_LOOK_MS, NEW_VERSION_LOOK_EVERY_MS, NO_VERSION_MEMORY, RELEASE_PAGE, type NewVersionMemory, type ReleaseApk } from "../../src/lib/newVersion";
 export { handRows, jumpTarget, lineInList, listAround, placeOf, putBack, tendedBranches, withoutSongs, type HandRow, type QueueBranch } from "../../src/lib/queueSections";
 export { currentLanguage, languageOf, LANGUAGES, setLanguage, T, type Language, type LanguageChoice } from "../../src/lib/i18n";
+// How the library is organised, the same as on the computer: album edits, and the documents they travel in.
+export {
+  applyAlbumLooks,
+  applyAlbumMerges,
+  applyArtistAliases,
+  applySongEdits,
+  baseTitle,
+  creditLine,
+  isLoose,
+  resolveAlbumKey,
+  withAlias,
+  withMerge,
+  withSplit,
+  type AlbumEdits,
+  type SongEdit,
+} from "../../src/lib/albumEdits";
+export { foldTag } from "../../src/lib/duplicates";
+export { orderRows } from "../../src/lib/libraryOrder";
+export {
+  albumEditsDoc,
+  albumEditsFrom,
+  canonical,
+  EDIT_FIELDS,
+  kindOfKey,
+  latestMoment,
+  LIBRARY_SORTS,
+  LIKED_KEY,
+  OLD_ON_PHONE,
+  restamp,
+  stampClock,
+  withOwnPins,
+  type AlbumEditsDoc,
+  type AlbumPicturesDoc,
+  type EditStamps,
+  type EditValues,
+  type GroupsDoc,
+  type LibraryDocName,
+  type LibrarySort,
+  type OrderDoc,
+  type StampedMap,
+} from "../../src/lib/librarySync";
+export type { LibraryDocHost } from "../../src/lib/syncEngine";
+export { problemKey, serviceProblem, SYNC_UPDATE_COMMAND, type SyncServiceInfo, type SyncServiceProblem } from "../../src/lib/syncService";

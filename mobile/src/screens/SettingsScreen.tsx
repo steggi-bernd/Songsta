@@ -1,6 +1,6 @@
 /** Everything that can be chosen: the music on this phone, the server, how it plays and feels, downloads, sync. */
 import { useNavigation } from "@react-navigation/native";
-import { Check, ChevronLeft, ChevronRight, FolderPlus, Link2, LogOut, RefreshCw, Server, SlidersHorizontal, Trash2, X } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight, CircleAlert, FileDown, FileUp, FolderPlus, Link2, LogOut, RefreshCw, Server, SlidersHorizontal, Trash2, X } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { APP_VERSION, installPhoneUpdate, lookNow, openReleasePage, updatePhone, useNewerVersion, usePhoneUpdate } from "../newVersion";
@@ -10,18 +10,20 @@ import Player from "../../modules/media3-player";
 import type { Leveling, QualityMode } from "../quality";
 import { NameDialog } from "../components/PlaylistSheets";
 import { Chip } from "../components/ui";
-import { plural, type SyncStatus } from "../shared";
+import { currentLanguage, plural, SYNC_UPDATE_COMMAND, type SyncStatus } from "../shared";
+import { backupSummary, type BackupProblem, type PhoneBackup } from "../backup";
+import { exportBackup, pickBackup, restoreBackup } from "../phoneBackup";
 import { useConnection } from "../stores/connection";
 import { sizeLine, useDownloads } from "../stores/downloads";
 import { useLibrary } from "../stores/library";
 import { useLocalMusic } from "../stores/localMusic";
 import { usePlayer } from "../stores/player";
 import { usePlaylists } from "../stores/playlists";
-import { showDialog } from "../stores/popups";
+import { showDialog, toast } from "../stores/popups";
 import { useSession } from "../stores/session";
 import { ACCENTS, useSettings, type Accent, feel } from "../stores/settings";
 import { LANGUAGES, type LanguageChoice } from "../shared";
-import { syncAddress, useSync } from "../sync";
+import { searchSyncAgain, syncAddress, useSync } from "../sync";
 import { colors, PAGE_END } from "../theme";
 import { T } from "../shared";
 
@@ -117,6 +119,74 @@ const REACH_LINE: Record<Reach, string> = {
   offline: T("Out of reach. Downloaded music plays."),
 };
 
+/** What's wrong with a picked file, in words. */
+const BACKUP_PROBLEM: Record<BackupProblem | "unreadable", string> = {
+  "not-a-backup": T("That file isn't a backup from Songsta on a phone."),
+  "computer-backup": T("That backup comes from Songsta on a computer: it goes back in there, with Import data in its settings."),
+  "too-new": T("That backup comes from a newer Songsta. Update the app first, then import it."),
+  "too-big": T("That file is too big to be a backup."),
+  unreadable: T("That file couldn't be read."),
+};
+
+function dayOf(at: number): string {
+  try {
+    return new Date(at).toLocaleDateString(currentLanguage() === "de" ? "de-DE" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
+  } catch {
+    return new Date(at).toISOString().slice(0, 10);
+  }
+}
+
+/** Asks where, and writes the backup there (phoneBackup.ts). */
+function exportData(): void {
+  exportBackup().then(
+    (name) => {
+      if (name) toast(T("Backup saved as {name}", { name }), true);
+    },
+    (err: unknown) => showDialog(T("Export failed"), err instanceof Error ? err.message : undefined)
+  );
+}
+
+/** The backup's things in place of the phone's, and a new start with them. */
+async function putBack(backup: PhoneBackup): Promise<void> {
+  try {
+    const folders = await restoreBackup(backup);
+    showDialog(
+      T("Backup imported"),
+      folders.length
+        ? T("Songsta starts anew with it now. Android lets it read a music folder only once it's picked again: add {folders} under Music on this phone.", { folders: folders.join(", ") })
+        : T("Songsta starts anew with it now."),
+      [{ text: T("Restart"), onPress: () => void Player.restartApp().catch(() => showDialog(T("Close Songsta and open it again to finish."))) }],
+      { cancelable: false }
+    );
+  } catch (err) {
+    showDialog(T("Import failed"), err instanceof Error ? err.message : undefined);
+  }
+}
+
+/** Asks for the file, says what's in it, and puts it back if that's still wanted. */
+function importData(): void {
+  pickBackup().then(
+    (picked) => {
+      if (!picked) return;
+      if (typeof picked === "string") {
+        showDialog(T("Import failed"), BACKUP_PROBLEM[picked]);
+        return;
+      }
+      const { playlists, groups, albumEdits, at } = backupSummary(picked);
+      const holds = [plural(playlists, T("playlist"), T("playlists")), plural(groups, T("group"), T("groups")), plural(albumEdits, T("edited album"), T("edited albums"))].join(", ");
+      showDialog(
+        T("Import this backup?"),
+        `${at ? T("From {date}: {holds}.", { date: dayOf(at), holds }) : `${holds}.`} ${T("Playlists, library order, groups, album edits and settings on this phone are replaced by the backup's. Songsta then starts anew.")}`,
+        [
+          { text: T("Cancel"), style: "cancel" },
+          { text: T("Import"), style: "destructive", onPress: () => void putBack(picked) },
+        ]
+      );
+    },
+    (err: unknown) => showDialog(T("Import failed"), err instanceof Error ? err.message : undefined)
+  );
+}
+
 export function SettingsScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
@@ -130,6 +200,11 @@ export function SettingsScreen() {
   const clear = useLibrary((s) => s.clear);
   const stop = usePlayer((s) => s.stop);
   const syncStatus = useSync((s) => s.status);
+  const syncVersion = useSync((s) => s.service?.version);
+  // Only with a linked service (lib/syncService.ts): without one, nothing is asked or said.
+  const syncTooOld = useSync((s) => !!s.serviceProblem && s.status === "connected");
+  // Never found for this server: it was looked for once, and "Search again" looks now.
+  const syncNotFound = useSync((s) => s.status === "unreachable" && !s.linked);
   const customAddress = useSync((s) => s.customAddress);
   const setCustomAddress = useSync((s) => s.setCustomAddress);
   const kept = useDownloads((s) => s.kept);
@@ -511,11 +586,41 @@ export function SettingsScreen() {
       <View style={styles.group}>
         <View style={styles.row}>
           <Text style={styles.rowTitle}>{T("Playlists and where you stopped")}</Text>
-          <Text style={[styles.rowSub, syncStatus === "connected" && { color: colors.accent }]}>{SYNC_LINE[syncStatus]}</Text>
+          <Text style={[styles.rowSub, syncStatus === "connected" && { color: colors.accent }]}>
+            {syncNotFound ? T("No sync service found on your Jellyfin server") : SYNC_LINE[syncStatus]}
+            {syncStatus === "connected" && syncVersion ? ` · ${T("version {version}", { version: syncVersion })}` : ""}
+          </Text>
           <Text numberOfLines={1} style={styles.rowSub}>
             {syncAddress()}
           </Text>
         </View>
+        {syncNotFound && (
+          <>
+            <View style={styles.divider} />
+            <Pressable onPress={searchSyncAgain} style={styles.notice}>
+              <RefreshCw size={20} color={colors.ink} />
+              <View style={styles.noticeText}>
+                <Text style={styles.rowTitle}>{T("Search again")}</Text>
+                <Text style={styles.rowSub}>{T("A sync service keeps playlists and your library the same on all your devices: a small Docker container next to Jellyfin, songsta-sync.zip on the Releases page. Without one, each device keeps its own.")}</Text>
+              </View>
+            </Pressable>
+          </>
+        )}
+        {syncTooOld && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.notice}>
+              <CircleAlert size={20} color={colors.hiRes} />
+              <View style={styles.noticeText}>
+                <Text style={styles.rowTitle}>{T("The sync service needs an update")}</Text>
+                <Text style={styles.rowSub}>{T("Until then, library order, groups and album edits stay on this phone. To update it, run this in its folder on the server:")}</Text>
+                <Text selectable style={styles.command}>
+                  {SYNC_UPDATE_COMMAND}
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
         <View style={styles.divider} />
         <Pressable onPress={() => setEditingSync(true)} style={styles.action}>
           <Link2 size={20} color={colors.ink} />
@@ -549,6 +654,22 @@ export function SettingsScreen() {
         <SwitchRow title={T("Automatic updates")} line={T("Fetches new versions on Wi-Fi. Android asks you before one goes in.")} value={settings.autoUpdate} onChange={(autoUpdate) => change({ autoUpdate })} />
         <View style={styles.divider} />
         <SwitchRow title={T("Tell me about new versions")} line={T("A short note and a dot on the settings button when one is out")} value={settings.checkNewVersion} onChange={(checkNewVersion) => change({ checkNewVersion })} />
+        <View style={styles.divider} />
+        <Pressable onPress={exportData} style={styles.notice}>
+          <FileUp size={20} color={colors.ink} />
+          <View style={styles.noticeText}>
+            <Text style={styles.rowTitle}>{T("Export data")}</Text>
+            <Text style={styles.rowSub}>{T("Playlists, library order, groups, album edits and settings in one file, for a new start")}</Text>
+          </View>
+        </Pressable>
+        <View style={styles.divider} />
+        <Pressable onPress={importData} style={styles.notice}>
+          <FileDown size={20} color={colors.ink} />
+          <View style={styles.noticeText}>
+            <Text style={styles.rowTitle}>{T("Import data")}</Text>
+            <Text style={styles.rowSub}>{T("From a file exported on a phone, in place of what's here")}</Text>
+          </View>
+        </Pressable>
         <View style={styles.divider} />
         <Pressable onPress={resetEverything} style={styles.action}>
           <Trash2 size={20} color="#FF9D9D" />
@@ -606,6 +727,9 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 14, paddingVertical: 8 },
   switchText: { flex: 1, minWidth: 0, gap: 3 },
   divider: { height: 1, backgroundColor: colors.hairline, marginLeft: 14 },
+  notice: { flexDirection: "row", gap: 12, padding: 14 },
+  noticeText: { flex: 1, minWidth: 0, gap: 4 },
+  command: { color: colors.ink, fontSize: 13, fontFamily: "monospace", backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, marginTop: 2 },
   action: { flexDirection: "row", alignItems: "center", gap: 12, height: 52, paddingHorizontal: 14 },
   actionText: { flexShrink: 1, color: colors.ink, fontSize: 15 },
   actionGrow: { flex: 1 },

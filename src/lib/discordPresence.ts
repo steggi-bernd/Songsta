@@ -4,12 +4,27 @@
  * change, play/pause, and whenever the clock Discord counts with drifts off
  * by more than 2 s (a seek, a stall, a speed change) — not per position tick.
  * Paused or stopped, the status is cleared, as Spotify's is. The main
- * process holds the connection to Discord and spaces the updates out.
+ * process holds the connection to Discord, finds the album's cover in the
+ * open databases and spaces the updates out.
+ *
+ * While this computer follows another device (one stream, lib/homeSync.ts),
+ * the player here shows that device's song, so the status does too: with
+ * Songsta running here, music from the phone shows as well.
  */
 import { usePlayer } from "../stores/player";
 import { useSettings } from "../stores/settings";
 
 const DRIFT_MS = 2000;
+
+/**
+ * Songsta's own Discord application, so nobody needs one of their own: its name is what
+ * Discord shows ("Listening to Songsta"). An Application ID isn't a secret, only a name tag;
+ * an ID of the user's own in Settings wins.
+ */
+export const SONGSTA_DISCORD_APP_ID = "1569032465333485688";
+
+/** The application the status goes out under. */
+export const discordAppId = (own: string): string => own || SONGSTA_DISCORD_APP_ID;
 
 /** Mount once (App). */
 export function watchDiscordPresence(): () => void {
@@ -35,13 +50,16 @@ export function watchDiscordPresence(): () => void {
     const rate = settings.playbackSpeed > 0 ? settings.playbackSpeed : 1;
     const length = p.duration > 0 ? p.duration : track.duration;
     const startedAt = Math.round(Date.now() - (p.position * 1000) / rate);
-    const key = `${track.id}|${length > 0 ? Math.round(length) : 0}`;
+    const key = `${track.id}|${length > 0 ? Math.round(length) : 0}|${settings.discordButton}`;
     if (key === shown && Math.abs(startedAt - shownStart) < DRIFT_MS) return;
     shown = key;
     shownStart = startedAt;
     bridge.discordActivity({
       title: track.title,
       artist: track.artist,
+      album: track.album ?? "",
+      albumArtist: track.albumArtist ?? "",
+      button: settings.discordButton,
       startedAt,
       endsAt: length > 0 ? Math.round(startedAt + (length * 1000) / rate) : 0,
     });
@@ -49,15 +67,15 @@ export function watchDiscordPresence(): () => void {
 
   const configure = (): void => {
     const s = useSettings.getState();
-    void bridge.discordConfigure(s.discordPresence, s.discordClientId).catch(() => undefined);
+    void bridge.discordConfigure(s.discordPresence, discordAppId(s.discordOwnAppId)).catch(() => undefined);
     shown = null;
     push();
   };
 
   configure();
   const offSettings = useSettings.subscribe((s, prev) => {
-    if (s.discordPresence !== prev.discordPresence || s.discordClientId !== prev.discordClientId) configure();
-    else if (s.playbackSpeed !== prev.playbackSpeed) push();
+    if (s.discordPresence !== prev.discordPresence || s.discordOwnAppId !== prev.discordOwnAppId) configure();
+    else if (s.playbackSpeed !== prev.playbackSpeed || s.discordButton !== prev.discordButton) push();
   });
   const offPlayer = usePlayer.subscribe((s, prev) => {
     if (

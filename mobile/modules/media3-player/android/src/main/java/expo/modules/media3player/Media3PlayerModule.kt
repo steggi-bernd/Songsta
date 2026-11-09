@@ -46,6 +46,8 @@ private const val TICK_MS = 500L
 private const val ZONE_TICK_MS = 1000L
 private const val PICK_FOLDER = 7931
 private const val PICK_IMAGE = 7932
+private const val SAVE_DOCUMENT = 7933
+private const val OPEN_DOCUMENT = 7934
 
 /**
  * The player as JavaScript sees it: commands in, one state event out. The
@@ -64,6 +66,8 @@ class Media3PlayerModule : Module() {
   private var files: FileServer? = null
   private var pickingFolder: Promise? = null
   private var pickingImage: Promise? = null
+  private var savingDocument: Promise? = null
+  private var openingDocument: Promise? = null
 
   /** Timers in JavaScript stand still in the background; native events still arrive, and the zones need their once a second. */
   private val zoneTick = object : Runnable {
@@ -214,6 +218,14 @@ class Media3PlayerModule : Module() {
         }
         return@OnActivityResult
       }
+      if (payload.requestCode == SAVE_DOCUMENT || payload.requestCode == OPEN_DOCUMENT) {
+        val saving = payload.requestCode == SAVE_DOCUMENT
+        val promise = (if (saving) savingDocument else openingDocument) ?: return@OnActivityResult
+        if (saving) savingDocument = null else openingDocument = null
+        val doc = payload.data?.data
+        promise.resolve(if (payload.resultCode == Activity.RESULT_OK && doc != null) Documents.describe(context, doc) else null)
+        return@OnActivityResult
+      }
       if (payload.requestCode != PICK_FOLDER) return@OnActivityResult
       val promise = pickingFolder ?: return@OnActivityResult
       pickingFolder = null
@@ -252,6 +264,38 @@ class Media3PlayerModule : Module() {
         activity.startActivityForResult(intent, PICK_IMAGE)
       }
     }.runOnQueue(Queues.MAIN)
+
+    /** Android's own "save as": where a file goes and its name; null when somebody changed their mind. */
+    AsyncFunction("pickSaveDocument") { name: String, mimeType: String, promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) {
+        promise.resolve(null)
+      } else {
+        savingDocument?.resolve(null)
+        savingDocument = promise
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(mimeType).putExtra(Intent.EXTRA_TITLE, name)
+        activity.startActivityForResult(intent, SAVE_DOCUMENT)
+      }
+    }.runOnQueue(Queues.MAIN)
+
+    /** Android's own picker for a file to open; null when somebody changed their mind. */
+    AsyncFunction("pickDocument") { mimeTypes: List<String>, promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) {
+        promise.resolve(null)
+      } else {
+        openingDocument?.resolve(null)
+        openingDocument = promise
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+        if (mimeTypes.isNotEmpty()) intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes.toTypedArray())
+        activity.startActivityForResult(intent, OPEN_DOCUMENT)
+      }
+    }.runOnQueue(Queues.MAIN)
+
+    /** Text into a file picked with pickSaveDocument, in place of what was in it. */
+    AsyncFunction("writeText") { uri: String, text: String ->
+      Documents.writeText(context, Uri.parse(uri), text)
+    }
 
     /** What's in a picked folder; `known`: file address to when it last changed. */
     AsyncFunction("localScan") { folder: String, known: Map<String, Double>, promise: Promise ->
@@ -474,8 +518,12 @@ class Media3PlayerModule : Module() {
       AppUpdate.clear(context)
     }
 
-    AsyncFunction("downloadStart") { url: String, headers: Map<String, String>, fileName: String, wifiOnly: Boolean ->
-      SongDownloads.start(context, url, headers, fileName, wifiOnly).toDouble()
+    AsyncFunction("downloadStart") { url: String, headers: Map<String, String>, fileName: String, wifiOnly: Boolean, label: String ->
+      SongDownloads.start(context, url, headers, fileName, wifiOnly, label).toDouble()
+    }
+
+    AsyncFunction("downloadTexts") { texts: Map<String, String> ->
+      SongDownloads.texts = texts
     }
 
     AsyncFunction("downloadQuery") { jobs: List<Double> ->

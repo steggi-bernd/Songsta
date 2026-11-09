@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { PutOnAlbumSheet } from "./src/components/AlbumEditSheets";
 import { AddToPlaylistSheet } from "./src/components/PlaylistSheets";
 import { PopupHost } from "./src/components/PopupHost";
 import { SongMenu } from "./src/components/SongMenu";
@@ -97,6 +98,7 @@ export default function App() {
       <View style={styles.root}>
         {ready && localReady && (!inside && adding ? <ConnectScreen /> : inside && setupDone ? <AppNavigation /> : <SetupScreen />)}
         <AddToPlaylistSheet />
+        <PutOnAlbumSheet />
         <SongMenu />
         {!!inside && <CoverKeeper />}
         <StatusScrim />
