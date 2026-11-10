@@ -1,6 +1,6 @@
 {
   "name": "songsta-mobile",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "main": "index.ts",
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.21.0",

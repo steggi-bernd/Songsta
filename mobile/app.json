@@ -2,7 +2,7 @@
   "expo": {
     "name": "Songsta",
     "slug": "songsta-mobile",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.bytune.mobile",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#2A2B2C",
         "foregroundImage": "./assets/android-icon-foreground.png",

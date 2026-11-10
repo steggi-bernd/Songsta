@@ -34,7 +34,7 @@ const LIBRARY_STORE = "jellyfin-library";
 const PAGE_SIZE = 500;
 const MAX_ITEMS = 100_000;
 const CLIENT = "Songsta";
-const VERSION = "1.5.0";
+const VERSION = "1.6.0";
 /** Bump when refreshLibrary reads new fields: an older cache then refreshes once in the background. */
 const LIB_VERSION = 3;
 

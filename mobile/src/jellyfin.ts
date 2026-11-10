@@ -25,7 +25,7 @@ export interface Session {
 }
 
 const CLIENT = "Songsta Mobile";
-const VERSION = "1.5.0";
+const VERSION = "1.6.0";
 const PAGE_SIZE = 500;
 const MAX_ITEMS = 100_000;
 
