@@ -263,7 +263,7 @@ It comes as a ready image for amd64 and arm64 (a Raspberry Pi too) with each rel
 JELLYFIN_NETWORK=<network Jellyfin is on> DATA_PATH=/path/for/its/data docker compose up -d
 ```
 
-The apps then find it by themselves on your Jellyfin server's host, port 8196, and sign in with your Jellyfin login. Updating it is `docker compose pull && docker compose up -d` in its folder; [Watchtower](https://containrrr.dev/watchtower/) can do that by itself if you like. When a new app needs a newer service, the app's settings say so, and what stays on the device until then; without a sync service nothing is asked. [sync-server/README.md](sync-server/README.md) has the settings, updating, and how to reach it from outside your home.
+The apps then find it by themselves on your Jellyfin server's host, port 8196, and sign in with your Jellyfin login. Updating it is `docker compose pull && docker compose up -d` in its folder; a small script from cron can do that by itself once a day, as its README shows. When a new app needs a newer service, the app's settings say so, and what stays on the device until then; without a sync service nothing is asked. [sync-server/README.md](sync-server/README.md) has the settings, updating, and how to reach it from outside your home.
 
 ## Build from source
 

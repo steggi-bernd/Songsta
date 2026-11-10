@@ -45,11 +45,26 @@ Its documents stay: they live in `DATA_PATH`, outside the container. The service
 
 Set up from a `songsta-sync.zip` older than the ready image (its `docker-compose.yml` has `build: .` and no `image:`)? Replace the folder's files with the new zip's, keep your `.env` and data, then run the command above once.
 
-To update it by itself, [Watchtower](https://containrrr.dev/watchtower/) can look for new images, for this container only:
+To update it by itself, let cron run that once a day. Save this as `update.sh` in the service's folder:
 
-```bash
-docker run -d --name watchtower --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower songsta-sync --interval 86400 --cleanup
+```sh
+#!/bin/sh
+# Once a day: the newest released image. The container is made anew only when there is
+# a newer one; the documents stay. Old Songsta images go, nothing else is touched.
+cd "$(dirname "$0")" || exit 1
+echo "$(date '+%Y-%m-%d %H:%M') looking for a new image"
+docker compose pull --quiet || exit 1
+docker compose up -d
+docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/steggi-bernd/Songsta" > /dev/null
 ```
+
+make it runnable with `chmod +x update.sh`, and add a line to your crontab (`crontab -e`) with the folder's full path, here for 04:23 each night:
+
+```
+23 4 * * * /home/you/songsta-sync/update.sh >> /home/you/songsta-sync/update.log 2>&1
+```
+
+The user whose crontab it is needs to be allowed to run `docker` (the `docker` group).
 
 It speaks plain HTTP like a Jellyfin server on your home network does. Anywhere else, put it behind the same TLS proxy or tunnel as Jellyfin: when Jellyfin's address starts with `https://`, the apps look for the service under that name, at `/songsta-sync`. With a Cloudflare tunnel:
 
