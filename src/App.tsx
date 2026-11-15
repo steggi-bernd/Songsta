@@ -37,6 +37,7 @@ import { SmartPlaylistEditorHost } from "./components/SmartPlaylistEditor";
 import { watchCatalog } from "./stores/catalog";
 import { watchAlbumCopies } from "./lib/albumCopies";
 import { watchRecoveredPlaylists } from "./lib/playlistRecovery";
+import { watchListDates } from "./lib/listDates";
 import { watchSound } from "./stores/sound";
 import { watchRecentlyPlayed } from "./lib/recentlyPlayed";
 import { watchAvailability } from "./stores/availability";
@@ -74,6 +75,8 @@ import { SettingsView } from "./views/SettingsView";
  */
 function TintWash() {
   const viewName = useUI((s) => s.view.name);
+  // Liked Songs is laid out like a playlist: its own picture fills the head.
+  const likedPage = useUI((s) => (s.view.name === "library" || s.view.name === "playlists") && s.view.param === "liked");
   const tintThumb = useUI((s) => s.tintThumb);
   const playingThumb = usePlayer((s) => s.queue[s.index]?.thumb ?? null);
   const palette = useArtworkPalette(tintThumb ?? playingThumb);
@@ -91,7 +94,7 @@ function TintWash() {
     });
   }, [color]);
 
-  if (viewName === "artist" || viewName === "playlist" || viewName === "artistliked" || viewName === "settings") return null;
+  if (viewName === "artist" || viewName === "playlist" || viewName === "artistliked" || viewName === "settings" || likedPage) return null;
   return (
     <>
       {([0, 1] as const).map((i) => (
@@ -342,6 +345,7 @@ export default function App() {
   useEffect(() => watchCatalog(), []);
   useEffect(() => watchAlbumCopies(), []);
   useEffect(() => watchRecoveredPlaylists(), []);
+  useEffect(() => watchListDates(), []);
 
   // Which folders and servers can play right now (lists grey out the rest).
   useEffect(() => watchAvailability(), []);

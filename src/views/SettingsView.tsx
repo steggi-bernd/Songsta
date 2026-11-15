@@ -1,4 +1,5 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, useMemo } from "react";
+import { useLibraryIndex } from "../lib/catalogIndex";
 import {
   Activity,
   AppWindow,
@@ -44,6 +45,16 @@ import {
   UserRound,
   Volume2,
   VolumeX,
+  CirclePlay,
+  MicVocal,
+  Library,
+  MonitorSmartphone,
+  Rocket,
+  Database,
+  Info,
+  Search,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import {
   useSettings,
@@ -87,7 +98,7 @@ function SettingsGroup({
   children: ReactNode;
 }) {
   return (
-    <section className="animate-slide-up">
+    <section className="animate-slide-up" data-settings-group={header ?? ""}>
       {header && (
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-dim px-1 pt-7 pb-2">
           {header}
@@ -101,7 +112,7 @@ function SettingsGroup({
 }
 
 function Divider() {
-  return <div className={`h-px bg-ink-hi/[0.08] ${TEXT_INSET}`} />;
+  return <div className={`settings-divider h-px bg-ink-hi/[0.08] ${TEXT_INSET}`} />;
 }
 
 function Switch({
@@ -586,6 +597,7 @@ function SettingsRow({
   const interactive = onClick && !disabled;
   return (
     <div
+      data-search={`${title} ${subtitle ?? ""}`.toLowerCase()}
       onPointerDown={onPointerDown}
       onClick={interactive ? (e) => onClick(e) : undefined}
       className={`flex items-center min-h-[52px] py-3 ${ROW_INSET} ${
@@ -640,7 +652,7 @@ function SliderRow({
 }) {
   const frac = max > min ? Math.min(1, Math.max(0, (current - min) / (max - min))) : 0;
   return (
-    <div className={`${ROW_INSET} py-3`}>
+    <div className={`${ROW_INSET} py-3`} data-search={`${title} ${subtitle ?? ""}`.toLowerCase()}>
       <div className="flex items-center">
         <Icon className="w-[22px] h-[22px] shrink-0 text-ink-hi" />
         <div className="flex-1 min-w-0 ml-[14px]">
@@ -1040,6 +1052,197 @@ function UpdateGroup() {
   );
 }
 
+/* ============================================================ the page's layout */
+
+type SettingsCategory = "playback" | "sound" | "lyrics" | "display" | "library" | "connections" | "startup" | "data" | "about";
+
+const CATEGORIES: { key: SettingsCategory; label: string; blurb: string; icon: LucideIcon }[] = [
+  { key: "playback", label: T("Playback"), blurb: T("How songs follow each other, and what plays when the list ends"), icon: CirclePlay },
+  { key: "sound", label: T("Sound"), blurb: T("Where it plays, how loud, and how it's shaped"), icon: AudioLines },
+  { key: "lyrics", label: T("Lyrics"), blurb: T("Lines that follow the song"), icon: MicVocal },
+  { key: "display", label: T("Display"), blurb: T("Language, colours, and how the app moves"), icon: Palette },
+  { key: "library", label: T("Library"), blurb: T("Your folders, your servers, and what fills the gaps"), icon: Library },
+  { key: "connections", label: T("Sync & devices"), blurb: T("Your other devices, receivers and TVs, and Discord"), icon: MonitorSmartphone },
+  { key: "startup", label: T("Startup & updates"), blurb: T("When Songsta opens, and how it stays up to date"), icon: Rocket },
+  { key: "data", label: T("Your data"), blurb: T("Your listening, backups, and a fresh start"), icon: Database },
+  { key: "about", label: T("About"), blurb: T("The version, and where Songsta comes from"), icon: Info },
+];
+/** Each category's icon has a colour of its own in the list. */
+const CATEGORY_TINTS = ["#a78bfa", "#5eead4", "#f0abfc", "#fbbf24", "#7dd3fc", "#4ade80", "#fb7185", "#d4d4d8", "#a1a1aa"];
+
+/** Behind a category's name: a narrow, darkened strip of the library's own covers. Nothing without enough of them. */
+function CoverStrip() {
+  const { albums } = useLibraryIndex();
+  const covers = useMemo(() => [...new Set(albums.map((a) => a.thumb).filter(Boolean))], [albums]);
+  if (covers.length < 6) return <div aria-hidden className="absolute inset-0 bg-ink-hi/[0.04]" />;
+  return (
+    <>
+      <div aria-hidden className="absolute -left-5 -right-5 -top-10 grid grid-cols-12 gap-[5px]" style={{ transform: "rotate(-3deg) scale(1.1)" }}>
+        {Array.from({ length: 36 }, (_, i) => (
+          <img key={i} src={covers[(i * 5 + Math.floor(i / 12) * 3) % covers.length]} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-md block" />
+        ))}
+      </div>
+      <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgb(var(--page-bg) / 0.95) 0%, rgb(var(--page-bg) / 0.78) 55%, rgb(var(--accent) / 0.28) 100%), linear-gradient(180deg, transparent 30%, rgb(var(--page-bg) / 0.9) 100%)" }} />
+    </>
+  );
+}
+
+const isCategory = (v: unknown): v is SettingsCategory => CATEGORIES.some((c) => c.key === v);
+/** The category open last: Settings opens on it again. */
+let lastCategory: SettingsCategory = "playback";
+
+/**
+ * Settings, a category at a time: the list and a search on the left, the category on the right.
+ * A search looks through every category's rows (their titles and lines) and shows what fits,
+ * under its category. Narrow, the categories line up above the page instead.
+ */
+function SettingsLayout({ blocks }: { blocks: Record<SettingsCategory, ReactNode> }) {
+  const param = useUI((st) => (st.view.name === "settings" ? st.view.param : undefined));
+  const [active, setActive] = useState<SettingsCategory>(() => (isCategory(param) ? param : lastCategory));
+  const [query, setQuery] = useState("");
+  const [nothing, setNothing] = useState(false);
+  const [narrow, setNarrow] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isCategory(param)) setActive(param);
+  }, [param]);
+  useEffect(() => {
+    lastCategory = active;
+  }, [active]);
+  useLayoutEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const look = (): void => setNarrow(el.clientWidth < 760);
+    look();
+    const seen = new ResizeObserver(look);
+    seen.observe(el);
+    return () => seen.disconnect();
+  }, []);
+
+  // What a search leaves: rows whose words fit, groups with such rows, categories with such groups.
+  // A category or group whose own name fits shows whole. Runs after every render, so rows that
+  // appear later (shown by another switch) are sorted too.
+  useLayoutEffect(() => {
+    const box = content.current;
+    if (!box) return;
+    const q = query.trim().toLowerCase();
+    box.classList.toggle("settings-searching", !!q);
+    let any = false;
+    for (const cat of box.querySelectorAll<HTMLElement>("[data-settings-category]")) {
+      const catHit = !!q && (cat.dataset.settingsCategory ?? "").toLowerCase().includes(q);
+      let catAny = false;
+      for (const group of cat.querySelectorAll<HTMLElement>("[data-settings-group]")) {
+        const groupHit = catHit || (!!q && (group.dataset.settingsGroup ?? "").toLowerCase().includes(q));
+        let groupAny = false;
+        for (const row of group.querySelectorAll<HTMLElement>("[data-search]")) {
+          const hit = !q || groupHit || (row.dataset.search ?? "").includes(q);
+          row.style.display = hit ? "" : "none";
+          groupAny ||= hit;
+        }
+        const shown = !q || groupHit || groupAny;
+        group.style.display = shown ? "" : "none";
+        catAny ||= shown;
+      }
+      cat.style.display = !q || catAny ? "" : "none";
+      any ||= !q || catAny;
+    }
+    if (nothing !== (!!q && !any)) setNothing(!!q && !any);
+  });
+
+  const category = CATEGORIES.find((c) => c.key === active) ?? CATEGORIES[0];
+  const pick = (key: SettingsCategory): void => {
+    setQuery("");
+    setActive(key);
+    document.getElementById("view-scroll")?.scrollTo({ top: 0 });
+  };
+  const searching = query.trim() !== "";
+
+  const searchField = (
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-dim pointer-events-none" />
+      <input
+        type="text"
+        value={query}
+        maxLength={60}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setQuery("");
+        }}
+        placeholder={T("Search settings")}
+        aria-label={T("Search settings")}
+        className="w-full h-10 pl-9 pr-9 rounded-full bg-panel border border-transparent text-[14px] text-ink-hi placeholder:text-ink-dim outline-none focus:border-ink-hi/25 transition-colors"
+      />
+      {searching && (
+        <button
+          onClick={() => setQuery("")}
+          title={T("Clear search")}
+          aria-label={T("Clear search")}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-ink-dim hover:text-ink-hi hover:bg-ink-hi/[0.08] transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
+
+  const nav = CATEGORIES.map((c, i) => {
+    const on = !searching && c.key === active;
+    return (
+      <button
+        key={c.key}
+        onClick={() => pick(c.key)}
+        aria-current={on ? "page" : undefined}
+        className={
+          narrow
+            ? `shrink-0 flex items-center gap-2 h-9 px-3.5 rounded-full text-[13px] font-medium transition-colors ${on ? "bg-ink-hi text-black" : "bg-ink-hi/[0.07] text-ink-hi hover:bg-ink-hi/[0.12]"}`
+            : `w-full flex items-center gap-3 h-10 px-3 rounded-lg text-left text-[14px] transition-colors ${on ? "bg-accent/[0.16] text-ink-hi font-bold" : "font-medium"} ${on ? "" : "text-ink-hi/75 hover:text-ink-hi hover:bg-ink-hi/[0.05]"}`
+        }
+      >
+        <c.icon className={narrow ? "w-4 h-4" : "w-[18px] h-[18px] shrink-0"} style={narrow && on ? undefined : { color: CATEGORY_TINTS[i % CATEGORY_TINTS.length] }} />
+        {c.label}
+      </button>
+    );
+  });
+
+  return (
+    <div ref={root} className={`pb-14 ${narrow ? "" : "flex gap-8"}`}>
+      <aside className={narrow ? "" : "w-[220px] shrink-0 self-start sticky top-0 pt-2"}>
+        <h1 className="font-display text-[34px] font-extrabold tracking-[-0.03em] text-ink-hi px-1 pt-2 pb-3.5">{T("Settings")}</h1>
+        {searchField}
+        <nav aria-label={T("Settings")} className={narrow ? "flex gap-2 overflow-x-auto pt-3 pb-1 -mx-1 px-1" : "pt-4 space-y-0.5"}>
+          {nav}
+        </nav>
+      </aside>
+      <div ref={content} className="flex-1 min-w-0 max-w-2xl">
+        <UpdateGroup />
+        {searching ? (
+          <>
+            {CATEGORIES.map((c) => (
+              <section key={c.key} data-settings-category={c.label}>
+                <h2 className="font-display text-[20px] font-bold text-ink-hi px-1 pt-8 -mb-3">{c.label}</h2>
+                {blocks[c.key]}
+              </section>
+            ))}
+            {nothing && <p className="px-1 pt-10 text-[14px] text-ink-dim">{T("No setting fits “{query}”", { query: query.trim() })}</p>}
+          </>
+        ) : (
+          <section key={category.key} data-settings-category={category.label}>
+            <div className={`relative overflow-hidden rounded-2xl ${narrow ? "mt-4" : "mt-3"}`}>
+              <CoverStrip />
+              <div className="relative px-5 pt-[70px] pb-4">
+                <h2 className="font-display text-[40px] leading-none font-black tracking-[-0.04em] text-ink-hi">{category.label}</h2>
+                <p className="text-[13.5px] text-ink-dim mt-1.5">{category.blurb}</p>
+              </div>
+            </div>
+            {blocks[category.key]}
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LookForUpdatesRow() {
   const [looking, setLooking] = useState(false);
   return (
@@ -1149,77 +1352,11 @@ export function SettingsView() {
     }
   };
 
-  return (
-    <div className="max-w-2xl pb-14">
-      <h1 className="font-display text-[34px] font-extrabold tracking-[-0.03em] text-ink-hi px-1 pt-2 pb-3.5">{T("Settings")}</h1>
-
-      <UpdateGroup />
-
-      <SettingsGroup
-        header={T("Library sources")}
-        footer={T("Covers your files lack, album names and artist bios come from open databases: MusicBrainz, Cover Art Archive, iTunes Search and Wikipedia/Wikidata. Answers are cached on this device.")}
-      >
-        <SettingsRow
-          icon={FolderOpen}
-          title={T("Local Music")}
-          subtitle={T("Folders on this device")}
-          onClick={() => useUI.getState().navigate({ name: "local" })}
-        />
-        <Divider />
-        <SettingsRow
-          icon={Server}
-          title={T("Jellyfin")}
-          subtitle={T("Your own media server")}
-          onClick={() => useUI.getState().navigate({ name: "jellyfin" })}
-        />
-        <Divider />
-        <SettingsRow
-          icon={Disc3}
-          title={T("Navidrome")}
-          subtitle={T("Navidrome or any Subsonic server")}
-          onClick={() => useUI.getState().navigate({ name: "subsonic" })}
-        />
-        <Divider />
-        <SettingsRow
-          icon={FileUp}
-          title={T("Import from Spotify")}
-          subtitle={T("Your Liked Songs: which you have, which to buy")}
-          onClick={() => useUI.getState().navigate({ name: "spotify" })}
-        />
-        <Divider />
-        <SettingsRow
-          icon={ShoppingBag}
-          title={T("Shop links for missing songs")}
-          subtitle={T("In the Spotify import's “to buy” list: searches on Qobuz, Bandcamp, 7digital and Amazon")}
-          trailing={<Switch checked={s.storeLinks} onChange={s.setStoreLinks} />}
-          onClick={() => s.setStoreLinks(!s.storeLinks)}
-        />
-        <Divider />
-        <SettingsRow
-          icon={FolderSync}
-          title={T("Watch folders")}
-          subtitle={T("New, changed and deleted files show up without rescanning")}
-          trailing={<Switch checked={s.watchFolders} onChange={s.setWatchFolders} />}
-          onClick={() => s.setWatchFolders(!s.watchFolders)}
-        />
-        <Divider />
-        <FfmpegRow />
-        <Divider />
-        <SoundAnalysisRow />
-        <Divider />
-        <SettingsRow
-          icon={ListChecks}
-          title={T("Library check")}
-          subtitle={T("Artists written different ways, albums in parts, songs you have twice, missing covers")}
-          onClick={() => useUI.getState().navigate({ name: "check" })}
-        />
-      </SettingsGroup>
-
-      <ServerSyncGroup />
-
-      <OutputDeviceGroup />
-
-      <SettingsGroup header={T("Playback")}>
+  // The page's groups, by category (the categories' list is CATEGORIES above).
+  const blocks: Record<SettingsCategory, ReactNode> = {
+    playback: (
+      <>
+        <SettingsGroup header={T("What plays")}>
         {!s.smartFade && (
           <>
             <SliderRow
@@ -1290,14 +1427,6 @@ export function SettingsView() {
           onClick={() => s.setSkipEndsRepeatOne(!s.skipEndsRepeatOne)}
         />
         <Divider />
-        <SettingsRow
-          icon={Power}
-          title={T("Switch receivers off afterwards")}
-          subtitle={T("Denon and Marantz go off 30 seconds after the music has left them, unless you stop it or they're doing something else")}
-          trailing={<Switch checked={s.switchOffDevices} onChange={s.setSwitchOffDevices} />}
-          onClick={() => s.setSwitchOffDevices(!s.switchOffDevices)}
-        />
-        <Divider />
         <SliderRow
           icon={Gauge}
           title={T("Playback speed")}
@@ -1309,7 +1438,21 @@ export function SettingsView() {
           current={s.playbackSpeed}
           onChange={s.setPlaybackSpeed}
         />
-        <Divider />
+          <Divider />
+        <SettingsRow
+          icon={ListMusic}
+          title={T("Don't repeat suggestions")}
+          subtitle={T("Keep recently played tracks out of autoplay")}
+          trailing={<Switch checked={s.dontRepeatSuggestions} onChange={s.setDontRepeatSuggestions} />}
+          onClick={() => s.setDontRepeatSuggestions(!s.dontRepeatSuggestions)}
+        />
+        </SettingsGroup>
+      </>
+    ),
+    sound: (
+      <>
+        <OutputDeviceGroup />
+        <SettingsGroup header={T("Loudness and sound")}>
         <SettingsRow
           icon={Gauge}
           title={T("Volume leveling")}
@@ -1342,9 +1485,42 @@ export function SettingsView() {
         )}
         <Divider />
         <EqualizerRows />
+        </SettingsGroup>
+      </>
+    ),
+    lyrics: (
+      <SettingsGroup header={T("Lyrics")}>
+        <SettingsRow
+          icon={ListMusic}
+          title={T("Synced lyrics")}
+          subtitle={T("Highlight the current line and auto-scroll")}
+          trailing={<Switch checked={s.syncedLyrics} onChange={s.setSyncedLyrics} />}
+          onClick={() => s.setSyncedLyrics(!s.syncedLyrics)}
+        />
+        {s.syncedLyrics && (
+          <>
+            <Divider />
+            <SettingsRow
+              icon={Droplets}
+              title={T("Blur unfocused lyrics")}
+              subtitle={T("Keep the spotlight on the current line")}
+              trailing={<Switch checked={s.blurUnfocusedLyrics} onChange={s.setBlurUnfocusedLyrics} />}
+              onClick={() => s.setBlurUnfocusedLyrics(!s.blurUnfocusedLyrics)}
+            />
+          </>
+        )}
+        <Divider />
+        <SettingsRow
+          icon={Languages}
+          title={T("Cyrillic in Latin letters")}
+          subtitle={T("A Latin line under each line of Russian, Ukrainian or other Cyrillic lyrics")}
+          trailing={<Switch checked={s.lyricsLatin} onChange={s.setLyricsLatin} />}
+          onClick={() => s.setLyricsLatin(!s.lyricsLatin)}
+        />
       </SettingsGroup>
-
-      <SettingsGroup header={T("Appearance")}>
+    ),
+    display: (
+      <SettingsGroup header={T("Look and language")}>
         <LanguageRow />
         <Divider />
         <SettingsRow
@@ -1391,8 +1567,8 @@ export function SettingsView() {
         <Divider />
         <SettingsRow
           icon={Maximize2}
-          title={T("Full-screen cover art")}
-          subtitle={T("Let the artwork bleed behind the status area")}
+          title={T("Bright cover backdrop")}
+          subtitle={T("In the full-screen player the cover glows stronger behind everything, its colours brighter")}
           trailing={<Switch checked={s.fullBleedArtwork} onChange={s.setFullBleedArtwork} />}
           onClick={() => s.setFullBleedArtwork(!s.fullBleedArtwork)}
         />
@@ -1414,31 +1590,73 @@ export function SettingsView() {
         />
         <Divider />
         <SettingsRow
-          icon={ListMusic}
-          title={T("Synced lyrics")}
-          subtitle={T("Highlight the current line and auto-scroll")}
-          trailing={<Switch checked={s.syncedLyrics} onChange={s.setSyncedLyrics} />}
-          onClick={() => s.setSyncedLyrics(!s.syncedLyrics)}
+          icon={VolumeX}
+          title={T("Hide volume bar")}
+          subtitle={T("Keep the player bar free of the volume slider")}
+          trailing={<Switch checked={s.hideVolumeBar} onChange={s.setHideVolumeBar} />}
+          onClick={() => s.setHideVolumeBar(!s.hideVolumeBar)}
         />
-        {s.syncedLyrics && (
-          <>
-            <Divider />
-            <SettingsRow
-              icon={Droplets}
-              title={T("Blur unfocused lyrics")}
-              subtitle={T("Keep the spotlight on the current line")}
-              trailing={<Switch checked={s.blurUnfocusedLyrics} onChange={s.setBlurUnfocusedLyrics} />}
-              onClick={() => s.setBlurUnfocusedLyrics(!s.blurUnfocusedLyrics)}
-            />
-          </>
-        )}
+      </SettingsGroup>
+    ),
+    library: (
+      <>
+      <SettingsGroup
+        header={T("Library sources")}
+        footer={T("Covers your files lack, album names and artist bios come from open databases: MusicBrainz, Cover Art Archive, iTunes Search and Wikipedia/Wikidata. Answers are cached on this device.")}
+      >
+        <SettingsRow
+          icon={FolderOpen}
+          title={T("Local Music")}
+          subtitle={T("Folders on this device")}
+          onClick={() => useUI.getState().navigate({ name: "local" })}
+        />
         <Divider />
         <SettingsRow
-          icon={Languages}
-          title={T("Cyrillic in Latin letters")}
-          subtitle={T("A Latin line under each line of Russian, Ukrainian or other Cyrillic lyrics")}
-          trailing={<Switch checked={s.lyricsLatin} onChange={s.setLyricsLatin} />}
-          onClick={() => s.setLyricsLatin(!s.lyricsLatin)}
+          icon={Server}
+          title={T("Jellyfin")}
+          subtitle={T("Your own media server")}
+          onClick={() => useUI.getState().navigate({ name: "jellyfin" })}
+        />
+        <Divider />
+        <SettingsRow
+          icon={Disc3}
+          title={T("Navidrome")}
+          subtitle={T("Navidrome or any Subsonic server")}
+          onClick={() => useUI.getState().navigate({ name: "subsonic" })}
+        />
+        <Divider />
+        <SettingsRow
+          icon={FileUp}
+          title={T("Import from Spotify")}
+          subtitle={T("Your Liked Songs: which you have, which to buy")}
+          onClick={() => useUI.getState().navigate({ name: "spotify" })}
+        />
+        <Divider />
+        <SettingsRow
+          icon={ShoppingBag}
+          title={T("Shop links for missing songs")}
+          subtitle={T("In the Spotify import's “to buy” list: searches on Qobuz, Bandcamp, 7digital and Amazon")}
+          trailing={<Switch checked={s.storeLinks} onChange={s.setStoreLinks} />}
+          onClick={() => s.setStoreLinks(!s.storeLinks)}
+        />
+        <Divider />
+        <SettingsRow
+          icon={FolderSync}
+          title={T("Watch folders")}
+          subtitle={T("New, changed and deleted files show up without rescanning")}
+          trailing={<Switch checked={s.watchFolders} onChange={s.setWatchFolders} />}
+          onClick={() => s.setWatchFolders(!s.watchFolders)}
+        />
+        <Divider />
+        <FfmpegRow />
+        <Divider />
+        <SoundAnalysisRow />
+        <Divider />
+        <SettingsRow
+          icon={ListChecks}
+          title={T("Library check")}
+          subtitle={T("Artists written different ways, albums in parts, songs you have twice, missing covers")}
+          onClick={() => useUI.getState().navigate({ name: "check" })}
         />
       </SettingsGroup>
 
@@ -1473,8 +1691,54 @@ export function SettingsView() {
         />
       </SettingsGroup>
 
-      <DiscordGroup />
+      </>
+    ),
+    connections: (
+      <>
+        <ServerSyncGroup />
+        <SettingsGroup header={T("Receivers and TVs")}>
+        <SettingsRow
+          icon={Power}
+          title={T("Switch receivers off afterwards")}
+          subtitle={T("Denon and Marantz go off 30 seconds after the music has left them, unless you stop it or they're doing something else")}
+          trailing={<Switch checked={s.switchOffDevices} onChange={s.setSwitchOffDevices} />}
+          onClick={() => s.setSwitchOffDevices(!s.switchOffDevices)}
+        />
+        </SettingsGroup>
+        <DiscordGroup />
+      </>
+    ),
+    startup: (
+      <>
+        <StartupGroup />
+      <SettingsGroup header={T("Updates")} footer={T("Asking GitHub once a day which version is the newest is all that goes out for this. With both off, not even that.")}>
+        <LookForUpdatesRow />
+        {canSelfUpdate && (
+          <>
+            <Divider />
+            <SettingsRow
+              icon={Download}
+              title={T("Automatic updates")}
+              subtitle={T("Fetches new versions in the background. They install when you close Songsta.")}
+              trailing={<Switch checked={s.autoUpdate} onChange={s.setAutoUpdate} />}
+              onClick={() => s.setAutoUpdate(!s.autoUpdate)}
+            />
+          </>
+        )}
+        <Divider />
+        <SettingsRow
+          icon={Sparkles}
+          title={T("Tell me about new versions")}
+          subtitle={T("A short note and a dot on the settings button when one is out")}
+          trailing={<Switch checked={s.checkNewVersion} onChange={s.setCheckNewVersion} />}
+          onClick={() => s.setCheckNewVersion(!s.checkNewVersion)}
+        />
+      </SettingsGroup>
 
+      </>
+    ),
+    data: (
+      <>
       <SettingsGroup header={T("Your data")}>
         <SettingsRow
           icon={BarChart3}
@@ -1506,55 +1770,6 @@ export function SettingsView() {
         />
       </SettingsGroup>
 
-      <StartupGroup />
-
-      <SettingsGroup header={T("Updates")} footer={T("Asking GitHub once a day which version is the newest is all that goes out for this. With both off, not even that.")}>
-        <LookForUpdatesRow />
-        {canSelfUpdate && (
-          <>
-            <Divider />
-            <SettingsRow
-              icon={Download}
-              title={T("Automatic updates")}
-              subtitle={T("Fetches new versions in the background. They install when you close Songsta.")}
-              trailing={<Switch checked={s.autoUpdate} onChange={s.setAutoUpdate} />}
-              onClick={() => s.setAutoUpdate(!s.autoUpdate)}
-            />
-          </>
-        )}
-        <Divider />
-        <SettingsRow
-          icon={Sparkles}
-          title={T("Tell me about new versions")}
-          subtitle={T("A short note and a dot on the settings button when one is out")}
-          trailing={<Switch checked={s.checkNewVersion} onChange={s.setCheckNewVersion} />}
-          onClick={() => s.setCheckNewVersion(!s.checkNewVersion)}
-        />
-      </SettingsGroup>
-
-      <SettingsGroup
-        header={T("Miscellaneous")}
-        footer={T("These apply to this desktop client and are stored locally.")}
-      >
-        <SettingsRow
-          icon={ListMusic}
-          title={T("Don't repeat suggestions")}
-          subtitle={T("Keep recently played tracks out of autoplay")}
-          trailing={<Switch checked={s.dontRepeatSuggestions} onChange={s.setDontRepeatSuggestions} />}
-          onClick={() => s.setDontRepeatSuggestions(!s.dontRepeatSuggestions)}
-        />
-        <Divider />
-        <SettingsRow
-          icon={VolumeX}
-          title={T("Hide volume bar")}
-          subtitle={T("Keep the player bar free of the volume slider")}
-          trailing={<Switch checked={s.hideVolumeBar} onChange={s.setHideVolumeBar} />}
-          onClick={() => s.setHideVolumeBar(!s.hideVolumeBar)}
-        />
-      </SettingsGroup>
-
-
-
       <SettingsGroup header={T("Danger zone")}>
         <SettingsRow
           icon={Trash2}
@@ -1572,7 +1787,25 @@ export function SettingsView() {
         />
       </SettingsGroup>
 
-      <div className="text-center text-[11px] text-ink-dim/80 pt-6 px-1 leading-relaxed">{T("Songsta {value} · GPL-3.0 · based on ByTune by rishiteja21", { value: versions?.app ?? "1.0.0" })}</div>
-    </div>
-  );
+      </>
+    ),
+    about: (
+      <SettingsGroup header={T("Songsta")}>
+        <SettingsRow
+          icon={Info}
+          title={T("Songsta {value}", { value: versions?.app ?? "1.0.0" })}
+          subtitle={T("Your music from your folders and your own servers. Free software under the GPL-3.0, based on ByTune by rishiteja21.")}
+        />
+        <Divider />
+        <SettingsRow
+          icon={ExternalLink}
+          title={T("Songsta on GitHub")}
+          subtitle={T("Releases, the source code and a place to report problems")}
+          onClick={() => void window.open("https://github.com/steggi-bernd/Songsta", "_blank")}
+        />
+      </SettingsGroup>
+    ),
+  };
+
+  return <SettingsLayout blocks={blocks} />;
 }

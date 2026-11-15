@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { storage } from "../lib/persist";
 import { DEFAULT_EXPLORE_SORTS, type ExploreSort, type ExploreTab } from "../lib/exploreRows";
+import { DEFAULT_COLUMNS, type ColumnChoice, type ListSort } from "../lib/trackColumns";
 import { NO_VERSION_MEMORY, type NewVersionMemory } from "../lib/newVersion";
 export type { ExploreSort, ExploreTab };
 
@@ -18,6 +19,10 @@ interface SettingsState {
   autoplay: boolean;
   /** going to another song ends repeat-one: the whole list repeats from there */
   skipEndsRepeatOne: boolean;
+  /** the song lists' columns: which, and how wide (lib/trackColumns.ts) */
+  trackColumns: ColumnChoice;
+  /** each song list's order when it isn't its own, by list ("liked", a playlist's or album's id) */
+  listSorts: Record<string, ListSort>;
   /** 0.5..2 — persisted playback speed (pitch-preserving) */
   playbackSpeed: number;
   /** Audio output device (setSinkId). "" follows the system default. */
@@ -111,6 +116,9 @@ interface SettingsState {
   /** the shell's one colour: what plays, what's on, likes and the main buttons */
   accent: Accent;
 
+  setTrackColumns(v: ColumnChoice): void;
+  /** `null`: the list's own order again */
+  setListSort(list: string, sort: ListSort | null): void;
   setCrossfadeSeconds(v: number): void;
   setSmartFade(v: boolean): void;
   setSkipSilence(v: boolean): void;
@@ -180,6 +188,8 @@ export const useSettings = create<SettingsState>()(
       skipSilence: false,
       autoplay: false,
       skipEndsRepeatOne: true,
+      trackColumns: DEFAULT_COLUMNS,
+      listSorts: {},
       playbackSpeed: 1,
       audioSinkId: "",
       eqEnabled: false,
@@ -235,6 +245,14 @@ export const useSettings = create<SettingsState>()(
       corners: "soft",
       accent: "violet",
 
+      setTrackColumns: (trackColumns) => set({ trackColumns }),
+      setListSort: (list, sort) =>
+        set((st) => {
+          const listSorts = { ...st.listSorts };
+          if (sort) listSorts[list] = sort;
+          else delete listSorts[list];
+          return { listSorts };
+        }),
       setCrossfadeSeconds: (crossfadeSeconds) => set({ crossfadeSeconds }),
       setSmartFade: (smartFade) => set({ smartFade }),
       setSkipSilence: (skipSilence) => set({ skipSilence }),

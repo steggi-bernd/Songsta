@@ -96,6 +96,8 @@ object PlaybackTuning {
   @Volatile var eqOn = false
   @Volatile var eqBands = IntArray(0)
   @Volatile var eqGains = FloatArray(0)
+  /** Settings → Even out loud and quiet: a compressor and a limiter after the equalizer */
+  @Volatile var evenOut = false
   @Volatile var service: PlaybackService? = null
 }
 

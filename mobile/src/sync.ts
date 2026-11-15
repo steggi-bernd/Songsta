@@ -24,6 +24,8 @@ import Player from "../modules/media3-player";
 const FILE = "sync-settings.json";
 /** Paused in the background: still within reach for this long. */
 const LISTENS_AFTER_PLAYING_MS = 5 * 60_000;
+/** The service answered within this long: it's listening, and coming to the front needs no new round. */
+const LISTENING_FINE_MS = 1500;
 
 interface SyncState {
   status: SyncStatus;
@@ -75,6 +77,12 @@ export const useSync = create<SyncState>((set) => ({
     engine?.retryNow();
   },
 }));
+
+/** Pulling Home down: the service is asked at once what's new and who's around. */
+export function syncLookNow(): void {
+  engine?.lookNow(0);
+  void engine?.checkPlayback();
+}
 
 /** "Search again" in Settings: no service ever answered this phone, and it's looked for now. */
 export function searchSyncAgain(): void {
@@ -219,6 +227,7 @@ export async function startSync(): Promise<void> {
     sendList: (id, tracks, context, command) => created.sendList(id, tracks, context, command),
     handOver: (id) => created.handOver(id),
     look: () => void created.checkPlayback(),
+    lookAround: () => void created.devicesNow(),
     connected: () => created.status() === "connected",
     presence: () => {
       if (AppState.currentState === "active") created.presenceChanged();
@@ -256,7 +265,8 @@ export async function startSync(): Promise<void> {
   });
   appState = AppState.addEventListener("change", (state) => {
     tellVolumeKeys();
-    if (state === "active") created.start();
+    // Back in front: a wait that died while the phone slept is dropped, and what plays elsewhere is asked at once.
+    if (state === "active") created.lookNow(LISTENING_FINE_MS);
     else if (state === "background") {
       void created.flushPlayback();
       if (!playingHere() && Date.now() - lastPlayingAt > LISTENS_AFTER_PLAYING_MS) created.rest();

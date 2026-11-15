@@ -34,6 +34,7 @@ import type { Track } from "../types";
 import { upgradeArtwork } from "../lib/artwork";
 import { usePlayingFrom } from "../lib/recentlyPlayed";
 import { songKey } from "../stores/catalog";
+import { useCanvas } from "../lib/canvas";
 import { T } from "../lib/i18n";
 
 /** The queue's "Now playing" row — draggable like every other song row. */
@@ -447,10 +448,40 @@ function PlayingFrom({ track }: { track: Track }) {
   );
 }
 
+/** The moving cover over the still one in the panel: it plays and pauses with the music, and fades in once it can play. */
+function RailCanvas({ url }: { url: string }) {
+  const playing = usePlayer((s) => s.playing);
+  const video = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(false);
+  }, [url]);
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    if (playing) void v.play().catch(() => undefined);
+    else v.pause();
+  }, [playing, url, ready]);
+  return (
+    <video
+      key={url}
+      ref={video}
+      src={url}
+      loop
+      muted
+      playsInline
+      autoPlay={playing}
+      onCanPlay={() => setReady(true)}
+      className={`absolute inset-0 w-full h-full object-cover rounded-xl transition-opacity duration-500 ${ready ? "opacity-100" : "opacity-0"}`}
+    />
+  );
+}
+
 function DetailsBody() {
   const track = usePlayer((s) => s.queue[s.index] ?? null);
   const navigate = useUI((s) => s.navigate);
   const detailsDrag = useDrag({ track: track ?? { id: "", title: "", artist: "", duration: 0, thumb: "" } });
+  const canvasUrl = useCanvas(track);
 
   if (!track) {
     return (
@@ -479,13 +510,17 @@ function DetailsBody() {
           playlist. The whole header (art, title, artist) shares one drag
           origin so every pixel behaves the same. */}
       <div {...detailsDrag.props} className={detailsDrag.dragging ? "opacity-40" : ""}>
-        <Artwork
-          key={track.id}
-          src={track.thumb}
-          className="w-full aspect-square rounded-xl shadow-elev animate-art-in"
-          iconClassName="w-10 h-10"
-          alt=""
-        />
+        <div className="relative">
+          <Artwork
+            key={track.id}
+            src={track.thumb}
+            className="w-full aspect-square rounded-xl shadow-elev animate-art-in"
+            iconClassName="w-10 h-10"
+            alt=""
+          />
+          {/* Settings → Animated cover art: the moving cover over the still one, which stays beneath if the clip stalls. */}
+          {canvasUrl && <RailCanvas url={canvasUrl} />}
+        </div>
 
         {/* Title + artist directly under the art, as in the player bar: the
             title opens the album, each credited artist their own page. */}

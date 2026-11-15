@@ -1,7 +1,29 @@
-import { Fragment, memo, useCallback } from "react";
-import { AlertCircle, ArrowDownCircle, Check, FolderOpen, Heart, Loader2, MoreHorizontal, Pause, Play } from "lucide-react";
+import { Fragment, memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { AlertCircle, ArrowDownCircle, Check, ChevronDown, ChevronUp, FolderOpen, Heart, List, Loader2, MoreHorizontal, Pause, Play, Plus, Search, X } from "lucide-react";
 import { sourceOf, useAvailabilityCheck } from "../stores/availability";
-import { sameSong, useCatalog, versionsOf } from "../stores/catalog";
+import { sameSong, songKey, useCatalog, versionsOf } from "../stores/catalog";
+import { useSettings } from "../stores/settings";
+import { addedLabel } from "../lib/exploreRows";
+import {
+  addedForOrder,
+  columnsFor,
+  formatCell,
+  matchesSearch,
+  moved,
+  nextListSort,
+  readColumns,
+  readListSort,
+  releasedCell,
+  resized,
+  sortTracks,
+  toggled,
+  TRACK_COLUMNS,
+  widthOf,
+  FIRST_DESC,
+  type ListSort,
+  type SortKey,
+  type TrackColumn,
+} from "../lib/trackColumns";
 import { likedIdSet, useLibrary } from "../stores/library";
 import { useIsMuted } from "../stores/muted";
 import { BranchMark } from "./primitives";
@@ -117,7 +139,12 @@ interface TrackRowProps {
   available: boolean;
   onPlay: (index: number) => void;
   menuFor: (track: Track, from?: TrackSource) => MenuItem[];
-  showAlbum: boolean;
+  /** the columns between the title and the row's buttons, and the time (a stable reference, so the row memo holds) */
+  columns: readonly ShownColumn[];
+  /** when the song joined this list, or the library (ms; 0 = not known) */
+  added: number;
+  /** how often it was played, when that column shows */
+  plays: number;
   /** the list's name and songs (stable references, so the row memo holds): Branch off continues there */
   sourceName?: string;
   sourceTracks?: Track[];
@@ -136,7 +163,9 @@ const TrackRow = memo(function TrackRow({
   available,
   onPlay,
   menuFor,
-  showAlbum,
+  columns,
+  added,
+  plays,
   sourceName,
   sourceTracks,
 }: TrackRowProps) {
@@ -222,22 +251,38 @@ const TrackRow = memo(function TrackRow({
         </div>
       </div>
 
-      {showAlbum && (
-        <div className="w-52 hidden xl:block text-xs text-ink-faint truncate">
-          {track.albumId ? (
-            <button
-              className="hover:text-ink hover:underline text-left transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate({ name: "album", param: track.albumId });
-              }}
-            >
-              {track.album ?? T("Single")}
-            </button>
-          ) : (
-            track.album ?? ""
-          )}
-        </div>
+      {columns.map((c) =>
+        c.key === "time" ? null : (
+          <div key={c.key} style={cellWidth(c.key)} className={`shrink-0 text-xs text-ink-faint truncate ${c.right ? "text-right tabular-nums" : ""}`}>
+            {c.key === "album" ? (
+              track.albumId ? (
+                <button
+                  className="max-w-full truncate hover:text-ink hover:underline text-left transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate({ name: "album", param: track.albumId });
+                  }}
+                >
+                  {track.album ?? T("Single")}
+                </button>
+              ) : (
+                (track.album ?? "")
+              )
+            ) : c.key === "added" ? (
+              added > 0 ? addedLabel(added) : ""
+            ) : c.key === "released" ? (
+              releasedCell(track)
+            ) : c.key === "genre" ? (
+              (track.genre ?? "")
+            ) : c.key === "format" ? (
+              formatCell(track)
+            ) : plays > 0 ? (
+              plays
+            ) : (
+              ""
+            )}
+          </div>
+        )
       )}
 
       {/* A like and a saved copy stay in view; the rest shows on hover. */}
@@ -267,24 +312,152 @@ const TrackRow = memo(function TrackRow({
         </button>
       </div>
 
-      <div className="w-11 shrink-0 text-right text-xs text-ink-faint tabular-nums">
-        {track.duration > 0 ? fmtTime(track.duration) : "—"}
-      </div>
+      {columns.some((c) => c.key === "time") && (
+        <div className="w-11 shrink-0 text-right text-xs text-ink-faint tabular-nums">
+          {track.duration > 0 ? fmtTime(track.duration) : "—"}
+        </div>
+      )}
     </div>
   );
 });
+
+type ShownColumn = { key: TrackColumn; width: number; right: boolean };
+
+/** A column's width comes from the list (a CSS variable), so pulling it moves every row without a single one being drawn anew. */
+const cellWidth = (key: TrackColumn): CSSProperties => ({ width: `var(--col-${key})` });
+
+const COLUMN_LABEL: Record<TrackColumn, string> = {
+  album: T("Album"),
+  added: T("Added"),
+  released: T("Released"),
+  genre: T("Genre"),
+  format: T("Format"),
+  plays: T("Plays"),
+  time: T("Time"),
+};
+const NO_COUNTS = {};
+
+const SORT_LABEL: Record<SortKey, string> = {
+  title: T("Title"),
+  artist: T("Artist"),
+  album: T("Album"),
+  added: T("Date added"),
+  released: T("Release date"),
+  genre: T("Genre"),
+  format: T("Quality"),
+  plays: T("Plays"),
+  time: T("Duration"),
+};
+
+/** Which way a list stands ordered by this column, as the small mark beside its name. */
+function SortMark({ desc }: { desc: boolean }) {
+  return desc ? <ChevronDown aria-hidden className="w-3 h-3 shrink-0 text-accent" /> : <ChevronUp aria-hidden className="w-3 h-3 shrink-0 text-accent" />;
+}
+
+/**
+ * A column's name in the list's head: a click orders the list by it (again: the other way round;
+ * a third time: the list's own order), a drag moves the column. On its left edge, showing while
+ * the pointer is over the head, a small handle: pulled, the column gets wider or narrower; a
+ * double click gives it its own width back.
+ */
+function HeadCell({
+  column,
+  sorted,
+  moving,
+  onLabelDown,
+  onSort,
+  onPull,
+  onPulled,
+  onReset,
+}: {
+  column: ShownColumn;
+  /** the list is ordered by this column: which way */
+  sorted: ListSort | null;
+  /** being dragged to another place */
+  moving: boolean;
+  onLabelDown: (key: TrackColumn, e: ReactPointerEvent<HTMLElement>) => void;
+  /** from the keyboard: Enter or Space on the name */
+  onSort: (key: TrackColumn) => void;
+  onPull: (key: TrackColumn, width: number) => void;
+  onPulled: (key: TrackColumn, width: number) => void;
+  onReset: (key: TrackColumn) => void;
+}) {
+  const from = useRef<{ x: number; width: number; now: number } | null>(null);
+  const label = COLUMN_LABEL[column.key];
+  return (
+    <div data-col={column.key} style={cellWidth(column.key)} className={`relative shrink-0 ${column.right ? "text-right" : ""}`}>
+      <span
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={T("Width of the {name} column", { name: COLUMN_LABEL[column.key] })}
+        title={T("Drag to change the width; double-click to reset it")}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.currentTarget.setPointerCapture(e.pointerId);
+          from.current = { x: e.clientX, width: column.width, now: column.width };
+        }}
+        onPointerMove={(e) => {
+          if (!from.current) return;
+          // The column's right side stays where it is: pulling to the left makes it wider.
+          from.current.now = from.current.width - (e.clientX - from.current.x);
+          onPull(column.key, from.current.now);
+        }}
+        onPointerUp={(e) => {
+          if (!from.current) return;
+          e.currentTarget.releasePointerCapture(e.pointerId);
+          const { now, width } = from.current;
+          from.current = null;
+          if (now !== width) onPulled(column.key, now);
+        }}
+        onDoubleClick={() => onReset(column.key)}
+        className="column-grip absolute -left-[12px] top-1/2 -translate-y-1/2 w-[10px] h-5 grid place-items-center cursor-col-resize opacity-0 group-hover/head:opacity-100 focus-visible:opacity-100 transition-opacity"
+      >
+        <span className="w-[3px] h-3 rounded-full bg-ink-hi/30" />
+      </span>
+      <span
+        role="button"
+        tabIndex={0}
+        onPointerDown={(e) => onLabelDown(column.key, e)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSort(column.key);
+          }
+        }}
+        title={column.key === "time" ? T("Order by {name}", { name: label }) : T("Click to order by {name}, drag to move the column", { name: label })}
+        className={`inline-flex max-w-full items-center gap-1 align-middle cursor-pointer select-none transition-colors hover:text-ink-hi ${column.right ? "flex-row-reverse" : ""} ${
+          sorted ? "text-accent" : ""
+        } ${moving ? "text-ink-hi cursor-grabbing" : ""}`}
+      >
+        <span className="truncate">{label}</span>
+        {sorted && <SortMark desc={sorted.desc} />}
+      </span>
+    </div>
+  );
+}
 
 interface TrackListProps {
   tracks: Track[];
   onPlay?: (index: number) => void;
   showAlbum?: boolean;
   showHeader?: boolean;
+  /** when each song joined this list, by song (lib/listDates.ts); without it the Added column says when the library got the song */
+  addedDates?: ReadonlyMap<string, number>;
+  /** the list puts its newest songs first (Liked Songs); a playlist adds them at the end */
+  newestFirst?: boolean;
+  /** remembers how this list was last ordered ("liked", a playlist's or album's id); without it the order lasts as long as the page */
+  listKey?: string;
+  /** a search and an order to choose above the head (playlists, Liked Songs); what the search field says when empty */
+  searchLabel?: string;
   menuFor?: (track: Track, from?: TrackSource) => MenuItem[];
   /** the list's name ("Lanterns", "Liked Songs"): its songs can be branched off into from the queue */
   sourceName?: string;
   emptyLabel?: string;
   emptyTitle?: string;
 }
+
+/** A column's name, as an order: the time column orders by length. */
+const SORT_OF: Record<TrackColumn, SortKey> = { album: "album", added: "added", released: "released", genre: "genre", format: "format", plays: "plays", time: "time" };
 
 export function TrackList({
   tracks,
@@ -295,45 +468,344 @@ export function TrackList({
   sourceName,
   emptyLabel,
   emptyTitle = T("Nothing here yet"),
+  addedDates,
+  newestFirst = false,
+  listKey,
+  searchLabel,
 }: TrackListProps) {
+  const rawChoice = useSettings((s) => s.trackColumns);
+  const savedChoice = useMemo(() => readColumns(rawChoice), [rawChoice]);
+  const setChoice = useSettings((s) => s.setTrackColumns);
+  const openContextMenu = useUI((s) => s.openContextMenu);
+  const root = useRef<HTMLDivElement>(null);
+  const head = useRef<HTMLDivElement>(null);
+  const [room, setRoom] = useState(0);
+  useLayoutEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    setRoom(el.clientWidth);
+    const seen = new ResizeObserver(() => setRoom(el.clientWidth));
+    seen.observe(el);
+    return () => seen.disconnect();
+  }, [tracks.length === 0]);
+
+  // How the list stands ordered: remembered for the list, or for as long as the page is open.
+  const savedSort = useSettings((s) => (listKey ? s.listSorts?.[listKey] : undefined));
+  const [pageSort, setPageSort] = useState<ListSort | null>(null);
+  const sort = listKey ? readListSort(savedSort) : pageSort;
+  const setSort = useCallback(
+    (next: ListSort | null) => {
+      if (listKey) useSettings.getState().setListSort(listKey, next);
+      else setPageSort(next);
+    },
+    [listKey]
+  );
+  const sortBy = useCallback((key: SortKey) => setSort(nextListSort(sort, key)), [setSort, sort]);
+
+  // A column being dragged to another place: the head and the rows show it there at once, it's kept when let go.
+  const [dragChoice, setDragChoice] = useState<ReturnType<typeof moved> | null>(null);
+  const [movingKey, setMovingKey] = useState<TrackColumn | null>(null);
+  const choice = dragChoice ?? savedChoice;
+
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState("");
+
+  // When a song joined: this list, where the list knows. Songs that were in the list before
+  // dates were kept (likes from older versions, say) fall back to the day the library got them —
+  // close enough, and better than a blank — as does a list that keeps no dates of its own.
+  const addedOf = useCallback((t: Track): number => (addedDates?.get(songKey(t.id)) || t.addedAt) ?? 0, [addedDates]);
+  // A column nobody here could fill stays away, whatever is switched on.
+  const has = useMemo(
+    () => ({
+      album: showAlbum && tracks.some((t) => !!t.album),
+      added: tracks.some((t) => addedOf(t) > 0),
+      released: tracks.some((t) => !!releasedCell(t)),
+      genre: tracks.some((t) => !!t.genre),
+      format: tracks.some((t) => !!formatCell(t)),
+    }),
+    [tracks, showAlbum, addedOf]
+  );
+  const columns = useMemo(() => columnsFor(choice, has, room), [choice, has, room]);
+  const showsPlays = columns.some((c) => c.key === "plays") || sort?.key === "plays";
+  const playCounts = useCatalog((s) => (showsPlays ? s.playCounts : NO_COUNTS)) as Record<string, { plays: number } | undefined>;
+  const widths = useMemo(() => Object.fromEntries(TRACK_COLUMNS.map((c) => [`--col-${c.key}`, `${widthOf(choice, c.key)}px`])) as CSSProperties, [choice]);
+
+  // The songs as they show: in the order asked for, then what the search lets through.
+  const shown = useMemo(() => {
+    let list = tracks;
+    if (sort) {
+      const order = sort.key === "added" ? addedForOrder(tracks.map(addedOf), newestFirst) : null;
+      list = sortTracks(tracks, sort, (i) => order?.[i] ?? 0, (t) => playCounts[t.id]?.plays ?? 0);
+    }
+    return query.trim() ? list.filter((t) => matchesSearch(t, query)) : list;
+  }, [tracks, sort, addedOf, newestFirst, playCounts, query]);
+
+  const pull = useCallback((key: TrackColumn, width: number) => {
+    const spec = TRACK_COLUMNS.find((c) => c.key === key)!;
+    root.current?.style.setProperty(`--col-${key}`, `${Math.round(Math.min(spec.max, Math.max(spec.min, width)))}px`);
+  }, []);
+  const pulled = useCallback((key: TrackColumn, width: number) => setChoice(resized(readColumns(useSettings.getState().trackColumns), key, width)), [setChoice]);
+  const reset = useCallback((key: TrackColumn) => setChoice(resized(readColumns(useSettings.getState().trackColumns), key, null)), [setChoice]);
+  const chooseColumns = (x: number, y: number): void => {
+    const now = readColumns(useSettings.getState().trackColumns);
+    openContextMenu(
+      x,
+      y,
+      [
+        { label: T("Columns"), header: true },
+        ...TRACK_COLUMNS.filter((c) => c.key !== "album" || showAlbum).map((c): MenuItem => ({
+          label: COLUMN_LABEL[c.key],
+          icon: Check,
+          iconClassName: now.shown.includes(c.key) ? "" : "opacity-0",
+          action: () => setChoice(toggled(readColumns(useSettings.getState().trackColumns), c.key)),
+        })),
+      ],
+      { alignRight: true }
+    );
+  };
+
+  /**
+   * A press on a column's name: let go where it was, it orders the list; moved sideways, the column
+   * goes with the pointer, in front of the first other column whose middle lies past it.
+   */
+  const labelDown = useCallback(
+    (key: TrackColumn, e: ReactPointerEvent<HTMLElement>) => {
+      if (e.button !== 0) return;
+      const el = e.currentTarget;
+      // Capture so the drag survives leaving the head; a synthetic event (tests) has no real pointer to capture.
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* the move and up still come through the listeners below */
+      }
+      const startX = e.clientX;
+      let dragging = false;
+      let latest: ReturnType<typeof moved> | null = null;
+      const movable = key !== "time";
+      const move = (ev: PointerEvent): void => {
+        if (!movable) return;
+        if (!dragging && Math.abs(ev.clientX - startX) < 5) return;
+        if (!dragging) {
+          dragging = true;
+          setMovingKey(key);
+        }
+        const others = [...(head.current?.querySelectorAll<HTMLElement>("[data-col]") ?? [])].filter((c) => c.dataset.col !== key && c.dataset.col !== "time");
+        const next = others.find((c) => {
+          const r = c.getBoundingClientRect();
+          return r.left + r.width / 2 > ev.clientX;
+        });
+        const base = readColumns(useSettings.getState().trackColumns);
+        const candidate = moved(latest ?? base, key, (next?.dataset.col as TrackColumn | undefined) ?? null);
+        if (!latest || candidate.order?.join() !== latest.order?.join()) {
+          latest = candidate;
+          setDragChoice(candidate);
+        }
+      };
+      const up = (): void => {
+        el.removeEventListener("pointermove", move);
+        el.removeEventListener("pointerup", up);
+        el.removeEventListener("pointercancel", up);
+        try {
+          if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+        } catch {
+          /* nothing was captured */
+        }
+        if (dragging) {
+          if (latest) setChoice(latest);
+          setDragChoice(null);
+          setMovingKey(null);
+        } else {
+          sortBy(SORT_OF[key]);
+        }
+      };
+      el.addEventListener("pointermove", move);
+      el.addEventListener("pointerup", up);
+      el.addEventListener("pointercancel", up);
+    },
+    [setChoice, sortBy]
+  );
+  const sortByColumn = useCallback((key: TrackColumn) => sortBy(SORT_OF[key]), [sortBy]);
+
+  const chooseOrder = (x: number, y: number): void => {
+    const keys: SortKey[] = ["title", "artist", ...(has.album ? (["album"] as SortKey[]) : []), ...(has.added ? (["added"] as SortKey[]) : []), ...(has.released ? (["released"] as SortKey[]) : []), ...(has.genre ? (["genre"] as SortKey[]) : []), ...(has.format ? (["format"] as SortKey[]) : []), "plays", "time"];
+    openContextMenu(
+      x,
+      y,
+      [
+        { label: T("Order by"), header: true },
+        { label: T("Custom order"), icon: Check, iconClassName: sort ? "opacity-0" : "", action: () => setSort(null) },
+        ...keys.map((key): MenuItem => ({
+          label: SORT_LABEL[key],
+          icon: sort?.key === key ? (sort.desc ? ChevronDown : ChevronUp) : Check,
+          iconClassName: sort?.key === key ? "text-accent" : "opacity-0",
+          // The order already chosen, chosen again: the other way round.
+          action: () => setSort(sort?.key === key ? { key, desc: !sort.desc } : { key, desc: FIRST_DESC[key] }),
+        })),
+      ],
+      { alignRight: true }
+    );
+  };
+
   const currentId = usePlayer((s) => s.queue[s.index]?.id ?? null);
   const playing = usePlayer((s) => s.playing);
   const playQueue = usePlayer((s) => s.playQueue);
   const available = useAvailabilityCheck();
-  // Songs that can't play right now stay out of the queue (the clicked one can).
+  // Songs that can't play right now stay out of the queue (the clicked one can). What plays is
+  // what shows: the list in the order chosen, as far as the search lets it through.
   // Stable across renders, so the memoized rows don't all re-render with it.
   const playFromList = useCallback(
     (i: number) => {
       const queue: Track[] = [];
       let start = 0;
-      tracks.forEach((t, j) => {
+      shown.forEach((t, j) => {
         if (j === i) start = queue.length;
         if (j === i || available(t)) queue.push(t);
       });
       playQueue(queue, start);
     },
-    [tracks, available, playQueue]
+    [shown, available, playQueue]
   );
-  const play = onPlay ?? playFromList;
+  // A list that plays in its own way (an album from a song on) gets the song's place in the whole list.
+  const playOwn = useCallback((i: number) => onPlay?.(Math.max(0, tracks.indexOf(shown[i]))), [onPlay, tracks, shown]);
+  const play = onPlay ? (shown === tracks ? onPlay : playOwn) : playFromList;
 
   if (!tracks.length) {
     return <EmptyState icon={Play} title={emptyTitle} body={emptyLabel ?? T("Tracks will appear here.")} />;
   }
 
+  const closeSearch = (): void => {
+    setQuery("");
+    setSearching(false);
+  };
+
   return (
-    <div>
+    <div ref={root} style={widths}>
+      {searchLabel !== undefined && (
+        <div className="flex items-center justify-end gap-1 -mt-1 mb-2 min-h-[36px]">
+          {searching ? (
+            <label className="flex items-center gap-2 h-9 w-[260px] max-w-full px-3 rounded-full bg-ink-hi/[0.08] focus-within:bg-ink-hi/[0.11] transition-colors">
+              <Search className="w-4 h-4 shrink-0 text-ink-faint" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") closeSearch();
+                }}
+                onBlur={() => {
+                  if (!query.trim()) setSearching(false);
+                }}
+                placeholder={searchLabel}
+                aria-label={searchLabel}
+                className="flex-1 min-w-0 bg-transparent outline-none text-[13.5px] text-ink-hi placeholder:text-ink-faint"
+              />
+              {query && (
+                <button onClick={closeSearch} title={T("Clear the search")} aria-label={T("Clear the search")} className="text-ink-faint hover:text-ink-hi transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </label>
+          ) : (
+            <button
+              onClick={() => setSearching(true)}
+              title={searchLabel}
+              aria-label={searchLabel}
+              className="p-2 rounded-full text-ink-faint hover:text-ink-hi hover:bg-ink-hi/[0.07] transition-colors"
+            >
+              <Search className="w-[18px] h-[18px]" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              const at = e.currentTarget.getBoundingClientRect();
+              chooseOrder(at.right, at.bottom + 6);
+            }}
+            title={T("Order the list")}
+            className="inline-flex items-center gap-2 h-9 pl-3 pr-2.5 rounded-full text-[13px] font-medium text-ink-dim hover:text-ink-hi hover:bg-ink-hi/[0.07] transition-colors"
+          >
+            {sort ? SORT_LABEL[sort.key] : T("Custom order")}
+            <List className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       {showHeader && (
-        <div className="flex items-center gap-3 px-3 pb-2.5 mb-1 border-b border-ink-hi/[0.06] text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-ghost">
-          <div className="w-7 shrink-0">#</div>
+        <div
+          ref={head}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            chooseColumns(e.clientX, e.clientY);
+          }}
+          className="group/head flex items-center gap-3.5 px-3 pb-2.5 mb-1 border-b border-ink-hi/[0.06] text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-ghost"
+        >
+          <div className="w-7 shrink-0">
+            <button
+              onClick={() => setSort(null)}
+              title={T("The list's own order")}
+              className={`uppercase tracking-[0.14em] transition-colors hover:text-ink-hi ${sort ? "" : "text-ink-faint"}`}
+            >
+              #
+            </button>
+          </div>
           <div className="w-[52px] shrink-0" />
-          <div className="flex-1 min-w-0">{T("Title")}</div>
-          {showAlbum && <div className="w-52 shrink-0 hidden xl:block">{T("Album")}</div>}
-          <div className="w-[88px] shrink-0" />
-          <div className="w-11 shrink-0 text-right">{T("Time")}</div>
+          <div className="flex-1 min-w-[120px]">
+            <button
+              onClick={() => sortBy(sort?.key === "artist" ? "artist" : "title")}
+              title={T("Order by title")}
+              className={`inline-flex items-center gap-1 uppercase tracking-[0.14em] transition-colors hover:text-ink-hi ${sort?.key === "title" || sort?.key === "artist" ? "text-accent" : ""}`}
+            >
+              {sort?.key === "artist" ? T("Title · by artist") : T("Title")}
+              {(sort?.key === "title" || sort?.key === "artist") && <SortMark desc={sort.desc} />}
+            </button>
+          </div>
+          {columns.map((c) =>
+            c.key === "time" ? null : (
+              <HeadCell
+                key={c.key}
+                column={c}
+                sorted={sort && sort.key === SORT_OF[c.key] ? sort : null}
+                moving={movingKey === c.key}
+                onLabelDown={labelDown}
+                onSort={sortByColumn}
+                onPull={pull}
+                onPulled={pulled}
+                onReset={reset}
+              />
+            )
+          )}
+          {/* Over the rows' buttons, at the head's right end: which columns there are. */}
+          <div className="w-[88px] shrink-0 flex justify-end">
+            <button
+              onClick={(e) => {
+                const at = e.currentTarget.getBoundingClientRect();
+                chooseColumns(at.right, at.bottom + 6);
+              }}
+              title={T("Choose the columns")}
+              aria-label={T("Choose the columns")}
+              className="-my-1.5 p-1.5 rounded-md text-ink-ghost hover:text-ink-hi hover:bg-ink-hi/[0.07] transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {columns.some((c) => c.key === "time") && (
+            <div className="w-11 shrink-0 text-right">
+              <button
+                onClick={() => sortBy("time")}
+                title={T("Order by {name}", { name: SORT_LABEL.time })}
+                className={`inline-flex items-center gap-1 flex-row-reverse uppercase tracking-[0.14em] transition-colors hover:text-ink-hi ${sort?.key === "time" ? "text-accent" : ""}`}
+              >
+                {T("Time")}
+                {sort?.key === "time" && <SortMark desc={sort.desc} />}
+              </button>
+            </div>
+          )}
         </div>
       )}
       <div>
-        {tracks.map((track, i) => {
+        {shown.length === 0 && query.trim() ? (
+          <div className="py-10 text-center text-sm text-ink-dim">{T("No song here matches “{query}”", { query: query.trim() })}</div>
+        ) : null}
+        {shown.map((track, i) => {
           const isCurrent = sameSong(track.id, currentId);
           return (
             <Fragment key={`${track.id}-${i}`}>
@@ -346,13 +818,15 @@ export function TrackList({
                 available={available(track)}
                 onPlay={play}
                 menuFor={menuFor}
-                showAlbum={showAlbum}
+                columns={columns}
+                added={addedOf(track)}
+                plays={showsPlays ? (playCounts[track.id]?.plays ?? 0) : 0}
                 sourceName={sourceName}
-                sourceTracks={tracks}
+                sourceTracks={shown}
               />
               {/* Hairline divider, inset to the title column — mobile's
                   ROW_DIVIDER_INSET clears the 52dp artwork the same way. */}
-              {i < tracks.length - 1 && <div className="h-px bg-ink-hi/[0.05] ml-[120px] mr-3" />}
+              {i < shown.length - 1 && <div className="h-px bg-ink-hi/[0.05] ml-[120px] mr-3" />}
             </Fragment>
           );
         })}

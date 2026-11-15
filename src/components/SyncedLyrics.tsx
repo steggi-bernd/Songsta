@@ -255,15 +255,27 @@ export function LyricsView({
     >{T("Latin")}</button>
   ) : null;
 
-  const activeIndex = useMemo(() => {
-    if (!lines) return -1;
-    let idx = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].time <= position + 0.35) idx = i;
-      else break;
-    }
-    return idx;
-  }, [lines, position]);
+  // The playing element's own clock, read ten times a second: the store's place comes four times
+  // a second, and a line could come a quarter second late on top of what its lead makes up for.
+  // A new value only when the line changes, so the lines draw anew once a line, not ten times a second.
+  const playing = usePlayer((s) => s.playing);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  useEffect(() => {
+    const look = (): void => {
+      if (!lines) return setActiveIndex(-1);
+      const now = playing ? getPlaybackPosition() : position;
+      let idx = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].time <= now + 0.35) idx = i;
+        else break;
+      }
+      setActiveIndex(idx);
+    };
+    look();
+    if (!playing || !lines) return;
+    const timer = window.setInterval(look, 100);
+    return () => window.clearInterval(timer);
+  }, [playing, lines, position]);
 
   // Keep the active line on its anchor. Runs on lyrics load too — at mount
   // the layout isn't measured yet, so the first attempt needs a frame first.

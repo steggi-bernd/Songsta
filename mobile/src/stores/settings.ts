@@ -55,6 +55,8 @@ export interface Settings {
   dontRepeat: boolean;
   eqOn: boolean;
   eqGains: number[];
+  /** loud passages held back and quiet ones brought up (SoundEqualizer.kt) */
+  evenOut: boolean;
   syncedLyrics: boolean;
   dimLyrics: boolean;
   lyricsLatin: boolean;
@@ -103,6 +105,7 @@ const DEFAULTS: Settings = {
   dontRepeat: false,
   eqOn: false,
   eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  evenOut: false,
   syncedLyrics: true,
   dimLyrics: true,
   lyricsLatin: false,
@@ -134,6 +137,7 @@ interface SettingsState extends Settings {
 function tellPlayer(s: Settings): void {
   void Player.setTuning(s.skipSilence, s.speed, s.fadeSeconds, s.seamlessAlbums).catch(() => undefined);
   void Player.setEqualizer(s.eqOn, EQ_BANDS, s.eqGains).catch(() => undefined);
+  void Player.setEvenOut(s.evenOut).catch(() => undefined);
 }
 
 export const useSettings = create<SettingsState>((set, get) => ({
@@ -142,7 +146,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     set(next);
     const { change: _change, togglePin: _togglePin, ...saved } = get();
     writeJson(FILE, saved);
-    if (["skipSilence", "speed", "fadeSeconds", "seamlessAlbums", "eqOn", "eqGains"].some((key) => key in next)) tellPlayer(saved);
+    if (["skipSilence", "speed", "fadeSeconds", "seamlessAlbums", "eqOn", "eqGains", "evenOut"].some((key) => key in next)) tellPlayer(saved);
   },
   togglePin(key) {
     const { pins } = get();

@@ -39,6 +39,8 @@ const COVER_SIDE = 23;
 const COVER_RADIUS = 8;
 
 const MINI_RADIUS = 4;
+/** How dark the page beneath is under the player that has only just begun to go down (PullDownView.kt has the same). */
+const SHADE = 0.6;
 
 const QUALITIES: { mode: QualityMode; title: string; line: string }[] = [
   { mode: "auto", title: T("Automatic"), line: T("The best your connection carries, on mobile data up to AAC 256 kbps") },
@@ -285,6 +287,8 @@ export function PlayerSheet({
   const coverTop = coverArea.y + (coverArea.height - coverSize) / 2;
 
   const pageTop = useMemo(() => progress.interpolate({ inputRange: [0, 1], outputRange: [height, 0] }), [progress, height]);
+  // What lies beneath is darkened while the player is over it: least when it has gone down the furthest, as under the pages that close with a pull.
+  const shade = useMemo(() => progress.interpolate({ inputRange: [0, 1], outputRange: [0, SHADE] }), [progress]);
 
   const renderCover = useCallback(
     (t: Track) => (
@@ -323,6 +327,8 @@ export function PlayerSheet({
         >
           <MiniPlayer width={width} onOpen={open} />
         </View>
+
+        <Animated.View pointerEvents="none" style={[styles.shade, { opacity: shade }]} />
 
         <Animated.View
           pointerEvents={expanded ? "auto" : "none"}
@@ -421,6 +427,7 @@ export function PlayerSheet({
 
 const styles = StyleSheet.create({
   back: { ...StyleSheet.absoluteFill, backgroundColor: "#121212" },
+  shade: { ...StyleSheet.absoluteFill, backgroundColor: "#000" },
   page: { position: "absolute", left: 0, right: 0, top: 0 },
   bigCover: { position: "absolute", left: 0, right: 0, overflow: "hidden" },
   statusFade: { position: "absolute", left: 0, right: 0, top: 0 },

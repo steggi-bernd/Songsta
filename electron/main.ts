@@ -1,7 +1,7 @@
 /** Songsta desktop — Electron main process. */
 // First of all: the data folder moves before anything else opens a file in it.
 import "./rename-data";
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, protocol, session, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, protocol, screen, session, shell } from "electron";
 import type { NativeImage } from "electron";
 import { fileURLToPath, pathToFileURL } from "url";
 import * as m3u from "./m3u";
@@ -37,6 +37,7 @@ import * as transcode from "./transcode";
 import * as transition from "./data-transition";
 import { buildAppMenu, type MenuCommand, type MenuPlaybackState, type MenuWiring } from "./mac-menu";
 import * as startup from "./startup";
+import { onAnotherScreen, placeOn, placeToKeep, readPlace, strayed, type Area, type WindowPlace } from "./window-place";
 import type { Track } from "../src/types";
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
@@ -187,11 +188,17 @@ function thumbarIcon(name: "previous" | "play" | "pause" | "next"): NativeImage 
 }
 
 let thumbarThemeWatched = false;
+/**
+ * The window has been shown, so Windows has a taskbar button for it. Buttons set before that are
+ * lost for good: Windows says they took, shows none, and every later call only updates buttons
+ * that were never added. The page tells its playback state before the window shows, so this waits.
+ */
+let thumbarReady = false;
 
 /** Returns true when the taskbar accepted the buttons (false = too early). */
 function applyThumbar(): boolean {
   if (process.platform !== "win32") return true;
-  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (!mainWindow || mainWindow.isDestroyed() || !thumbarReady) return false;
   const command = (c: MenuCommand) => (): void => menuWiring().sendCommand(c);
   return mainWindow.setThumbarButtons([
     { icon: thumbarIcon("previous"), tooltip: "Previous", click: command("previous") },
@@ -219,10 +226,68 @@ function watchServerReach(): void {
   powerMonitor.on("resume", () => void look());
 }
 
+/* ------------------------------ the window's place ------------------------------ */
+
+const WINDOW_STORE = "window";
+/** the window as last seen on a screen: what gets written down, and where it belongs after a minimize */
+let windowPlace: WindowPlace | null = null;
+/** set while the window is in the taskbar: the place it left from */
+let placeBeforeMinimize: WindowPlace | null = null;
+let placeTimer: NodeJS.Timeout | null = null;
+/** the size the window last had when it didn't fill a screen */
+let ownSize: { width: number; height: number } | null = null;
+let homeTimer: NodeJS.Timeout | null = null;
+const SETTLED_MS = 500;
+
+const workAreas = (): Area[] => screen.getAllDisplays().map((d) => d.workArea);
+
+/**
+ * The window fills one screen while Windows keeps its own bounds on another: it was taken over
+ * while maximized, or the screens went off and on and Windows shuffled the windows. From there it
+ * would minimize towards that other screen's taskbar and come back on that screen. Once things
+ * have settled, its bounds are brought over to the screen it shows on.
+ */
+function bringHome(): void {
+  homeTimer = null;
+  const win = mainWindow;
+  if (!win || win.isDestroyed() || placeBeforeMinimize || win.isMinimized() || win.isFullScreen() || !win.isMaximized()) return;
+  const areas = workAreas();
+  if (!strayed(win.getNormalBounds(), win.getBounds(), true, areas)) return;
+  const to = placeToKeep(win.getNormalBounds(), win.getBounds(), true, areas, ownSize ?? undefined);
+  win.unmaximize();
+  win.setBounds({ x: to.x, y: to.y, width: to.width, height: to.height });
+  win.maximize();
+}
+
+/** Size, place and screen as the window stands now. Nothing new while it's in the taskbar or fills the screen as a video does. */
+function notePlace(): void {
+  if (!mainWindow || mainWindow.isDestroyed() || placeBeforeMinimize || mainWindow.isMinimized() || mainWindow.isFullScreen()) return;
+  const normal = mainWindow.getNormalBounds();
+  const shown = mainWindow.getBounds();
+  const maximized = mainWindow.isMaximized();
+  const areas = workAreas();
+  if (!maximized) ownSize = { width: normal.width, height: normal.height };
+  windowPlace = placeToKeep(normal, shown, maximized, areas, ownSize ?? undefined);
+  if (homeTimer) clearTimeout(homeTimer);
+  homeTimer = strayed(normal, shown, maximized, areas) ? setTimeout(bringHome, SETTLED_MS) : null;
+  if (placeTimer) clearTimeout(placeTimer);
+  placeTimer = setTimeout(() => {
+    placeTimer = null;
+    void persist.writeData(WINDOW_STORE, windowPlace).catch(() => undefined);
+  }, 600);
+}
+
 function createWindow(): void {
+  // Where it was left: its size, its place, its screen. Null on the first start, or when that screen is gone.
+  const place = placeOn(readPlace(persist.readData(WINDOW_STORE)), workAreas());
+  windowPlace = place;
+  ownSize = place ? { width: place.width, height: place.height } : null;
+  placeBeforeMinimize = null;
+  thumbarReady = false;
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    width: place?.width ?? 1280,
+    height: place?.height ?? 820,
+    ...(place ? { x: place.x, y: place.y } : {}),
     minWidth: 1000,
     minHeight: 640,
     backgroundColor: "#0a0a0a",
@@ -254,10 +319,31 @@ function createWindow(): void {
   });
 
   mainWindow.once("ready-to-show", () => {
-    // Windows opens maximized by default; macOS keeps a normal-sized window
-    // (Spotify's convention) — the user's own zoom is remembered by the OS.
-    if (!isMac && !mainWindow?.isMaximized()) mainWindow?.maximize();
+    // The first start opens maximized (macOS a normal-sized window, Spotify's
+    // convention); from then on the window comes back the way it was left.
+    if ((place ? place.maximized : !isMac) && !mainWindow?.isMaximized()) mainWindow?.maximize();
     mainWindow?.show();
+  });
+
+  // What the next start goes by, kept as the window is moved, sized, maximized.
+  mainWindow.on("resize", notePlace);
+  mainWindow.on("move", notePlace);
+  mainWindow.on("maximize", notePlace);
+  mainWindow.on("unmaximize", notePlace);
+  mainWindow.on("minimize", () => {
+    placeBeforeMinimize = windowPlace;
+  });
+  // Back from the taskbar on another screen than it went there from (seen with two screens, the
+  // window on the second): put back where it was.
+  mainWindow.on("restore", () => {
+    const was = placeBeforeMinimize;
+    placeBeforeMinimize = null;
+    if (mainWindow && was && onAnotherScreen(mainWindow.getBounds(), was, workAreas())) {
+      if (mainWindow.isMaximized()) mainWindow.unmaximize();
+      mainWindow.setBounds({ x: was.x, y: was.y, width: was.width, height: was.height });
+      if (was.maximized) mainWindow.maximize();
+    }
+    notePlace();
   });
 
   // Windows taskbar thumbbar: the toolbar can only attach once the window
@@ -270,7 +356,10 @@ function createWindow(): void {
       if (isDev) console.log("[bytune] taskbar thumbbar:", ok ? "attached" : "deferred");
       if (!ok && triesLeft > 0) setTimeout(() => attach(triesLeft - 1), 1500);
     };
-    mainWindow.once("show", () => attach(5));
+    mainWindow.once("show", () => {
+      thumbarReady = true;
+      attach(5);
+    });
     // Again whenever the window comes back: without a play or pause nothing else would, and
     // Windows forgets the buttons of a window it rebuilt its taskbar for.
     mainWindow.on("show", () => void applyThumbar());
@@ -359,6 +448,18 @@ function createWindow(): void {
   // and the Dock icon brings it back via the activate handler. Only a real
   // quit (Cmd+Q, Dock → Quit) destroys the window.
   mainWindow.on("close", (event) => {
+    // Written down for certain: a timer might not get to run any more.
+    if (placeTimer) clearTimeout(placeTimer);
+    placeTimer = null;
+    if (homeTimer) clearTimeout(homeTimer);
+    homeTimer = null;
+    if (windowPlace) {
+      try {
+        persist.writeDataSync(WINDOW_STORE, windowPlace);
+      } catch {
+        /* the next start opens it as on the first day */
+      }
+    }
     if (isMac && !quitting) {
       event.preventDefault();
       mainWindow?.hide();
@@ -434,6 +535,8 @@ const RENDERER_STORES = new Set([
   "muted",
   "device-names",
   "server-sync",
+  // when each song joined Liked Songs or a playlist (lib/listDates.ts)
+  "list-dates",
 ]);
 /** "jf:<item>" / "ss:<song>" — a song on one of the servers. */
 function serverItem(id: unknown): { kind: "jf" | "ss"; raw: string } {

@@ -692,6 +692,8 @@ async function beginFade(nextTrack: Track, fadeMs: number): Promise<void> {
     // If the user interacted meanwhile, re-check.
     const s2 = usePlayer.getState();
     if (s2.index >= s2.queue.length - 1 || s2.queue[s2.index + 1]?.id !== nextTrack.id) return;
+    // Repeat one came on in these last seconds (from here or from another device): this song stays.
+    if (s2.repeat === "one") return;
     const main = el();
     if (!s2.playing) {
       try {
@@ -715,11 +717,8 @@ async function beginFade(nextTrack: Track, fadeMs: number): Promise<void> {
     if (plan.smart) {
       useUI.getState().toast(T("Automix: {reason}", { reason: plan.reason }), "info");
     }
-    try {
-      void stand.play();
-    } catch {
-      /* fade falls back below if the standby refuses */
-    }
+    // The fade falls back below if the standby refuses.
+    void stand.play().catch(() => undefined);
     stopPpRamp();
     applyElementVolumes(1, 0);
     driveFade();
@@ -1022,9 +1021,8 @@ function armSilenceTail(tailSec: number): void {
     if (transitioning()) return;
     const cur = el();
     if (!Number.isFinite(cur.duration)) return;
-    if (cur.currentTime >= cur.duration - tailSec - 0.05) {
-      usePlayer.getState().next(false);
-    }
+    // The silent tail is this song's end, with all an end means: on repeat one it starts over.
+    if (cur.currentTime >= cur.duration - tailSec - 0.05) onTrackEnded();
   };
   silenceTailTimer = window.setInterval(check, 500);
   void check();
@@ -1320,7 +1318,7 @@ function onTrackEnded(): void {
   }
   if (state.repeat === "one") {
     const a = el();
-    a.currentTime = 0;
+    a.currentTime = useSettings.getState().skipSilence ? (silenceTrims.get(current.id)?.head ?? 0) : 0;
     void a.play().catch(() => undefined);
     return;
   }

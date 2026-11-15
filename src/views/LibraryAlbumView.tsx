@@ -128,7 +128,7 @@ export function LibraryAlbumView({ param }: { param: string }) {
       </div>
       {editing && <AlbumEditor album={album} onClose={() => setEditing(false)} />}
 
-      <TrackList tracks={album.tracks} sourceName={album.title} emptyLabel={T("No songs.")} />
+      <TrackList tracks={album.tracks} showAlbum={false} sourceName={album.title} emptyLabel={T("No songs.")} />
 
       {more.length > 0 && (
         <section className="pt-2">

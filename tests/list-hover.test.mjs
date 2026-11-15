@@ -15,7 +15,8 @@ const sources = fs
 
 test("a row that swaps its number and play button on hover keeps that spot's size", () => {
   const swapping = sources.filter((s) => s.text.includes("hidden group-hover:block"));
-  assert.ok(swapping.length >= 2, "the list rows are found");
+  // The song list (components/TrackList.tsx) is the one place since the playlist page uses it too.
+  assert.ok(swapping.length >= 1, "the list rows are found");
   for (const { file, text } of swapping) {
     const swaps = text.split("hidden group-hover:block").length - 1;
     const spots = text.split("row-number").length - 1;

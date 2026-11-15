@@ -174,8 +174,8 @@ let inFlight: Promise<CanvasHit | null> | null = null;
 let inFlightKey = "";
 
 /**
- * The canvas for a track, or null. Never throws; a local file has no
- * catalogue identity worth searching on.
+ * The canvas for a track, or null. Never throws. Found by title, artist and
+ * album, so a file of the user's own finds it as a server song does.
  */
 export async function canvasFor(
   title: string,

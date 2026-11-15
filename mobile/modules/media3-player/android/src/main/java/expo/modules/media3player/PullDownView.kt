@@ -32,6 +32,7 @@ class PullDownView(context: Context, appContext: AppContext) : ExpoView(context,
   private var downY = 0f
   private var pulling = false
   private var velocity: VelocityTracker? = null
+  private val spot = IntArray(2)
 
   override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
     when (ev.actionMasked) {
@@ -43,7 +44,7 @@ class PullDownView(context: Context, appContext: AppContext) : ExpoView(context,
       MotionEvent.ACTION_MOVE -> {
         val dy = ev.rawY - downY
         val dx = ev.rawX - downX
-        if (!pulling && dy > slop && dy > abs(dx) * 1.5f && !canScrollUp(this)) {
+        if (!pulling && dy > slop && dy > abs(dx) * 1.5f && !canScrollUp(this, downX, downY)) {
           pulling = true
           // From here on, without a jump by the slop.
           downY = ev.rawY
@@ -102,10 +103,19 @@ class PullDownView(context: Context, appContext: AppContext) : ExpoView(context,
     shade()?.alpha = SHADE * (1f - gone)
   }
 
-  /** Some list in here can still scroll up, at the place it shows. */
-  private fun canScrollUp(view: View): Boolean {
-    if (view !== this && view.isShown && view.canScrollVertically(-1)) return true
-    if (view is ViewGroup) for (i in 0 until view.childCount) if (canScrollUp(view.getChildAt(i))) return true
+  /**
+   * Some list under the finger can still scroll up, at the place it shows. A pull that starts beside
+   * every list, on a page's head say, is the page's whatever the lists show: lyrics that have run on
+   * with the song don't keep their page from closing.
+   */
+  private fun canScrollUp(view: View, x: Float, y: Float): Boolean {
+    if (view !== this) {
+      if (!view.isShown) return false
+      view.getLocationOnScreen(spot)
+      if (x < spot[0] || x > spot[0] + view.width || y < spot[1] || y > spot[1] + view.height) return false
+      if (view.canScrollVertically(-1)) return true
+    }
+    if (view is ViewGroup) for (i in 0 until view.childCount) if (canScrollUp(view.getChildAt(i), x, y)) return true
     return false
   }
 

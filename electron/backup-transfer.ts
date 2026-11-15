@@ -13,7 +13,7 @@
  */
 
 /** Device-local settings a backup must never carry or overwrite: a folder, an output device, what this install has heard of. */
-export const DEVICE_LOCAL_SETTINGS = new Set(["pairHinted", "localMusicFolder", "audioSinkId", "newVersion", "lastVersion", "keptLists", "setupDone", "pairedTvs"]);
+export const DEVICE_LOCAL_SETTINGS = new Set(["pairHinted", "localMusicFolder", "audioSinkId", "newVersion", "lastVersion", "keptLists", "setupDone", "pairedTvs", "trackColumns", "listSorts"]);
 
 /** Known settings keys — junk in, junk never out. Every setting of stores/settings.ts stands here (a test sees to that). */
 export const SETTINGS_KEYS = new Set([
@@ -24,6 +24,8 @@ export const SETTINGS_KEYS = new Set([
   "skipSilence",
   "autoplay",
   "skipEndsRepeatOne",
+  "trackColumns",
+  "listSorts",
   "playbackSpeed",
   "audioSinkId",
   "eqEnabled",

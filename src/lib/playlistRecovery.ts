@@ -11,7 +11,7 @@ import { useSpotifyImport } from "../stores/spotifyImport";
 import { useUI } from "../stores/ui";
 import type { Track } from "../types";
 import { T } from "./i18n";
-import { applyDecisions, completePlaylist, matchEntries, type ImportDecisions, type ImportRow, type SpotifyEntry } from "./spotifyImport";
+import { applyDecisions, completePlaylist, importOrder, matchEntries, type ImportDecisions, type ImportRow, type SpotifyEntry } from "./spotifyImport";
 
 /** A hand-picked id may be a copy the catalogue merged into another song: that song, then. */
 function songById(id: string): Track | undefined {
@@ -20,7 +20,7 @@ function songById(id: string): Track | undefined {
   return tracks.find((t) => t.id === primary) ?? byId.get(id);
 }
 
-function rowsOf(entries: SpotifyEntry[], tracks: Track[], decisions: ImportDecisions): ImportRow[] {
+export function rowsOf(entries: SpotifyEntry[], tracks: Track[], decisions: ImportDecisions): ImportRow[] {
   return applyDecisions(matchEntries(entries, tracks), decisions, songById);
 }
 
@@ -47,6 +47,27 @@ function completeAll(): void {
     lib.setPlaylistTracks(id, tracks);
     useUI.getState().toast(T("Added {added} {value} to “{name}”, in Spotify's order", { added, value: added === 1 ? T("song") : T("songs"), name: playlist.name }), "success");
   }
+  completeLiked();
+}
+
+/**
+ * Liked Songs brought over from Spotify finish themselves the same way: once the export's songs
+ * were added to Liked Songs, every song of it found later (bought since, or answered "same song")
+ * joins them in its Spotify place. A song laid out before and taken out by hand stays out.
+ */
+function completeLiked(): void {
+  const imp = useSpotifyImport.getState();
+  const catalog = useCatalog.getState();
+  if (!imp.entries.length || !imp.likedIds.length) return;
+  const lib = useLibrary.getState();
+  const rows = rowsOf(imp.entries, catalog.tracks, { verdicts: imp.verdicts, picks: imp.picks });
+  const likedSongs = new Set(lib.liked.map((t) => songKey(t.id)));
+  const broughtBefore = new Set(imp.likedIds.map(songKey));
+  const order = importOrder(rows, likedSongs, songKey).filter((t) => likedSongs.has(songKey(t.id)) || !broughtBefore.has(songKey(t.id)));
+  if (!order.some((t) => !likedSongs.has(songKey(t.id)))) return;
+  const added = lib.importLikes(order, imp.likedIds);
+  imp.noteLiked(order.map((t) => t.id));
+  if (added > 0) useUI.getState().toast(T("Added {added} {value} to Liked Songs, in Spotify's order", { added, value: added === 1 ? T("song") : T("songs") }), "success");
 }
 
 /** Mount once (App). Only a change in the library's songs or an answer counts, not a cover arriving. */

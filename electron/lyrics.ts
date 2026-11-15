@@ -93,10 +93,10 @@ function stampMs(min: string, sec: string, frac: string): number {
 
 /** Rendition markers that change the timing itself — a match to the normal
  * studio cut can never stay in sync with these, no matter the offset. */
-const EDITION_MARKERS = /(sped[ -]?up|slowed(?:\s*(?:\+|and|&)?\s*(?:down|reverb))?|reverb|nightcore|daycore|super\s*(?:sped|slowed)|remix|bootleg|live)/i;
+const EDITION_MARKERS = /\b(sped[ -]?up|slowed(?:\s*(?:\+|and|&)?\s*(?:down|reverb))?|reverb|nightcore|daycore|super\s*(?:sped|slowed)|remix|bootleg|live)\b/i;
 
 /** The edition word on the upload's own title, when it names one. */
-function editionOf(title: string): string | null {
+export function editionOf(title: string): string | null {
   return EDITION_MARKERS.exec(title)?.[0]?.toLowerCase() ?? null;
 }
 

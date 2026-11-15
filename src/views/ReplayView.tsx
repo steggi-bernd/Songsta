@@ -174,183 +174,235 @@ export function ReplayView() {
     duration: 0,
   }));
 
+  const periodName = period === "month" ? T("This month") : period === "lastMonth" ? T("Last month") : period === "year" ? String(new Date().getFullYear()) : T("All of it");
+  const minutes = Math.round((data?.totalMs ?? 0) / 60000);
+  const topAlbum = data?.albums[0];
+  const topAlbumThumb = topAlbum ? albumThumb(topAlbum) : "";
+  const flowCovers = (data?.albums ?? []).map(albumThumb).filter(Boolean).slice(0, 7);
+  const pulse = pulseOf(data?.days ?? [], period === "year" || period === "all");
+  const maxPulse = Math.max(1, ...pulse.map((p) => p.ms));
+  const pulseCovers = flowCovers.length ? flowCovers : topTracks.map((t) => t.thumb).filter(Boolean);
+  const faces = (data?.artists ?? []).slice(0, 5).map((a) => ({ ...a, photo: a.thumb || artistThumbs[a.name] || "" }));
+  const play = (i: number): void => {
+    playQueue(topTracks, i);
+    toast(T("Playing {title}", { title: topTracks[i].title }), "info");
+  };
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4 flex-wrap animate-slide-up">
-        <div>
-          <h1 className="font-display text-[34px] font-bold tracking-[-0.03em] text-ink-hi">{T("Replay")}</h1>
-          <p className="text-[13.5px] text-ink-dim mt-1">{T("Your listening, counted by Songsta — nothing estimated, kept on this computer.")}</p>
+    <div className="page-bleed -mt-5 pb-12 overflow-hidden">
+      {/* The opening: the period, loud, over its top albums fanned out like a record shelf. */}
+      <div className="relative overflow-hidden">
+        {topAlbumThumb && <img src={topAlbumThumb} alt="" aria-hidden className="absolute -inset-20 w-[calc(100%+160px)] h-[calc(100%+160px)] object-cover blur-[110px] saturate-150 brightness-[0.32]" />}
+        <div className="relative page-pad pt-12">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="text-[13px] font-black tracking-[0.3em] text-accent">{T("SONGSTA REPLAY")}</div>
+            <Pills options={PERIODS.map((p) => ({ key: p.key, label: p.label }))} value={period} onChange={(k) => setPeriod(k as typeof period)} />
+          </div>
+          <h1 className="font-display font-black tracking-[-0.065em] leading-[0.88] text-ink-hi mt-3 text-[clamp(64px,11vw,170px)]">
+            {hasData ? T("{period} was", { period: periodName }) : periodName}
+            <br />
+            <span className="italic text-accent">{hasData ? T("loud.") : T("still quiet.")}</span>
+          </h1>
         </div>
-        <Pills options={PERIODS.map((p) => ({ key: p.key, label: p.label }))} value={period} onChange={(k) => setPeriod(k as typeof period)} />
+
+        {loading && <div className="page-pad py-10"><div className="skeleton h-64 rounded-2xl" /></div>}
+
+        {!loading && !hasData && (
+          <div className="relative page-pad py-10">
+            <EmptyState icon={Clock3} title={T("Nothing here yet")} body={T("Play something first — Replay fills in as Songsta counts what you actually listen to.")} />
+          </div>
+        )}
+
+        {!loading && hasData && data && (
+          <>
+            {flowCovers.length >= 3 && (
+              <div className="relative flex items-center justify-center h-[340px] mt-2" style={{ perspective: 1400 }}>
+                {flowCovers.map((src, i) => {
+                  const mid = (flowCovers.length - 1) / 2;
+                  const off = i - mid;
+                  const size = Math.round(330 - Math.abs(off) * 62);
+                  return (
+                    <img
+                      key={`${src}-${i}`}
+                      src={src}
+                      alt=""
+                      className="shrink-0 object-cover rounded-xl relative shadow-[0_50px_100px_-24px_rgba(0,0,0,0.95)]"
+                      style={{ width: size, height: size, marginLeft: i === 0 ? 0 : -34, transform: `rotateY(${Math.round(-off * 19)}deg)`, zIndex: 10 - Math.round(Math.abs(off)), filter: `brightness(${1 - Math.abs(off) * 0.16})` }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+            <div className="relative page-pad flex gap-x-14 gap-y-2 flex-wrap items-baseline pt-6 pb-10">
+              <BigNumber value={minutes.toLocaleString()} label={T("MINUTES")} />
+              <BigNumber value={data.plays.toLocaleString()} label={T("PLAYS")} />
+              <BigNumber value={String(data.artists.length)} label={T("ARTISTS")} />
+            </div>
+          </>
+        )}
       </div>
-
-      {loading && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="skeleton h-28 rounded-2xl" />
-          ))}
-        </div>
-      )}
-
-      {!loading && !hasData && (
-        <EmptyState
-          icon={Clock3}
-          title={T("Nothing here yet")}
-          body={T("Play something first — Replay fills in as Songsta counts what you actually listen to.")}
-        />
-      )}
 
       {!loading && hasData && data && (
         <>
-          {/* Hero stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
-            <div className="glass-pill rounded-2xl p-5">
-              <div className="text-[12px] uppercase tracking-[0.12em] text-ink-faint font-semibold">{T("Listening time")}</div>
-              <div className="font-display text-[30px] font-bold text-ink-hi mt-2">{fmtHours(data.totalMs)}</div>
-            </div>
-            <div className="glass-pill rounded-2xl p-5">
-              <div className="text-[12px] uppercase tracking-[0.12em] text-ink-faint font-semibold">{T("Plays")}</div>
-              <div className="font-display text-[30px] font-bold text-ink-hi mt-2">{data.plays}</div>
-            </div>
-            <div className="glass-pill rounded-2xl p-5">
-              <div className="text-[12px] uppercase tracking-[0.12em] text-ink-faint font-semibold">{T("Top artist")}</div>
-              <div className="font-display text-[19px] font-bold text-ink-hi mt-2 truncate">
-                {data.artists[0]?.name ?? "—"}
-              </div>
-              {data.artists[0] && <div className="text-[12.5px] text-ink-dim mt-1">{fmtHours(data.artists[0].ms)}</div>}
-            </div>
-            <div className="glass-pill rounded-2xl p-5">
-              <div className="text-[12px] uppercase tracking-[0.12em] text-ink-faint font-semibold">{T("Top song")}</div>
-              <div className="font-display text-[19px] font-bold text-ink-hi mt-2 truncate">
-                {data.tracks[0]?.title ?? "—"}
-              </div>
-              {data.tracks[0] && <div className="text-[12.5px] text-ink-dim mt-1 truncate">{data.tracks[0].artist}</div>}
-            </div>
-          </div>
-
-          {/* Listening activity */}
-          {recentDays.length > 1 && (
-            <section>
-              <h2 className="section-title text-[21px] mb-4">{T("Listening activity")}</h2>
-              <div className="glass-pill rounded-2xl p-5">
-                <div className="flex items-end gap-1.5 h-28">
-                  {recentDays.map((d) => (
-                    <div
-                      key={d.date}
-                      title={`${fmtDate(d.date)} — ${fmtHours(d.ms)}`}
-                      className="flex-1 rounded-t-md bg-accent/70 hover:bg-accent transition-colors min-h-[3px]"
-                      style={{ height: `${Math.max(3, (d.ms / maxDay) * 100)}%` }}
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-between text-[11px] text-ink-faint mt-2">
-                  <span>{fmtDate(recentDays[0].date)}</span>
-                  <span>{fmtDate(recentDays[recentDays.length - 1].date)}</span>
+          {/* N°1: the album of the period, tilted over the page's edge, in its own colours. */}
+          {topAlbum && (
+            <div className="relative overflow-hidden min-h-[560px] flex items-center">
+              {topAlbumThumb && <img src={topAlbumThumb} alt="" aria-hidden className="absolute -inset-20 w-[calc(100%+160px)] h-[calc(100%+160px)] object-cover blur-[80px] saturate-[1.7] brightness-50" />}
+              {topAlbumThumb && (
+                <img src={topAlbumThumb} alt="" className="absolute -left-[70px] top-1/2 w-[min(46vw,520px)] aspect-square object-cover rounded-2xl shadow-[0_60px_140px_-30px_rgba(0,0,0,0.95)]" style={{ transform: "translateY(-50%) rotate(-9deg)" }} />
+              )}
+              <div className="relative ml-[min(42vw,470px)] pr-8 py-16 min-w-0">
+                <div className="font-black leading-[0.8] text-transparent text-[clamp(80px,12vw,190px)]" style={{ WebkitTextStroke: "3px rgba(255,255,255,0.4)" }}>N°1</div>
+                <div className="font-display font-black tracking-[-0.06em] leading-[0.92] text-white mt-4 text-[clamp(44px,8vw,130px)] break-words">{topAlbum.name}</div>
+                <div className="inline-block mt-5 px-4 py-2 bg-[#0b0b0d] text-white text-[clamp(14px,1.6vw,22px)] font-extrabold" style={{ transform: "rotate(2deg)" }}>
+                  {[topAlbum.artist, fmtHours(topAlbum.ms)].filter(Boolean).join(" — ")}
                 </div>
               </div>
-            </section>
+            </div>
           )}
 
-          {/* Listening clock */}
-          <section>
-            <h2 className="section-title text-[21px] mb-4">{T("When you listen")}</h2>
-            <div className="glass-pill rounded-2xl p-5">
-              <div className="flex items-end gap-1 h-20">
-                {data.hours.map((ms, h) => (
-                  <div key={h} title={`${h}:00 — ${fmtHours(ms)}`} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className="w-full rounded-t-sm bg-ink-hi/25 hover:bg-ink-hi/50 transition-colors min-h-[2px]"
-                      style={{ height: `${Math.max(2, (ms / maxHour) * 72)}px` }}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between text-[11px] text-ink-faint mt-2">
-                <span>{T("12am")}</span>
-                <span>{T("6am")}</span>
-                <span>{T("12pm")}</span>
-                <span>{T("6pm")}</span>
-                <span>{T("11pm")}</span>
+          {/* Five songs as a fan of cards. */}
+          {topTracks.length > 0 && (
+            <div className="page-pad pt-24 pb-28">
+              <h2 className="font-display font-black tracking-[-0.06em] leading-[0.9] text-ink-hi text-[clamp(48px,8vw,120px)]">
+                {T("Five you")}
+                <br />
+                <span className="italic text-accent">{T("couldn't stop.")}</span>
+              </h2>
+              <div className="flex justify-center mt-16 pl-[60px]">
+                {topTracks.slice(0, 5).map((t, i, all) => {
+                  const off = i - (all.length - 1) / 2;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => play(i)}
+                      title={T("Play {title}", { title: t.title })}
+                      className="relative w-[250px] shrink-0 -ml-[60px] rounded-2xl overflow-hidden bg-[#17171b] text-left shadow-[0_40px_90px_-20px_rgba(0,0,0,0.95),inset_0_0_0_1px_rgba(255,255,255,0.08)] transition-transform duration-200 hover:z-10 hover:!rotate-0 hover:!translate-y-[-14px]"
+                      style={{ transform: `rotate(${off * 5}deg) translateY(${Math.round(Math.abs(off) * Math.abs(off) * 7)}px)` }}
+                    >
+                      <Artwork src={t.thumb} className="w-[250px] h-[250px]" iconClassName="w-10 h-10" alt="" />
+                      <span className="absolute left-3 top-1 text-[110px] font-black tracking-[-0.06em] leading-none text-white drop-shadow-[0_6px_30px_rgba(0,0,0,0.8)]">{i + 1}</span>
+                      <span className="block px-4 pt-3.5 pb-4">
+                        <span className="block text-[21px] font-black tracking-[-0.02em] text-white truncate">{t.title}</span>
+                        <span className="block text-[13px] text-zinc-400 truncate">{t.artist}</span>
+                        <span className="block text-[13px] font-extrabold text-accent mt-2">{plural(data.tracks[i].plays, T("play"), T("plays"))}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </section>
+          )}
 
-          {/* Top tracks + artists */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            <section>
-              <h2 className="section-title text-[21px] mb-4">{T("Top songs")}</h2>
-              <div className="glass-pill rounded-2xl p-2">
-                {topTracks.slice(0, 10).map((t, i) => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      playQueue(topTracks, i);
-                      toast(T("Playing {title}", { title: t.title }), "info");
-                    }}
-                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-ink-hi/[0.05] transition-colors text-left"
-                  >
-                    <span className="w-6 text-center text-[13px] font-bold text-ink-faint">{i + 1}</span>
-                    <Artwork src={t.thumb} className="w-11 h-11 rounded-lg shrink-0" iconClassName="w-4 h-4" alt="" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[14px] font-semibold text-ink-hi truncate">{t.title}</span>
-                      <span className="block text-[12.5px] text-ink-dim truncate">{t.artist}</span>
-                    </span>
-                    <span className="text-[12.5px] text-ink-faint shrink-0">
-                      {fmtHours(data.tracks.find((x) => x.id === t.id)?.ms ?? 0)}
-                    </span>
-                  </button>
-                ))}
+          {/* The pulse: the period as records on a wave, the bigger the more played. */}
+          {pulse.length > 2 && (
+            <div className="bg-[#101013] page-pad pt-14 pb-20">
+              <h2 className="font-display font-black tracking-[-0.06em] leading-[0.9] text-ink-hi text-[clamp(48px,8vw,120px)]">
+                {T("It had a")} <span className="italic text-accent">{T("pulse.")}</span>
+              </h2>
+              <p className="text-[16px] text-ink-dim mt-3">{T("The bigger the record, the more played then.")}</p>
+              <div className="relative h-[440px] mt-6">
+                {pulse.map((p, i) => {
+                  const share = p.ms / maxPulse;
+                  const size = Math.round(50 + share * 150);
+                  const top = Math.round(330 - share * 190 + Math.sin(i * 1.3) * 14);
+                  const peak = p.ms === maxPulse;
+                  const cover = pulseCovers.length ? pulseCovers[i % pulseCovers.length] : "";
+                  return (
+                    <div key={p.label + i} title={`${p.label} — ${fmtHours(p.ms)}`} className="absolute text-center" style={{ left: `${4 + (i * 92) / Math.max(1, pulse.length - 1)}%`, top, width: size, transform: "translate(-50%, -50%)" }}>
+                      <div className={`rounded-full overflow-hidden shadow-[0_24px_60px_-10px_rgba(0,0,0,0.9)] ${peak ? "ring-[6px] ring-accent" : ""}`} style={{ width: size, height: size }}><Artwork src={cover} className="w-full h-full" rounded="rounded-full" iconClassName="w-5 h-5" alt="" /></div>
+                      <div className={`text-[12px] font-black tracking-[0.14em] mt-2.5 uppercase whitespace-nowrap ${peak ? "text-accent" : "text-zinc-500"}`}>{p.label}</div>
+                    </div>
+                  );
+                })}
               </div>
-            </section>
+            </div>
+          )}
 
-            <section>
-              <h2 className="section-title text-[21px] mb-4">{T("Top artists")}</h2>
-              <div className="glass-pill rounded-2xl p-4 space-y-3">
-                {data.artists.slice(0, 10).map((a, i) => (
-                  <div key={a.name} className="flex items-center gap-3">
-                    <span className="w-6 text-center text-[13px] font-bold text-ink-faint">{i + 1}</span>
-                    <Artwork
-                      src={a.thumb || artistThumbs[a.name] || ""}
-                      className="w-9 h-9 rounded-full shrink-0"
-                      iconClassName="w-4 h-4"
-                      alt=""
-                    />
-                    <span className="min-w-0 flex-1 text-[14px] font-semibold text-ink-hi truncate">{a.name}</span>
-                    <span className="text-[12.5px] text-ink-faint shrink-0">{fmtHours(a.ms)}</span>
-                  </div>
-                ))}
-              </div>
-              {data.albums.length > 0 && (
-                <>
-                  <h2 className="section-title text-[21px] mt-8 mb-4">{T("Top albums")}</h2>
-                  <div className="glass-pill rounded-2xl p-4 space-y-3">
-                    {data.albums.slice(0, 5).map((al, i) => (
-                      <div key={`${al.name}-${i}`} className="flex items-center gap-3">
-                        <span className="w-6 text-center text-[13px] font-bold text-ink-faint">{i + 1}</span>
-                        <Artwork
-                          src={albumThumb(al)}
-                          className="w-9 h-9 rounded-lg shrink-0"
-                          iconClassName="w-4 h-4"
-                          alt=""
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[14px] font-semibold text-ink-hi truncate">{al.name}</span>
-                          <span className="block text-[12.5px] text-ink-dim truncate">{al.artist}</span>
-                        </span>
-                        <span className="text-[12.5px] text-ink-faint shrink-0">{fmtHours(al.ms)}</span>
+          {/* The faces: the top artists as tilted, overlapping cards. */}
+          {faces.length > 0 && (
+            <div className="page-pad pt-24 pb-16">
+              <h2 className="font-display font-black tracking-[-0.06em] leading-[0.9] text-ink-hi text-right text-[clamp(48px,8vw,120px)]">
+                {T("The faces")}
+                <br />
+                {T("of")} <span className="italic text-accent">{T("it all.")}</span>
+              </h2>
+              <div className="flex items-end justify-center mt-8">
+                {faces.map((a, i) => {
+                  const w = [360, 260, 220, 190, 160][i];
+                  const turn = [-4, 5, -6, 7, -3][i];
+                  const lift = [0, -30, 10, -44, 20][i];
+                  return (
+                    <div key={a.name} className="relative shrink-0" style={{ marginLeft: i === 0 ? 0 : -40, zIndex: 5 - i, transform: `rotate(${turn}deg) translateY(${lift}px)` }}>
+                      <div className="rounded-2xl overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.95)]" style={{ width: w, height: Math.round(w * 1.22) }}><Artwork src={a.photo} className="w-full h-full" rounded="rounded-2xl" iconClassName="w-10 h-10" alt="" /></div>
+                      <div className={`absolute -left-3 px-3 py-1.5 font-black text-[#0b0b0d] whitespace-nowrap ${i === 0 ? "bg-accent text-[22px] bottom-6" : "bg-white text-[14px] bottom-4"}`}>
+                        {i + 1} · {a.name}
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </section>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* The ending: a ticket for the period. */}
+          <div className="bg-[#101013] page-pad py-20 flex items-center gap-14 flex-wrap">
+            <div className="flex-1 basis-[360px] min-w-0">
+              <h2 className="font-display font-black tracking-[-0.06em] leading-[0.9] text-ink-hi text-[clamp(48px,8vw,120px)]">
+                {T("Same seat")}
+                <br />
+                <span className="italic text-accent">{T("next time?")}</span>
+              </h2>
+            </div>
+            <div className="flex shrink-0 rounded-2xl overflow-hidden shadow-[0_50px_120px_-30px_rgba(0,0,0,0.95)]" style={{ transform: "rotate(4deg)" }}>
+              <Artwork src={topAlbumThumb} className="w-[230px] h-[300px]" iconClassName="w-10 h-10" alt="" />
+              <div className="w-[300px] h-[300px] bg-[#f4f1ea] text-[#0b0b0d] px-6 py-5 flex flex-col border-l-[3px] border-dashed border-[#0b0b0d]">
+                <div className="text-[11px] font-black tracking-[0.28em]">{T("ADMIT ONE · SONGSTA REPLAY")}</div>
+                <div className="text-[60px] font-black tracking-[-0.06em] leading-none mt-2 truncate">{periodName}</div>
+                <div className="text-[13px] font-bold leading-[1.7] mt-2">
+                  <div>{T("{minutes} minutes · {plays} plays", { minutes: minutes.toLocaleString(), plays: data.plays.toLocaleString() })}</div>
+                  {data.artists[0] && <div className="truncate">{T("Headliner: {name}", { name: data.artists[0].name })}</div>}
+                  {topAlbum && <div className="truncate">{T("Album: {name}", { name: topAlbum.name })}</div>}
+                </div>
+                <div className="flex-1" />
+                <div className="h-[34px]" style={{ background: "repeating-linear-gradient(90deg, #0b0b0d 0 3px, transparent 3px 6px, #0b0b0d 6px 7px, transparent 7px 12px)" }} />
+              </div>
+            </div>
           </div>
         </>
       )}
 
-      <ListeningHistory />
+      <div className="page-pad pt-12">
+        <ListeningHistory />
+      </div>
     </div>
   );
+}
+
+function BigNumber({ value, label }: { value: string; label: string }) {
+  return (
+    <div>
+      <span className="text-[clamp(36px,5vw,64px)] font-black tracking-[-0.04em] text-white">{value}</span>{" "}
+      <span className="text-[14px] font-extrabold tracking-[0.16em] text-zinc-400">{label}</span>
+    </div>
+  );
+}
+
+/** The days as up to twelve stretches for the pulse: months for a year or all time, else runs of days. */
+function pulseOf(days: { date: string; ms: number }[], byMonth: boolean): { label: string; ms: number }[] {
+  if (!days.length) return [];
+  if (byMonth) {
+    const months = new Map<string, number>();
+    for (const d of days) months.set(d.date.slice(0, 7), (months.get(d.date.slice(0, 7)) ?? 0) + d.ms);
+    return [...months.entries()].slice(-12).map(([month, ms]) => ({ label: new Date(`${month}-01T00:00:00`).toLocaleDateString(undefined, { month: "short" }), ms }));
+  }
+  const size = Math.max(1, Math.ceil(days.length / 12));
+  const out: { label: string; ms: number }[] = [];
+  for (let i = 0; i < days.length; i += size) {
+    const run = days.slice(i, i + size);
+    out.push({ label: fmtDate(run[0].date), ms: run.reduce((sum, d) => sum + d.ms, 0) });
+  }
+  return out;
 }
 
 /** "Today", "Yesterday", else the weekday and date (the year only when it isn't this one). */

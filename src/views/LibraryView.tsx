@@ -1,15 +1,18 @@
 /**
  * Your Library — the full-page counterpart of the sidebar pill, Spotify-style.
- * Chips: Playlists / Liked / Downloaded. Playlists group into the same folders
+ * Three pages under one route: the playlists (grouped into the same folders
  * as the sidebar, with Liked Songs, Downloads and Local Music as pinned
- * shortcut cards (unpin from the card menu or the sidebar row).
+ * shortcut cards; unpin from the card menu or the sidebar row), Liked Songs
+ * (views/LikedSongsView.tsx: nothing but the liked songs) and the downloads.
  * Listening history is deliberately absent — it lives in the queue panel's
  * "Recently played" tab, not in the library.
  */
-import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Download, FileDown, FileUp, Folder, FolderOpen, Heart, ListMusic, Music2, Pin, PinOff, Play, RotateCw, Shuffle, Trash2, Pencil } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, Download, Folder, FolderOpen, Heart, ListMusic, Music2, Pin, PinOff, Play, RotateCw, Shuffle, Trash2, Pencil } from "lucide-react";
 import { TrackList } from "../components/TrackList";
-import { Btn, EmptyState, Pills, PlayOverlay } from "../components/primitives";
+import { Btn, EmptyState, PlayOverlay } from "../components/primitives";
+import { LibraryFront } from "../components/LibraryFront";
+import { LikedSongsView } from "./LikedSongsView";
 import { CreateMenu } from "../components/CreateMenu";
 import { downloadForOffline } from "../lib/downloads";
 import { useLibrary, type DownloadStatus, type LibraryFolder, type Playlist } from "../stores/library";
@@ -22,7 +25,6 @@ import { dragHasPlaylist, readPlaylist, useDrag } from "../lib/dnd";
 import { playlistFolderItems, playlistHeaderItems } from "../lib/trackActions";
 import { plural } from "../lib/format";
 import { upgradeArtwork } from "../lib/artwork";
-import { exportM3uPlaylist } from "../lib/playlistFiles";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
 
@@ -346,15 +348,10 @@ export function LibraryView() {
   const pinnedSingles = useLibrary((s) => s.pinnedSingles);
   const togglePinSingle = useLibrary((s) => s.togglePinSingle);
 
-  const [tab, setTab] = useState<LibTab>(() => tabFromParam(useUI.getState().view.param));
+  // Which of the three pages: the route says (the sidebar's Liked Songs row leads to `liked`).
+  const tab = tabFromParam(view.param);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   // Dropping songs on the open Liked page is handled panel-wide in App.
-
-  // The sidebar deep-links here (Liked Songs → ?liked); keep the chip in sync
-  // when the view changes while this component stays mounted.
-  useEffect(() => {
-    setTab(tabFromParam(view.param));
-  }, [view.name, view.param]);
 
   // The computer sends no notifications: the list says how each download stands — what's on its
   // way first, then what failed, then what's here.
@@ -379,96 +376,30 @@ export function LibraryView() {
     usePlayer.getState().playAll(tracks, true);
   };
 
+  // Liked Songs has a page to itself.
+  if (tab === "liked") return <LikedSongsView />;
+
   return (
     <div className="pb-12">
-      {/* Header — counts + the shared create dropdown (Playlist / Folder) */}
-      <div>
+      {tab === "playlists" && <LibraryFront downloaded={downloadedTracks.length} />}
+      {/* Header — the shared create dropdown (Playlist / Folder) */}
+      <div className={tab === "playlists" ? "mt-9" : ""}>
         <div className="flex items-end justify-between gap-4 animate-slide-up">
-          <div>
-            <div className="micro-label text-ink-faint mb-1.5">{T("Collection")}</div>
-            <h1 className="font-display text-[28px] font-bold tracking-tight text-ink-hi">{T("Your Library")}</h1>
-            <p className="text-sm text-ink-dim mt-1">
-              {plural(playlists.length, T("playlist"), T("playlists"))} ·{" "}
-              {plural(folders.length, T("folder"), T("folders"))} ·{" "}
-              {plural(liked.length, T("liked song"), T("liked songs"))}
-            </p>
-          </div>
-          <CreateMenu onFolderCreated={(f) => setExpandedFolders((prev) => new Set(prev).add(f.id))} />
-        </div>
-
-        <div className="mt-5">
-          <Pills
-            options={[
-              { key: "playlists" as const, label: T("Playlists"), count: playlists.length },
-              { key: "liked" as const, label: T("Liked"), count: liked.length },
-              { key: "downloaded" as const, label: T("Downloaded"), count: downloadedTracks.length },
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
+          {tab === "downloaded" ? (
+            <div>
+              <div className="micro-label text-ink-faint mb-1.5">{T("Offline")}</div>
+              <h1 className="font-display text-[28px] font-bold tracking-tight text-ink-hi">{T("Downloads")}</h1>
+              <p className="text-sm text-ink-dim mt-1">{plural(downloadedTracks.length, T("song"), T("songs"))}</p>
+            </div>
+          ) : (
+            <h2 className="text-[30px] font-black tracking-[-0.03em] text-ink-hi">{T("Your playlists")}</h2>
+          )}
+          {tab === "playlists" && <CreateMenu onFolderCreated={(f) => setExpandedFolders((prev) => new Set(prev).add(f.id))} />}
         </div>
       </div>
 
       {tab === "playlists" && (
         <div className="mt-6 space-y-7">
-          {/* Shortcut tiles — Liked Songs, Downloads + Local Music, pinned by default */}
-          <div className="flex flex-wrap gap-5">
-            {(
-              [
-                { key: "liked" as const, pinned: pinnedSingles?.liked ?? true },
-                { key: "downloads" as const, pinned: pinnedSingles?.downloads ?? true },
-                { key: "local" as const, pinned: pinnedSingles?.local ?? true },
-              ]
-                .sort((a, b) => Number(b.pinned) - Number(a.pinned))
-                .map(({ key, pinned }) => {
-                  if (key === "liked") {
-                    return (
-                      <ShortcutTile
-                        key="liked"
-                        title={T("Liked Songs")}
-                        subtitle={plural(liked.length, T("song"), T("songs"))}
-                        pinned={pinned}
-                        onTogglePin={() => togglePinSingle("liked")}
-                        onOpen={() => setTab("liked")}
-                        artClassName="from-accent to-accent/25 bg-[#141418]"
-                        art={<Heart className="w-9 h-9 fill-white text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)]" />}
-                      />
-                    );
-                  }
-                  if (key === "downloads") {
-                    return (
-                      <ShortcutTile
-                        key="downloads"
-                        title={T("Downloads")}
-                        subtitle={plural(downloadedTracks.length, T("song"), T("songs"))}
-                        pinned={pinned}
-                        onTogglePin={() => togglePinSingle("downloads")}
-                        onOpen={() => setTab("downloaded")}
-                        artClassName="from-emerald-400/25 to-emerald-400/[0.05]"
-                        art={
-                          <Download
-                            className={`w-9 h-9 ${downloadedTracks.length ? "text-emerald-300" : "text-ink-hi/55"}`}
-                          />
-                        }
-                      />
-                    );
-                  }
-                  return (
-                    <ShortcutTile
-                      key="local"
-                      title={T("Local Music")}
-                      subtitle={T("On this device")}
-                      pinned={pinned}
-                      onTogglePin={() => togglePinSingle("local")}
-                      onOpen={() => navigate({ name: "local" })}
-                      artClassName="from-white/[0.07] to-white/[0.02]"
-                      art={<FolderOpen className="w-9 h-9 text-ink-hi/55" />}
-                    />
-                  );
-                })
-            )}
-          </div>
-
           {folders.length === 0 && unfiled.length === 0 ? (
             <EmptyState
               icon={ListMusic}
@@ -506,36 +437,6 @@ export function LibraryView() {
                 </section>
               )}
             </>
-          )}
-        </div>
-      )}
-
-      {tab === "liked" && (
-        <div className="mt-6">
-          {liked.length ? (
-            <>
-              <div className="flex items-center gap-2">
-                <Btn variant="white" size="md" icon={Play} onClick={() => usePlayer.getState().playAll(liked)}>{T("Play all")}</Btn>
-                <Btn variant="glass" size="md" icon={Shuffle} onClick={() => shufflePlay(liked)}>{T("Shuffle")}</Btn>
-                <Btn variant="glass" size="md" icon={FileUp} onClick={() => navigate({ name: "spotify" })} className="ml-auto">{T("Import from Spotify")}</Btn>
-                <Btn variant="glass" size="md" icon={FileDown} onClick={() => void exportM3uPlaylist(T("Liked Songs"), liked)}>{T("Export M3U")}</Btn>
-              </div>
-              <div className="mt-5">
-                <TrackList tracks={liked} showAlbum sourceName={T("Liked Songs")} emptyTitle={T("No liked songs yet")} />
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              icon={Heart}
-              title={T("Songs you like will show up here")}
-              body={T("Click the heart on any song — in the player, a playlist, or search — and it lands in this list. Or bring your Liked Songs over from Spotify.")}
-              action={
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Btn variant="white" icon={FileUp} onClick={() => navigate({ name: "spotify" })}>{T("Import from Spotify")}</Btn>
-                  <Btn variant="glass" onClick={() => navigate({ name: "search" })}>{T("Find something to like")}</Btn>
-                </div>
-              }
-            />
           )}
         </div>
       )}

@@ -164,6 +164,8 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   readText(uri: string): Promise<string | null>;
   setTuning(skipSilence: boolean, speed: number, fadeSeconds: number, seamless: boolean): Promise<void>;
   setEqualizer(on: boolean, bands: number[], gains: number[]): Promise<void>;
+  /** Even out loud and quiet: a compressor and a limiter after the equalizer (Android 9 and later). */
+  setEvenOut(on: boolean): Promise<void>;
   restartApp(): Promise<void>;
   /** What a gesture feels like. */
   haptic(kind: "tick" | "press" | "arm" | "charge" | "charged" | "commit" | "cancel"): Promise<void>;

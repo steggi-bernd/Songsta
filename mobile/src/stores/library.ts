@@ -8,6 +8,7 @@ import { blurhashColor, type Rgb } from "../color";
 import { artistPhotoUrl, fetchLibrary, isNoAnswer, markPlayed, setFavorite, type ServerLibrary, type Session } from "../jellyfin";
 import { allMixes, applyAlbumLooks, applyAlbumMerges, applyArtistAliases, applySongEdits, buildAlbums, buildArtists, buildGenres, likedInOrder, oneCopyEach, sameSong, songFinder, songIdentity, toWireTrack, type LibAlbum, type LibArtist, type LibGenre, type Mix, type Track, type WireTrack } from "../shared";
 import { readJson, removeJson, writeJson } from "../storage";
+import { useListens } from "./listens";
 import { albumEditsNow, useAlbumEdits } from "./albumEdits";
 import { useConnection } from "./connection";
 import { useLibrarySync } from "./librarySync";
@@ -316,6 +317,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
     const next = { ...data, counts: { ...data.counts, [track.id]: { plays, lastAt: at } } };
     set({ data: next });
     writeJson(FILE, forFile(next));
+    useListens.getState().note(track, at);
     if (!s || track.localPath || !useSettings.getState().serverPlays) return;
     void markPlayed(s, track, new Date(at)).catch((err) => {
       if (!isNoAnswer(err)) return;

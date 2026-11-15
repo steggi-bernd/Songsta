@@ -331,6 +331,11 @@ class Media3PlayerModule : Module() {
       PlaybackTuning.service?.applyTuning()
     }.runOnQueue(Queues.MAIN)
 
+    AsyncFunction("setEvenOut") { on: Boolean ->
+      PlaybackTuning.evenOut = on
+      PlaybackTuning.service?.applyTuning()
+    }.runOnQueue(Queues.MAIN)
+
     /** For what only applies when the app starts anew: the accent colour. */
     AsyncFunction("restartApp") {
       context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { start ->

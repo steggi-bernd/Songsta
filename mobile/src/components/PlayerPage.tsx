@@ -6,13 +6,13 @@
  * the computer shows in its side panel.
  */
 import { useNavigation } from "@react-navigation/native";
-import { Bluetooth, Check, ChevronDown, EllipsisVertical, Headphones, Laptop, ListMusic, Pause, Play, Plus, Repeat, Repeat1, Share2, Shuffle, SkipBack, SkipForward, Smartphone, Tv, Speaker  } from "lucide-react-native";
+import { Bluetooth, Check, ChevronDown, EllipsisVertical, Headphones, Laptop, ListMusic, Pause, Play, Plus, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Smartphone, Tv, Speaker  } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PanResponder, PixelRatio, Pressable, Share, StyleSheet, Text, View, type GestureResponderHandlers } from "react-native";
+import { PanResponder, PixelRatio, Pressable, StyleSheet, Text, View, type GestureResponderHandlers } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
 import Player, { type SoundOutput } from "../../modules/media3-player";
 import { tinted } from "../color";
-import { currentLine, useLyrics } from "../lyrics";
+import { useLyricLine, useLyrics } from "../lyrics";
 import { albumKeyOf, playingFrom } from "../playingFrom";
 import { playingNow } from "../quality";
 import { describePlayback, fmtTime, type Track } from "../shared";
@@ -21,6 +21,7 @@ import { usePlayer } from "../stores/player";
 import { usePlaylists } from "../stores/playlists";
 import { feel } from "../stores/settings";
 import { colors, qualityColors } from "../theme";
+import { Marquee } from "./Marquee";
 import { AboutArtistCard, AboutSongCard, NextUpCard } from "./PlayerCards";
 import { SongDownloadButton } from "./SongMenu";
 import { TrackStrip } from "./TrackStrip";
@@ -99,10 +100,10 @@ function Scrubber() {
   );
 }
 
-function LyricsCard({ lines, track }: { lines: LyricLine[]; track: Track }) {
+function LyricsCard({ lines, track, active }: { lines: LyricLine[]; track: Track; active: boolean }) {
   const nav = useNavigation<any>();
   const color = useCoverColor(track.thumb);
-  const at = usePlayer((s) => Math.max(0, currentLine(lines, s.positionMs)));
+  const at = Math.max(0, useLyricLine(lines, active));
   return (
     <Pressable onPress={() => nav.navigate("Lyrics")} style={[styles.lyricsCard, { backgroundColor: tinted(color, 0.3) }]}>
       <Text style={styles.cardTitle}>{T("Lyrics")}</Text>
@@ -213,14 +214,10 @@ export function PlayerPage({
                       accessibilityLabel={T("{title}: open the album", { title: t.title })}
                       style={styles.titleTap}
                     >
-                      <Text numberOfLines={1} style={styles.title}>
-                        {t.title}
-                      </Text>
+                      <Marquee text={t.title} style={styles.title} active={expanded && t.id === track.id} />
                     </Pressable>
                     <Pressable onPress={() => onArtist(t)} accessibilityLabel={T("{artist}: open the artist", { artist: t.artist })} style={styles.titleTap}>
-                      <Text numberOfLines={1} style={styles.artist}>
-                        {t.artist}
-                      </Text>
+                      <Marquee text={t.artist} style={styles.artist} active={expanded && t.id === track.id} />
                     </Pressable>
                   </View>
                 )}
@@ -291,13 +288,6 @@ export function PlayerPage({
               </Pressable>
             )}
             <SongDownloadButton track={track} size={22} style={styles.rowButton} />
-            <Pressable
-              onPress={() => void Share.share({ message: `${track.title} · ${track.artist}` })}
-              accessibilityLabel={T("Share")}
-              style={styles.rowButton}
-            >
-              <Share2 size={22} color={colors.ink} />
-            </Pressable>
             <Pressable onPress={() => nav.navigate("Queue")} accessibilityLabel={T("Queue")} style={styles.iconButton}>
               <ListMusic size={24} color={colors.ink} />
             </Pressable>
@@ -306,7 +296,7 @@ export function PlayerPage({
       </View>
 
       <View onLayout={(e) => onCardsHeight(e.nativeEvent.layout.height)} style={[styles.cards, { paddingBottom: insets.bottom + 18 }]}>
-        {lyrics.length > 0 && <LyricsCard lines={lyrics} track={track} />}
+        {lyrics.length > 0 && <LyricsCard lines={lyrics} track={track} active={expanded} />}
         <NextUpCard />
         <AboutSongCard track={track} active={expanded} />
         <AboutArtistCard track={track} active={expanded} onOpen={() => onArtist(track)} />

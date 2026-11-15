@@ -1,14 +1,15 @@
 /** Everything that can be chosen: the music on this phone, the server, how it plays and feels, downloads, sync. */
-import { useNavigation } from "@react-navigation/native";
-import { Check, ChevronLeft, ChevronRight, CircleAlert, FileDown, FileUp, FolderPlus, Link2, LogOut, RefreshCw, Server, SlidersHorizontal, Trash2, X } from "lucide-react-native";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { BarChart3, AudioLines, Check, ChevronLeft, ChevronRight, CircleAlert, CircleArrowDown, CirclePlay, FileDown, FileUp, FolderPlus, Hand, Info, Link2, LogOut, MicVocal, MonitorSmartphone, Palette, RefreshCw, Server, SlidersHorizontal, Trash2, X, type LucideIcon } from "lucide-react-native";
+import { useState, type ReactNode } from "react";
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { APP_VERSION, installPhoneUpdate, lookNow, openReleasePage, updatePhone, useNewerVersion, usePhoneUpdate } from "../newVersion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Reach } from "../addresses";
 import Player from "../../modules/media3-player";
 import type { Leveling, QualityMode } from "../quality";
 import { NameDialog } from "../components/PlaylistSheets";
+import { PullDownToClose } from "../components/PullDownToClose";
 import { Chip } from "../components/ui";
 import { currentLanguage, plural, SYNC_UPDATE_COMMAND, type SyncStatus } from "../shared";
 import { backupSummary, type BackupProblem, type PhoneBackup } from "../backup";
@@ -187,8 +188,25 @@ function importData(): void {
   );
 }
 
+type SettingsSection = "music" | "playback" | "sound" | "gestures" | "lyrics" | "appearance" | "downloads" | "sync" | "app";
+
+/** The categories, in the order of the list. Downloads and sync only with a server. */
+const SECTIONS: { key: SettingsSection; title: string; Icon: LucideIcon; server?: boolean }[] = [
+  { key: "music", title: T("Music and server"), Icon: Server },
+  { key: "playback", title: T("Playback"), Icon: CirclePlay },
+  { key: "sound", title: T("Sound"), Icon: AudioLines },
+  { key: "lyrics", title: T("Lyrics"), Icon: MicVocal },
+  { key: "appearance", title: T("Appearance"), Icon: Palette },
+  { key: "gestures", title: T("Gestures"), Icon: Hand },
+  { key: "downloads", title: T("Downloads"), Icon: CircleArrowDown, server: true },
+  { key: "sync", title: T("Sync and devices"), Icon: MonitorSmartphone, server: true },
+  { key: "app", title: T("This app"), Icon: Info },
+];
+
 export function SettingsScreen() {
   const nav = useNavigation<any>();
+  // Pushed with a section: that category's page; without: the list of categories.
+  const section = (useRoute<any>().params?.section as SettingsSection | undefined) ?? undefined;
   const insets = useSafeAreaInsets();
   const session = useSession((s) => s.session);
   const signOut = useSession((s) => s.signOut);
@@ -232,6 +250,53 @@ export function SettingsScreen() {
   const keptBytes = keptSongs.reduce((sum, song) => sum + song.bytes, 0);
   const onItsWay = useDownloads((s) => Object.keys(s.loading).length);
   const anyDownloads = keptSongs.length + onItsWay > 0;
+
+  // What each category holds right now, in a line under its name.
+  const summary: Record<SettingsSection, string> = {
+    music: session ? `${session.userName} · ${plural(count, T("song"), T("songs"))}` : folders.length ? plural(folders.length, T("folder"), T("folders")) : T("Not set up yet"),
+    playback: [settings.fadeSeconds ? T("Fade {seconds} s", { seconds: settings.fadeSeconds }) : T("No fade"), settings.speed !== 1 ? `${settings.speed}×` : "", settings.autoplay ? T("Autoplay") : ""].filter(Boolean).join(" · "),
+    sound: [QUALITIES.find((q) => q.value === streaming)?.label, settings.eqOn ? T("Equalizer on") : "", settings.evenOut ? T("Evened out") : ""].filter(Boolean).join(" · "),
+    lyrics: settings.syncedLyrics ? T("Synced") : T("Plain text"),
+    appearance: [ACCENTS[settings.accent].label, settings.language === "auto" ? T("Automatic language") : LANGUAGES.find((l) => l.id === settings.language)?.name].filter(Boolean).join(" · "),
+    gestures: [settings.swipeFeel === "rubber" ? T("Rubber band") : T("Taut"), settings.haptics ? T("Vibration") : ""].filter(Boolean).join(" · "),
+    downloads: keptSongs.length ? `${plural(keptSongs.length, T("song"), T("songs"))} · ${sizeLine(keptBytes)}` : T("Nothing downloaded yet"),
+    sync: syncNotFound ? T("No sync service found") : SYNC_LINE[syncStatus],
+    app: newer ? T("Songsta {version} is out", { version: newer }) : T("Songsta {APP_VERSION}", { APP_VERSION }),
+  };
+
+  const overview = (
+    <>
+    <Pressable onPress={() => nav.push("Replay")} android_ripple={{ color: "rgba(255,255,255,0.06)" }} style={[styles.group, styles.overview, styles.overviewRow]}>
+      <View style={[styles.overviewIcon, { backgroundColor: colors.accent }]}>
+        <BarChart3 size={20} color={colors.onAccent} />
+      </View>
+      <View style={styles.switchText}>
+        <Text style={styles.rowTitle}>{T("Replay")}</Text>
+        <Text numberOfLines={1} style={styles.rowSub}>{T("What this phone played, counted")}</Text>
+      </View>
+      <ChevronRight size={18} color={colors.dim} />
+    </Pressable>
+    <View style={[styles.group, styles.overview]}>
+      {SECTIONS.filter((x) => !x.server || session).map((x, i) => (
+        <View key={x.key}>
+          {i > 0 && <View style={styles.overviewDivider} />}
+          <Pressable onPress={() => nav.push("Settings", { section: x.key })} android_ripple={{ color: "rgba(255,255,255,0.06)" }} style={styles.overviewRow}>
+            <View style={styles.overviewIcon}>
+              <x.Icon size={20} color={colors.ink} />
+            </View>
+            <View style={styles.switchText}>
+              <Text style={styles.rowTitle}>{x.title}</Text>
+              <Text numberOfLines={1} style={[styles.rowSub, x.key === "app" && !!newer && { color: colors.accent }]}>
+                {summary[x.key]}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={colors.dim} />
+          </Pressable>
+        </View>
+      ))}
+    </View>
+    </>
+  );
 
   const leave = (): void => {
     stop();
@@ -279,403 +344,449 @@ export function SettingsScreen() {
     ]);
   };
 
+  // One page of a category, or the list of them (section undefined).
+  const pages: Record<SettingsSection, ReactNode> = {
+    music: (
+          <>
+          <Text style={styles.section}>{T("ON THIS PHONE")}</Text>
+          <View style={styles.group}>
+            {folders.map((folder) => (
+              <View key={folder.uri}>
+                <View style={styles.switchRow}>
+                  <View style={styles.switchText}>
+                    <Text numberOfLines={1} style={styles.rowTitle}>
+                      {folder.name}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityLabel={T("Remove {name}", { name: folder.name })}
+                    hitSlop={8}
+                    onPress={() =>
+                      showDialog(T("Remove “{name}”?", { name: folder.name }), T("Its songs leave the app. The files stay on your phone."), [
+                        { text: T("Cancel"), style: "cancel" },
+                        { text: T("Remove"), style: "destructive", onPress: () => useLocalMusic.getState().removeFolder(folder.uri) },
+                      ])
+                    }
+                  >
+                    <X size={20} color={colors.dim} />
+                  </Pressable>
+                </View>
+                <View style={styles.divider} />
+              </View>
+            ))}
+            <Pressable onPress={() => void useLocalMusic.getState().addFolder()} style={styles.action}>
+              <FolderPlus size={20} color={colors.ink} />
+              <Text style={styles.actionText}>{T("Add a folder")}</Text>
+            </Pressable>
+            {folders.length > 0 && (
+              <>
+                <View style={styles.divider} />
+                <Pressable disabled={!!scanning} onPress={() => void useLocalMusic.getState().rescan()} style={styles.action}>
+                  <RefreshCw size={20} color={colors.ink} />
+                  <Text style={styles.actionText}>
+                    {scanning ? (scanning.total ? T("Reading {read} of {total}…", { read: scanning.read, total: scanning.total }) : T("Looking through the folders…")) : T("Look again ({count})", { count: plural(onPhone, T("song"), T("songs")) })}
+                  </Text>
+                </Pressable>
+                <View style={styles.divider} />
+                <SwitchRow
+                  title={T("Filter non-music audio")}
+                  line={inFolders > onPhone ? T("Clips, recordings and voice notes stay out. Of {count}, {value} {value2} listed on their own: filtered, or also on your server.", { count: plural(inFolders, T("file"), T("files")), value: inFolders - onPhone, value2: inFolders - onPhone === 1 ? "isn't" : "aren't" }) : T("Clips, recordings and voice notes stay out")}
+                  value={settings.filterNonMusic}
+                  onChange={(filterNonMusic) => change({ filterNonMusic })}
+                />
+              </>
+            )}
+          </View>
+    
+          <Text style={styles.section}>{T("SERVER")}</Text>
+          {!session && (
+            <View style={styles.group}>
+              <Pressable onPress={() => useLocalMusic.getState().setAddingServer(true)} style={styles.action}>
+                <Server size={20} color={colors.ink} />
+                <Text style={styles.actionText}>{T("Connect to a Jellyfin server")}</Text>
+              </Pressable>
+            </View>
+          )}
+          {!!session && <View style={styles.group}>
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Jellyfin")}</Text>
+              <Text style={[styles.rowSub, reach !== "offline" && { color: colors.accent }]}>{REACH_LINE[reach]}</Text>
+              <Text style={styles.rowSub}>
+                {session?.userName} · {plural(count, T("song"), T("songs"))}
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            <Pressable onPress={() => setEditingServer("home")} style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Address at home")}</Text>
+              <Text numberOfLines={1} style={styles.rowSub}>
+                {session?.home}
+              </Text>
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable onPress={() => setEditingServer("away")} style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Address away from home")}</Text>
+              <Text numberOfLines={2} style={styles.rowSub}>
+                {session?.away ?? T("None yet: your music plays only at home. Enter the address of your tunnel or proxy.")}
+              </Text>
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable disabled={refreshing} onPress={() => void refresh()} style={styles.action}>
+              <RefreshCw size={20} color={colors.ink} />
+              <Text style={styles.actionText}>{refreshing ? T("Reading the library…") : T("Read the library again")}</Text>
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable
+              onPress={() => {
+                if (!keptSongs.length) leave();
+                else {
+                  showDialog(T("Sign out?"), T("Your downloads go too: {count}, {sizeLine}.", { count: plural(keptSongs.length, T("song"), T("songs")), sizeLine: sizeLine(keptBytes) }), [
+                    { text: T("Cancel"), style: "cancel" },
+                    { text: T("Sign out"), style: "destructive", onPress: leave },
+                  ]);
+                }
+              }}
+              style={styles.action}
+            >
+              <LogOut size={20} color="#FF9D9D" />
+              <Text style={[styles.actionText, { color: "#FF9D9D" }]}>{T("Sign out")}</Text>
+            </Pressable>
+          </View>}
+    
+          </>
+    ),
+    playback: (
+          <>
+          <View style={styles.group}>
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Fade between songs")}</Text>
+              <View style={styles.chips}>
+                {FADES.map((seconds) => (
+                  <Chip key={seconds} label={seconds ? `${seconds} s` : T("Off")} active={settings.fadeSeconds === seconds} onPress={() => change({ fadeSeconds: seconds })} />
+                ))}
+              </View>
+              <Text style={styles.rowSub}>{settings.fadeSeconds ? T("A song fades out, the next one fades in. They don't overlap yet.") : T("Songs follow each other without a gap")}</Text>
+            </View>
+            {settings.fadeSeconds > 0 && (
+              <>
+                <View style={styles.divider} />
+                <SwitchRow
+                  title={T("Seamless albums")}
+                  line={T("Songs of one album play on without a fade: live albums, DJ mixes, songs that run into each other")}
+                  value={settings.seamlessAlbums}
+                  onChange={(seamlessAlbums) => change({ seamlessAlbums })}
+                />
+              </>
+            )}
+            <View style={styles.divider} />
+            <SwitchRow title={T("Skip silence")} line={T("Jump over silent intros and gaps")} value={settings.skipSilence} onChange={(skipSilence) => change({ skipSilence })} />
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Playback speed")}</Text>
+              <View style={styles.chips}>
+                {SPEEDS.map((speed) => (
+                  <Chip key={speed} label={`${speed}×`} active={settings.speed === speed} onPress={() => change({ speed })} />
+                ))}
+              </View>
+              <Text style={styles.rowSub}>{T("The pitch stays where it is")}</Text>
+            </View>
+            <View style={styles.divider} />
+            <SwitchRow title={T("Skipping ends repeat one")} line={T("Go to another song while one is on repeat, and the whole list repeats from there")} value={settings.skipEndsRepeatOne} onChange={(skipEndsRepeatOne) => change({ skipEndsRepeatOne })} />
+            <View style={styles.divider} />
+            <SwitchRow title={T("Autoplay")} line={T("Keep the music going when the queue ends")} value={settings.autoplay} onChange={(autoplay) => change({ autoplay })} />
+            {settings.autoplay && (
+              <>
+                <View style={styles.divider} />
+                <SwitchRow title={T("Don't repeat suggestions")} line={T("What played in the last week stays out of that")} value={settings.dontRepeat} onChange={(dontRepeat) => change({ dontRepeat })} />
+              </>
+            )}
+          </View>
+          </>
+    ),
+    sound: (
+          <>
+          <View style={styles.group}>
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Streaming quality")}</Text>
+              <View style={styles.chips}>
+                {QUALITIES.map((q) => (
+                  <Chip key={q.value} label={q.label} active={streaming === q.value} onPress={() => usePlayer.getState().setQuality(q.value)} />
+                ))}
+              </View>
+              <Text style={styles.rowSub}>{QUALITIES.find((q) => q.value === streaming)?.line}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Volume leveling")}</Text>
+              <View style={styles.chips}>
+                {LEVELS.map((level) => (
+                  <Chip key={level.value} label={level.label} active={leveling === level.value} onPress={() => usePlayer.getState().setLeveling(level.value)} />
+                ))}
+              </View>
+              <Text style={styles.rowSub}>{LEVELS.find((level) => level.value === leveling)?.line}</Text>
+            </View>
+            {Number(Platform.Version) >= 28 && (
+              <>
+              <View style={styles.divider} />
+              <SwitchRow
+                title={T("Even out loud and quiet")}
+                line={T("Quiet passages come up and loud ones are held back: for orchestras and film music on headphones, or at night")}
+                value={settings.evenOut}
+                onChange={(evenOut) => change({ evenOut })}
+              />
+              </>
+            )}
+            <View style={styles.divider} />
+            <Pressable onPress={() => nav.navigate("Equalizer")} style={styles.action}>
+              <SlidersHorizontal size={20} color={colors.ink} />
+              <Text style={[styles.actionText, styles.actionGrow]}>{T("Equalizer")}</Text>
+              <Text style={styles.rowSub}>{settings.eqOn ? T("On") : T("Off")}</Text>
+              <ChevronRight size={18} color={colors.dim} />
+            </Pressable>
+            <View style={styles.divider} />
+            <View style={styles.switchRow}>
+              <View style={styles.switchText}>
+                <Text style={styles.rowTitle}>{T("24-bit output")}</Text>
+                <Text style={styles.rowSub}>{T("Keeps the full resolution of 24-bit files up to your phone's mixer. Turn it off if those songs play too fast.")}</Text>
+              </View>
+              <Switch accessibilityLabel={T("24-bit output")} value={keep24Bit} onValueChange={(on) => usePlayer.getState().setKeep24Bit(on)} trackColor={{ true: colors.accent }} thumbColor={colors.ink} />
+            </View>
+          </View>
+          </>
+    ),
+    gestures: (
+          <>
+          <View style={styles.group}>
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("How a pulled song feels")}</Text>
+              <View style={styles.chips}>
+                <Chip label={T("Rubber band")} active={settings.swipeFeel === "rubber"} onPress={() => change({ swipeFeel: "rubber" })} />
+                <Chip label={T("Taut")} active={settings.swipeFeel === "taut"} onPress={() => change({ swipeFeel: "taut" })} />
+              </View>
+              <Text style={styles.rowSub}>{settings.swipeFeel === "rubber" ? T("Pulls far and kicks at every step; let go it snaps home") : T("Gives less and kicks less; let go it comes home without going past it")}</Text>
+            </View>
+            <View style={styles.divider} />
+            <SwitchRow title={T("Vibration")} line={T("The phone answers your touches: pulled songs, buttons, likes, menus")} value={settings.haptics} onChange={(haptics) => change({ haptics })} />
+          </View>
+    
+          </>
+    ),
+    lyrics: (
+          <>
+          <View style={styles.group}>
+            <SwitchRow title={T("Synced lyrics")} line={T("Highlight the current line and follow it")} value={settings.syncedLyrics} onChange={(syncedLyrics) => change({ syncedLyrics })} />
+            <View style={styles.divider} />
+            <SwitchRow title={T("Dim the other lines")} line={T("Keep the spotlight on the current line")} value={settings.dimLyrics} onChange={(dimLyrics) => change({ dimLyrics })} />
+            <View style={styles.divider} />
+            <SwitchRow title={T("Cyrillic in Latin letters")} line={T("A Latin line under each line of Russian, Ukrainian or other Cyrillic lyrics")} value={settings.lyricsLatin} onChange={(lyricsLatin) => change({ lyricsLatin })} />
+          </View>
+    
+          </>
+    ),
+    appearance: (
+          <>
+          <View style={styles.group}>
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Accent")}</Text>
+              <View style={styles.swatches}>
+                {(Object.keys(ACCENTS) as Accent[]).map((accent) => (
+                  <Pressable
+                    key={accent}
+                    accessibilityLabel={ACCENTS[accent].label}
+                    accessibilityState={{ selected: settings.accent === accent }}
+                    onPress={() => pickAccent(accent)}
+                    style={[styles.swatch, { backgroundColor: ACCENTS[accent].color }]}
+                  >
+                    {settings.accent === accent && <Check size={18} color={ACCENTS[accent].on} strokeWidth={3} />}
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={styles.rowSub}>{T("The colour of what's playing, what's on, likes and the main buttons")}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Language")}</Text>
+              <View style={styles.chips}>
+                <Chip label={T("Automatic")} active={settings.language === "auto"} onPress={() => pickLanguage("auto")} />
+                {LANGUAGES.map((l) => (
+                  <Chip key={l.id} label={l.name} active={settings.language === l.id} onPress={() => pickLanguage(l.id)} />
+                ))}
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <SwitchRow title={T("Reduce animation")} line={T("Pages and pulled songs move straight to where they're going")} value={settings.reduceMotion} onChange={(reduceMotion) => change({ reduceMotion })} />
+          </View>
+    
+          </>
+    ),
+    downloads: (
+          <>
+          <View style={styles.group}>
+            {!!(loadingCount || failedCount) && (
+              <>
+                <View style={styles.row}>
+                  <Text style={styles.rowTitle}>
+                    {waitingForWifi ? T("{count} for Wi-Fi", { count: plural(waitingForWifi, T("song waits"), T("songs wait")) }) : loadingCount ? T("Downloading {count}", { count: plural(loadingCount, T("song"), T("songs")) }) : T("{count} didn't download", { count: plural(failedCount, T("song"), T("songs")) })}
+                  </Text>
+                  {!!failedCount && !!lastProblem && <Text style={[styles.rowSub, { color: "#FF9D9D" }]}>{lastProblem}</Text>}
+                </View>
+                <View style={styles.divider} />
+              </>
+            )}
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Quality of new downloads")}</Text>
+              <View style={styles.chips}>
+                <Chip label={T("Original")} active={quality === "original"} onPress={() => useDownloads.getState().setQuality("original")} />
+                <Chip label={T("Compact")} active={quality === "compact"} onPress={() => useDownloads.getState().setQuality("compact")} />
+              </View>
+              <Text style={styles.rowSub}>{quality === "original" ? T("The files themselves, FLAC stays FLAC") : T("MP3 at 192 kbps, about 1.5 MB a minute")}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.switchRow}>
+              <View style={styles.switchText}>
+                <Text style={styles.rowTitle}>{T("Download over mobile data")}</Text>
+              </View>
+              <Switch
+                accessibilityLabel={T("Download over mobile data")}
+                value={overMobile}
+                onValueChange={(on) => useDownloads.getState().setOverMobile(on)}
+                trackColor={{ true: colors.accent }}
+              thumbColor={colors.ink}
+              />
+            </View>
+            <View style={styles.divider} />
+            <Pressable
+              disabled={!anyDownloads}
+              onPress={() =>
+                showDialog(T("Remove all downloads?"), T("{count}, {sizeLine} from this phone{value}. They stay on your server.", { count: plural(keptSongs.length, T("song"), T("songs")), sizeLine: sizeLine(keptBytes), value: onItsWay ? T(", and {count} on the way", { count: plural(onItsWay, T("song"), T("songs")) }) : "" }), [
+                  { text: T("Cancel"), style: "cancel" },
+                  { text: T("Remove"), style: "destructive", onPress: () => useDownloads.getState().removeAll() },
+                ])
+              }
+              style={styles.action}
+            >
+              <Trash2 size={20} color={anyDownloads ? "#FF9D9D" : colors.dim} />
+              <Text style={[styles.actionText, { color: anyDownloads ? "#FF9D9D" : colors.dim }]}>
+                {anyDownloads ? T("Remove all ({count}, {sizeLine})", { count: plural(keptSongs.length + onItsWay, T("song"), T("songs")), sizeLine: sizeLine(keptBytes) }) : T("Nothing downloaded yet")}
+              </Text>
+            </Pressable>
+          </View>
+    
+          </>
+    ),
+    sync: (
+          <>
+          <View style={styles.group}>
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Playlists and where you stopped")}</Text>
+              <Text style={[styles.rowSub, syncStatus === "connected" && { color: colors.accent }]}>
+                {syncNotFound ? T("No sync service found on your Jellyfin server") : SYNC_LINE[syncStatus]}
+                {syncStatus === "connected" && syncVersion ? ` · ${T("version {version}", { version: syncVersion })}` : ""}
+              </Text>
+              <Text numberOfLines={1} style={styles.rowSub}>
+                {syncAddress()}
+              </Text>
+            </View>
+            {syncNotFound && (
+              <>
+                <View style={styles.divider} />
+                <Pressable onPress={searchSyncAgain} style={styles.notice}>
+                  <RefreshCw size={20} color={colors.ink} />
+                  <View style={styles.noticeText}>
+                    <Text style={styles.rowTitle}>{T("Search again")}</Text>
+                    <Text style={styles.rowSub}>{T("A sync service keeps playlists and your library the same on all your devices: a small Docker container next to Jellyfin, songsta-sync.zip on the Releases page. Without one, each device keeps its own.")}</Text>
+                  </View>
+                </Pressable>
+              </>
+            )}
+            {syncTooOld && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.notice}>
+                  <CircleAlert size={20} color={colors.hiRes} />
+                  <View style={styles.noticeText}>
+                    <Text style={styles.rowTitle}>{T("The sync service needs an update")}</Text>
+                    <Text style={styles.rowSub}>{T("Until then, library order, groups and album edits stay on this phone. To update it, run this in its folder on the server:")}</Text>
+                    <Text selectable style={styles.command}>
+                      {SYNC_UPDATE_COMMAND}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
+            <View style={styles.divider} />
+            <Pressable onPress={() => setEditingSync(true)} style={styles.action}>
+              <Link2 size={20} color={colors.ink} />
+              <Text style={styles.actionText}>{customAddress ? T("Change the address") : T("Enter another address")}</Text>
+            </Pressable>
+            <View style={styles.divider} />
+            <SwitchRow title={T("Count plays on the server")} line={T("Songs you hear here count on Jellyfin too")} value={settings.serverPlays} onChange={(serverPlays) => change({ serverPlays })} />
+          </View>
+          <Text style={styles.section}>{T("RECEIVERS AND TVS")}</Text>
+          <View style={styles.group}>
+            <SwitchRow title={T("Switch receivers off afterwards")} line={T("Denon and Marantz go off 30 seconds after the music has left them, unless you stop it or they're doing something else")} value={settings.switchOffDevices} onChange={(switchOffDevices) => change({ switchOffDevices })} />
+          </View>
+          </>
+    ),
+    app: (
+          <>
+          <View style={styles.group}>
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{T("Songsta {APP_VERSION}", { APP_VERSION })}</Text>
+              <Text style={styles.rowSub}>{T("Your data stays on your devices and your own server.")}</Text>
+            </View>
+            <View style={styles.divider} />
+            <UpdateRows newer={newer} />
+            <Pressable
+              disabled={lookingForUpdates}
+              onPress={() => {
+                setLookingForUpdates(true);
+                void lookNow().finally(() => setLookingForUpdates(false));
+              }}
+              style={styles.row}
+            >
+              <Text style={styles.rowTitle}>{T("Look for updates")}</Text>
+              <Text style={styles.rowSub}>{lookingForUpdates ? T("Looking…") : T("You have Songsta {version}", { version: APP_VERSION })}</Text>
+            </Pressable>
+            <View style={styles.divider} />
+            <SwitchRow title={T("Automatic updates")} line={T("Fetches new versions on Wi-Fi. Android asks you before one goes in.")} value={settings.autoUpdate} onChange={(autoUpdate) => change({ autoUpdate })} />
+            <View style={styles.divider} />
+            <SwitchRow title={T("Tell me about new versions")} line={T("A short note and a dot on the settings button when one is out")} value={settings.checkNewVersion} onChange={(checkNewVersion) => change({ checkNewVersion })} />
+            <View style={styles.divider} />
+            <Pressable onPress={exportData} style={styles.notice}>
+              <FileUp size={20} color={colors.ink} />
+              <View style={styles.noticeText}>
+                <Text style={styles.rowTitle}>{T("Export data")}</Text>
+                <Text style={styles.rowSub}>{T("Playlists, library order, groups, album edits and settings in one file, for a new start")}</Text>
+              </View>
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable onPress={importData} style={styles.notice}>
+              <FileDown size={20} color={colors.ink} />
+              <View style={styles.noticeText}>
+                <Text style={styles.rowTitle}>{T("Import data")}</Text>
+                <Text style={styles.rowSub}>{T("From a file exported on a phone, in place of what's here")}</Text>
+              </View>
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable onPress={resetEverything} style={styles.action}>
+              <Trash2 size={20} color="#FF9D9D" />
+              <Text style={[styles.actionText, { color: "#FF9D9D" }]}>{T("Reset the app")}</Text>
+            </Pressable>
+          </View>
+    
+          </>
+    ),
+  };
+
   return (
+    <PullDownToClose onClose={() => nav.goBack()}>
     <ScrollView style={styles.root} contentContainerStyle={{ paddingTop: insets.top + 2, paddingBottom: PAGE_END + insets.bottom }}>
       <Pressable onPress={() => nav.goBack()} accessibilityLabel={T("Go back")} style={styles.back}>
         <ChevronLeft size={28} color={colors.ink} />
       </Pressable>
-      <Text style={styles.title}>{T("Settings")}</Text>
+      <Text style={styles.title}>{section ? SECTIONS.find((x) => x.key === section)?.title : T("Settings")}</Text>
 
-      <Text style={styles.section}>{T("MUSIC ON THIS PHONE")}</Text>
-      <View style={styles.group}>
-        {folders.map((folder) => (
-          <View key={folder.uri}>
-            <View style={styles.switchRow}>
-              <View style={styles.switchText}>
-                <Text numberOfLines={1} style={styles.rowTitle}>
-                  {folder.name}
-                </Text>
-              </View>
-              <Pressable
-                accessibilityLabel={T("Remove {name}", { name: folder.name })}
-                hitSlop={8}
-                onPress={() =>
-                  showDialog(T("Remove “{name}”?", { name: folder.name }), T("Its songs leave the app. The files stay on your phone."), [
-                    { text: T("Cancel"), style: "cancel" },
-                    { text: T("Remove"), style: "destructive", onPress: () => useLocalMusic.getState().removeFolder(folder.uri) },
-                  ])
-                }
-              >
-                <X size={20} color={colors.dim} />
-              </Pressable>
-            </View>
-            <View style={styles.divider} />
-          </View>
-        ))}
-        <Pressable onPress={() => void useLocalMusic.getState().addFolder()} style={styles.action}>
-          <FolderPlus size={20} color={colors.ink} />
-          <Text style={styles.actionText}>{T("Add a folder")}</Text>
-        </Pressable>
-        {folders.length > 0 && (
-          <>
-            <View style={styles.divider} />
-            <Pressable disabled={!!scanning} onPress={() => void useLocalMusic.getState().rescan()} style={styles.action}>
-              <RefreshCw size={20} color={colors.ink} />
-              <Text style={styles.actionText}>
-                {scanning ? (scanning.total ? T("Reading {read} of {total}…", { read: scanning.read, total: scanning.total }) : T("Looking through the folders…")) : T("Look again ({count})", { count: plural(onPhone, T("song"), T("songs")) })}
-              </Text>
-            </Pressable>
-            <View style={styles.divider} />
-            <SwitchRow
-              title={T("Filter non-music audio")}
-              line={inFolders > onPhone ? T("Clips, recordings and voice notes stay out. Of {count}, {value} {value2} listed on their own: filtered, or also on your server.", { count: plural(inFolders, T("file"), T("files")), value: inFolders - onPhone, value2: inFolders - onPhone === 1 ? "isn't" : "aren't" }) : T("Clips, recordings and voice notes stay out")}
-              value={settings.filterNonMusic}
-              onChange={(filterNonMusic) => change({ filterNonMusic })}
-            />
-          </>
-        )}
-      </View>
-
-      <Text style={styles.section}>{T("SERVER")}</Text>
-      {!session && (
-        <View style={styles.group}>
-          <Pressable onPress={() => useLocalMusic.getState().setAddingServer(true)} style={styles.action}>
-            <Server size={20} color={colors.ink} />
-            <Text style={styles.actionText}>{T("Connect to a Jellyfin server")}</Text>
-          </Pressable>
-        </View>
-      )}
-      {!!session && <View style={styles.group}>
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Jellyfin")}</Text>
-          <Text style={[styles.rowSub, reach !== "offline" && { color: colors.accent }]}>{REACH_LINE[reach]}</Text>
-          <Text style={styles.rowSub}>
-            {session?.userName} · {plural(count, T("song"), T("songs"))}
-          </Text>
-        </View>
-        <View style={styles.divider} />
-        <Pressable onPress={() => setEditingServer("home")} style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Address at home")}</Text>
-          <Text numberOfLines={1} style={styles.rowSub}>
-            {session?.home}
-          </Text>
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable onPress={() => setEditingServer("away")} style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Address away from home")}</Text>
-          <Text numberOfLines={2} style={styles.rowSub}>
-            {session?.away ?? T("None yet: your music plays only at home. Enter the address of your tunnel or proxy.")}
-          </Text>
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable disabled={refreshing} onPress={() => void refresh()} style={styles.action}>
-          <RefreshCw size={20} color={colors.ink} />
-          <Text style={styles.actionText}>{refreshing ? T("Reading the library…") : T("Read the library again")}</Text>
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable
-          onPress={() => {
-            if (!keptSongs.length) leave();
-            else {
-              showDialog(T("Sign out?"), T("Your downloads go too: {count}, {sizeLine}.", { count: plural(keptSongs.length, T("song"), T("songs")), sizeLine: sizeLine(keptBytes) }), [
-                { text: T("Cancel"), style: "cancel" },
-                { text: T("Sign out"), style: "destructive", onPress: leave },
-              ]);
-            }
-          }}
-          style={styles.action}
-        >
-          <LogOut size={20} color="#FF9D9D" />
-          <Text style={[styles.actionText, { color: "#FF9D9D" }]}>{T("Sign out")}</Text>
-        </Pressable>
-      </View>}
-
-      <Text style={styles.section}>{T("PLAYBACK")}</Text>
-      <View style={styles.group}>
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Streaming quality")}</Text>
-          <View style={styles.chips}>
-            {QUALITIES.map((q) => (
-              <Chip key={q.value} label={q.label} active={streaming === q.value} onPress={() => usePlayer.getState().setQuality(q.value)} />
-            ))}
-          </View>
-          <Text style={styles.rowSub}>{QUALITIES.find((q) => q.value === streaming)?.line}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Fade between songs")}</Text>
-          <View style={styles.chips}>
-            {FADES.map((seconds) => (
-              <Chip key={seconds} label={seconds ? `${seconds} s` : T("Off")} active={settings.fadeSeconds === seconds} onPress={() => change({ fadeSeconds: seconds })} />
-            ))}
-          </View>
-          <Text style={styles.rowSub}>{settings.fadeSeconds ? T("A song fades out, the next one fades in. They don't overlap yet.") : T("Songs follow each other without a gap")}</Text>
-        </View>
-        {settings.fadeSeconds > 0 && (
-          <>
-            <View style={styles.divider} />
-            <SwitchRow
-              title={T("Seamless albums")}
-              line={T("Songs of one album play on without a fade: live albums, DJ mixes, songs that run into each other")}
-              value={settings.seamlessAlbums}
-              onChange={(seamlessAlbums) => change({ seamlessAlbums })}
-            />
-          </>
-        )}
-        <View style={styles.divider} />
-        <SwitchRow title={T("Skip silence")} line={T("Jump over silent intros and gaps")} value={settings.skipSilence} onChange={(skipSilence) => change({ skipSilence })} />
-        <View style={styles.divider} />
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Playback speed")}</Text>
-          <View style={styles.chips}>
-            {SPEEDS.map((speed) => (
-              <Chip key={speed} label={`${speed}×`} active={settings.speed === speed} onPress={() => change({ speed })} />
-            ))}
-          </View>
-          <Text style={styles.rowSub}>{T("The pitch stays where it is")}</Text>
-        </View>
-        <View style={styles.divider} />
-        <SwitchRow title={T("Switch receivers off afterwards")} line={T("Denon and Marantz go off 30 seconds after the music has left them, unless you stop it or they're doing something else")} value={settings.switchOffDevices} onChange={(switchOffDevices) => change({ switchOffDevices })} />
-        <View style={styles.divider} />
-        <SwitchRow title={T("Skipping ends repeat one")} line={T("Go to another song while one is on repeat, and the whole list repeats from there")} value={settings.skipEndsRepeatOne} onChange={(skipEndsRepeatOne) => change({ skipEndsRepeatOne })} />
-        <View style={styles.divider} />
-        <SwitchRow title={T("Autoplay")} line={T("Keep the music going when the queue ends")} value={settings.autoplay} onChange={(autoplay) => change({ autoplay })} />
-        {settings.autoplay && (
-          <>
-            <View style={styles.divider} />
-            <SwitchRow title={T("Don't repeat suggestions")} line={T("What played in the last week stays out of that")} value={settings.dontRepeat} onChange={(dontRepeat) => change({ dontRepeat })} />
-          </>
-        )}
-        <View style={styles.divider} />
-        <Pressable onPress={() => nav.navigate("Equalizer")} style={styles.action}>
-          <SlidersHorizontal size={20} color={colors.ink} />
-          <Text style={[styles.actionText, styles.actionGrow]}>{T("Equalizer")}</Text>
-          <Text style={styles.rowSub}>{settings.eqOn ? T("On") : T("Off")}</Text>
-          <ChevronRight size={18} color={colors.dim} />
-        </Pressable>
-        <View style={styles.divider} />
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Volume leveling")}</Text>
-          <View style={styles.chips}>
-            {LEVELS.map((level) => (
-              <Chip key={level.value} label={level.label} active={leveling === level.value} onPress={() => usePlayer.getState().setLeveling(level.value)} />
-            ))}
-          </View>
-          <Text style={styles.rowSub}>{LEVELS.find((level) => level.value === leveling)?.line}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.switchRow}>
-          <View style={styles.switchText}>
-            <Text style={styles.rowTitle}>{T("24-bit output")}</Text>
-            <Text style={styles.rowSub}>{T("Keeps the full resolution of 24-bit files up to your phone's mixer. Turn it off if those songs play too fast.")}</Text>
-          </View>
-          <Switch accessibilityLabel={T("24-bit output")} value={keep24Bit} onValueChange={(on) => usePlayer.getState().setKeep24Bit(on)} trackColor={{ true: colors.accent }} thumbColor={colors.ink} />
-        </View>
-      </View>
-
-      <Text style={styles.section}>{T("GESTURES")}</Text>
-      <View style={styles.group}>
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("How a pulled song feels")}</Text>
-          <View style={styles.chips}>
-            <Chip label={T("Rubber band")} active={settings.swipeFeel === "rubber"} onPress={() => change({ swipeFeel: "rubber" })} />
-            <Chip label={T("Taut")} active={settings.swipeFeel === "taut"} onPress={() => change({ swipeFeel: "taut" })} />
-          </View>
-          <Text style={styles.rowSub}>{settings.swipeFeel === "rubber" ? T("Pulls far and kicks at every step; let go it snaps home") : T("Gives less and kicks less; let go it comes home without going past it")}</Text>
-        </View>
-        <View style={styles.divider} />
-        <SwitchRow title={T("Vibration")} line={T("The phone answers your touches: pulled songs, buttons, likes, menus")} value={settings.haptics} onChange={(haptics) => change({ haptics })} />
-      </View>
-
-      <Text style={styles.section}>{T("LYRICS")}</Text>
-      <View style={styles.group}>
-        <SwitchRow title={T("Synced lyrics")} line={T("Highlight the current line and follow it")} value={settings.syncedLyrics} onChange={(syncedLyrics) => change({ syncedLyrics })} />
-        <View style={styles.divider} />
-        <SwitchRow title={T("Dim the other lines")} line={T("Keep the spotlight on the current line")} value={settings.dimLyrics} onChange={(dimLyrics) => change({ dimLyrics })} />
-        <View style={styles.divider} />
-        <SwitchRow title={T("Cyrillic in Latin letters")} line={T("A Latin line under each line of Russian, Ukrainian or other Cyrillic lyrics")} value={settings.lyricsLatin} onChange={(lyricsLatin) => change({ lyricsLatin })} />
-      </View>
-
-      <Text style={styles.section}>{T("APPEARANCE")}</Text>
-      <View style={styles.group}>
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Accent")}</Text>
-          <View style={styles.swatches}>
-            {(Object.keys(ACCENTS) as Accent[]).map((accent) => (
-              <Pressable
-                key={accent}
-                accessibilityLabel={ACCENTS[accent].label}
-                accessibilityState={{ selected: settings.accent === accent }}
-                onPress={() => pickAccent(accent)}
-                style={[styles.swatch, { backgroundColor: ACCENTS[accent].color }]}
-              >
-                {settings.accent === accent && <Check size={18} color={ACCENTS[accent].on} strokeWidth={3} />}
-              </Pressable>
-            ))}
-          </View>
-          <Text style={styles.rowSub}>{T("The colour of what's playing, what's on, likes and the main buttons")}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Language")}</Text>
-          <View style={styles.chips}>
-            <Chip label={T("Automatic")} active={settings.language === "auto"} onPress={() => pickLanguage("auto")} />
-            {LANGUAGES.map((l) => (
-              <Chip key={l.id} label={l.name} active={settings.language === l.id} onPress={() => pickLanguage(l.id)} />
-            ))}
-          </View>
-        </View>
-        <View style={styles.divider} />
-        <SwitchRow title={T("Reduce animation")} line={T("Pages and pulled songs move straight to where they're going")} value={settings.reduceMotion} onChange={(reduceMotion) => change({ reduceMotion })} />
-      </View>
-
-      {!!session && <>
-      <Text style={styles.section}>{T("DOWNLOADS")}</Text>
-      <View style={styles.group}>
-        {!!(loadingCount || failedCount) && (
-          <>
-            <View style={styles.row}>
-              <Text style={styles.rowTitle}>
-                {waitingForWifi ? T("{count} for Wi-Fi", { count: plural(waitingForWifi, T("song waits"), T("songs wait")) }) : loadingCount ? T("Downloading {count}", { count: plural(loadingCount, T("song"), T("songs")) }) : T("{count} didn't download", { count: plural(failedCount, T("song"), T("songs")) })}
-              </Text>
-              {!!failedCount && !!lastProblem && <Text style={[styles.rowSub, { color: "#FF9D9D" }]}>{lastProblem}</Text>}
-            </View>
-            <View style={styles.divider} />
-          </>
-        )}
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Quality of new downloads")}</Text>
-          <View style={styles.chips}>
-            <Chip label={T("Original")} active={quality === "original"} onPress={() => useDownloads.getState().setQuality("original")} />
-            <Chip label={T("Compact")} active={quality === "compact"} onPress={() => useDownloads.getState().setQuality("compact")} />
-          </View>
-          <Text style={styles.rowSub}>{quality === "original" ? T("The files themselves, FLAC stays FLAC") : T("MP3 at 192 kbps, about 1.5 MB a minute")}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.switchRow}>
-          <View style={styles.switchText}>
-            <Text style={styles.rowTitle}>{T("Download over mobile data")}</Text>
-          </View>
-          <Switch
-            accessibilityLabel={T("Download over mobile data")}
-            value={overMobile}
-            onValueChange={(on) => useDownloads.getState().setOverMobile(on)}
-            trackColor={{ true: colors.accent }}
-          thumbColor={colors.ink}
-          />
-        </View>
-        <View style={styles.divider} />
-        <Pressable
-          disabled={!anyDownloads}
-          onPress={() =>
-            showDialog(T("Remove all downloads?"), T("{count}, {sizeLine} from this phone{value}. They stay on your server.", { count: plural(keptSongs.length, T("song"), T("songs")), sizeLine: sizeLine(keptBytes), value: onItsWay ? T(", and {count} on the way", { count: plural(onItsWay, T("song"), T("songs")) }) : "" }), [
-              { text: T("Cancel"), style: "cancel" },
-              { text: T("Remove"), style: "destructive", onPress: () => useDownloads.getState().removeAll() },
-            ])
-          }
-          style={styles.action}
-        >
-          <Trash2 size={20} color={anyDownloads ? "#FF9D9D" : colors.dim} />
-          <Text style={[styles.actionText, { color: anyDownloads ? "#FF9D9D" : colors.dim }]}>
-            {anyDownloads ? T("Remove all ({count}, {sizeLine})", { count: plural(keptSongs.length + onItsWay, T("song"), T("songs")), sizeLine: sizeLine(keptBytes) }) : T("Nothing downloaded yet")}
-          </Text>
-        </Pressable>
-      </View>
-
-      <Text style={styles.section}>{T("SYNC")}</Text>
-      <View style={styles.group}>
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Playlists and where you stopped")}</Text>
-          <Text style={[styles.rowSub, syncStatus === "connected" && { color: colors.accent }]}>
-            {syncNotFound ? T("No sync service found on your Jellyfin server") : SYNC_LINE[syncStatus]}
-            {syncStatus === "connected" && syncVersion ? ` · ${T("version {version}", { version: syncVersion })}` : ""}
-          </Text>
-          <Text numberOfLines={1} style={styles.rowSub}>
-            {syncAddress()}
-          </Text>
-        </View>
-        {syncNotFound && (
-          <>
-            <View style={styles.divider} />
-            <Pressable onPress={searchSyncAgain} style={styles.notice}>
-              <RefreshCw size={20} color={colors.ink} />
-              <View style={styles.noticeText}>
-                <Text style={styles.rowTitle}>{T("Search again")}</Text>
-                <Text style={styles.rowSub}>{T("A sync service keeps playlists and your library the same on all your devices: a small Docker container next to Jellyfin, songsta-sync.zip on the Releases page. Without one, each device keeps its own.")}</Text>
-              </View>
-            </Pressable>
-          </>
-        )}
-        {syncTooOld && (
-          <>
-            <View style={styles.divider} />
-            <View style={styles.notice}>
-              <CircleAlert size={20} color={colors.hiRes} />
-              <View style={styles.noticeText}>
-                <Text style={styles.rowTitle}>{T("The sync service needs an update")}</Text>
-                <Text style={styles.rowSub}>{T("Until then, library order, groups and album edits stay on this phone. To update it, run this in its folder on the server:")}</Text>
-                <Text selectable style={styles.command}>
-                  {SYNC_UPDATE_COMMAND}
-                </Text>
-              </View>
-            </View>
-          </>
-        )}
-        <View style={styles.divider} />
-        <Pressable onPress={() => setEditingSync(true)} style={styles.action}>
-          <Link2 size={20} color={colors.ink} />
-          <Text style={styles.actionText}>{customAddress ? T("Change the address") : T("Enter another address")}</Text>
-        </Pressable>
-        <View style={styles.divider} />
-        <SwitchRow title={T("Count plays on the server")} line={T("Songs you hear here count on Jellyfin too")} value={settings.serverPlays} onChange={(serverPlays) => change({ serverPlays })} />
-      </View>
-      </>}
-
-      <Text style={styles.section}>{T("THIS APP")}</Text>
-      <View style={styles.group}>
-        <View style={styles.row}>
-          <Text style={styles.rowTitle}>{T("Songsta {APP_VERSION}", { APP_VERSION })}</Text>
-          <Text style={styles.rowSub}>{T("Your data stays on your devices and your own server.")}</Text>
-        </View>
-        <View style={styles.divider} />
-        <UpdateRows newer={newer} />
-        <Pressable
-          disabled={lookingForUpdates}
-          onPress={() => {
-            setLookingForUpdates(true);
-            void lookNow().finally(() => setLookingForUpdates(false));
-          }}
-          style={styles.row}
-        >
-          <Text style={styles.rowTitle}>{T("Look for updates")}</Text>
-          <Text style={styles.rowSub}>{lookingForUpdates ? T("Looking…") : T("You have Songsta {version}", { version: APP_VERSION })}</Text>
-        </Pressable>
-        <View style={styles.divider} />
-        <SwitchRow title={T("Automatic updates")} line={T("Fetches new versions on Wi-Fi. Android asks you before one goes in.")} value={settings.autoUpdate} onChange={(autoUpdate) => change({ autoUpdate })} />
-        <View style={styles.divider} />
-        <SwitchRow title={T("Tell me about new versions")} line={T("A short note and a dot on the settings button when one is out")} value={settings.checkNewVersion} onChange={(checkNewVersion) => change({ checkNewVersion })} />
-        <View style={styles.divider} />
-        <Pressable onPress={exportData} style={styles.notice}>
-          <FileUp size={20} color={colors.ink} />
-          <View style={styles.noticeText}>
-            <Text style={styles.rowTitle}>{T("Export data")}</Text>
-            <Text style={styles.rowSub}>{T("Playlists, library order, groups, album edits and settings in one file, for a new start")}</Text>
-          </View>
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable onPress={importData} style={styles.notice}>
-          <FileDown size={20} color={colors.ink} />
-          <View style={styles.noticeText}>
-            <Text style={styles.rowTitle}>{T("Import data")}</Text>
-            <Text style={styles.rowSub}>{T("From a file exported on a phone, in place of what's here")}</Text>
-          </View>
-        </Pressable>
-        <View style={styles.divider} />
-        <Pressable onPress={resetEverything} style={styles.action}>
-          <Trash2 size={20} color="#FF9D9D" />
-          <Text style={[styles.actionText, { color: "#FF9D9D" }]}>{T("Reset the app")}</Text>
-        </Pressable>
-      </View>
+      {section ? pages[section] : overview}
 
       <NameDialog
         visible={editingSync}
@@ -711,6 +822,7 @@ export function SettingsScreen() {
         }}
       />
     </ScrollView>
+    </PullDownToClose>
   );
 }
 
@@ -735,4 +847,8 @@ const styles = StyleSheet.create({
   actionGrow: { flex: 1 },
   swatches: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginVertical: 10 },
   swatch: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  overview: { marginTop: 18 },
+  overviewRow: { flexDirection: "row", alignItems: "center", gap: 14, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10 },
+  overviewIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
+  overviewDivider: { height: 1, backgroundColor: colors.hairline, marginLeft: 64 },
 });

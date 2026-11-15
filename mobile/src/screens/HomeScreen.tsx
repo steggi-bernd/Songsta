@@ -7,10 +7,11 @@ import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { CloudOff, Settings, Speaker } from "lucide-react-native";
 import { useNewerVersion } from "../newVersion";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tinted } from "../color";
+import { refreshEverything } from "../refreshAll";
 import { Card, CARD_SIZE, Chip, Cover, CoverGrid, Shelf } from "../components/ui";
 import { splitCredits, type LibAlbum, type Track } from "../shared";
 import { useConnection } from "../stores/connection";
@@ -59,8 +60,13 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<Filter>("all");
   const loaded = useLibrary((s) => s.loaded);
-  const refreshing = useLibrary((s) => s.refreshing);
-  const refresh = useLibrary((s) => s.refresh);
+  // Pulled down: everything read again, as at a start (refreshAll.ts); the ring turns until that's done.
+  const [pulled, setPulled] = useState(false);
+  const refreshing = useLibrary((s) => s.refreshing) || pulled;
+  const refresh = useCallback(() => {
+    setPulled(true);
+    return refreshEverything().finally(() => setPulled(false));
+  }, []);
   const error = useLibrary((s) => s.error);
   const unreachable = useConnection((s) => s.reach === "offline");
   const hasServer = useSession((s) => !!s.session);

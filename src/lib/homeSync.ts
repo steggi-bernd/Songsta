@@ -30,6 +30,8 @@ import { T } from "./i18n";
 
 /** A pause a moment ago is a person between songs, not somebody done here. */
 const IDLE_BEFORE_TAKING_OVER_MS = 60_000;
+/** The service answered within this long: it's listening, and a look at the window needs no new round. */
+const LISTENING_FINE_MS = 28_000;
 /** While the other device plays on in the same song, this one looks up only now and then. */
 const FOLLOW_EVERY_MS = 120_000;
 const QUEUE_NOTE_BEHIND = 200;
@@ -117,6 +119,9 @@ const RESTART_AFTER_SEC = 3;
 /** Looks again at the login and the address: after a change in Settings. */
 let refreshNow: () => void = () => undefined;
 export const refreshHomeSync = (): void => refreshNow();
+/** Asks the sync service at once what's new and who's around (Refresh). */
+let lookNow: () => void = () => undefined;
+export const syncLookNow = (): void => lookNow();
 
 function readStored(key: string): string {
   try {
@@ -210,6 +215,7 @@ export function watchHomeSync(): () => void {
   let activityAt = Number(readStored(AT_KEY)) || 0;
   /** when somebody last did something here */
   let ownActivityAt = 0;
+  let idleLook: ReturnType<typeof setTimeout> | null = null;
   let queueId = readStored(QUEUE_KEY);
   let adoptedAt = 0;
   let device = { id: "", name: "" };
@@ -557,6 +563,15 @@ export function watchHomeSync(): () => void {
     const stillWanted = current && (current.presence.playing || !followed?.pausedSince || Date.now() - followed.pausedSince < FOLLOW_PAUSED_MS);
     const idleHere = Date.now() - ownActivityAt > IDLE_BEFORE_TAKING_OVER_MS;
     const target = handedTo ?? (stillWanted ? current : undefined) ?? (idleHere ? playing : undefined);
+    // Somebody plays, and this computer was in use a moment ago: looked at again when that moment is over, not at the next news.
+    if (idleLook) clearTimeout(idleLook);
+    idleLook = null;
+    if (!target && playing && !idleHere) {
+      idleLook = setTimeout(() => {
+        idleLook = null;
+        void engine?.devicesNow();
+      }, Math.max(500, ownActivityAt + IDLE_BEFORE_TAKING_OVER_MS + 250 - Date.now()));
+    }
     if (target) follow(target);
     else if (followed) stopFollowing(false);
   }
@@ -756,6 +771,10 @@ export function watchHomeSync(): () => void {
 
   const refreshQuietly = (): void => void refresh().catch(() => undefined);
   refreshNow = refreshQuietly;
+  lookNow = () => {
+    engine?.lookNow(0);
+    void engine?.checkPlayback();
+  };
   searchNow = () => engine?.searchAgain();
   // Away from home and back: the address moved, and the service is looked for at the new one.
   const offReach = bridge.onJellyfinReach?.(() => refreshQuietly()) ?? (() => undefined);
@@ -787,6 +806,8 @@ export function watchHomeSync(): () => void {
       activityAt = newNote();
       ownActivityAt = Date.now();
       engine?.playbackChanged(true);
+      // The song over from its start (repeat one): the devices showing it hear of it now, not at the next round.
+      if (s.position < prev.position - 2) engine?.presenceChanged();
     }
   });
   const offMuted = useMuted.subscribe((s, prev) => {
@@ -808,16 +829,22 @@ export function watchHomeSync(): () => void {
     // How the library is organised: pins, sort, groups, album edits and pictures (lib/libraryDocs.ts).
     watchLibraryDocs((name) => engine?.libraryChanged(name)),
   ];
-  const onFocus = (): void => void engine?.checkPlayback();
+  // Looked at again, or the network back (a computer woken up): a wait that died meanwhile is dropped at once.
+  const onFocus = (): void => {
+    engine?.lookNow(LISTENING_FINE_MS);
+    void engine?.checkPlayback();
+  };
   const onLeave = (): void => void engine?.flushPlayback();
   window.addEventListener("bytune:remote-library-updated", refreshQuietly);
   window.addEventListener("focus", onFocus);
+  window.addEventListener("online", onFocus);
   window.addEventListener("pagehide", onLeave);
   refreshQuietly();
 
   return () => {
     closed = true;
     refreshNow = () => undefined;
+    lookNow = () => undefined;
     searchNow = () => undefined;
     offReach();
     setSteering(null);
@@ -831,6 +858,9 @@ export function watchHomeSync(): () => void {
     for (const off of offHydrations) off();
     window.removeEventListener("bytune:remote-library-updated", refreshQuietly);
     window.removeEventListener("focus", onFocus);
+    window.removeEventListener("online", onFocus);
+    if (idleLook) clearTimeout(idleLook);
+    idleLook = null;
     window.removeEventListener("pagehide", onLeave);
   };
 }

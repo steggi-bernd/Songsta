@@ -1057,6 +1057,8 @@ interface DeviceLink {
   handOver(deviceId: string): Promise<boolean>;
   /** Look at the position and queue documents again. */
   look(): void;
+  /** Ask again who's around and what plays there. */
+  lookAround?(): void;
   /** What this phone says about itself changed. */
   presence(): void;
   /** Whether the service answers: without it the others hear nothing. */
@@ -1155,6 +1157,7 @@ let deviceLink: DeviceLink | null = null;
 let followNext: string | null = null;
 let followTick: ReturnType<typeof setInterval> | null = null;
 let followPausedSince = 0;
+let idleLook: ReturnType<typeof setTimeout> | null = null;
 
 export function linkDevices(link: DeviceLink | null): void {
   deviceLink = link;
@@ -1288,6 +1291,15 @@ export function hearDevices(others: RemoteDevice[]): void {
   // A pause a moment ago is a person between songs: their own queue stays until then.
   const idleHere = Date.now() - ownActivityAt > IDLE_BEFORE_TAKING_OVER_MS;
   const target = handedTo ?? (stillWanted ? followed : undefined) ?? (idleHere ? playing : undefined);
+  // Somebody plays, and this phone was in use a moment ago: looked at again when that moment is over, not at the next news.
+  if (idleLook) clearTimeout(idleLook);
+  idleLook = null;
+  if (!target && playing && !idleHere) {
+    idleLook = setTimeout(() => {
+      idleLook = null;
+      deviceLink?.lookAround?.();
+    }, Math.max(500, ownActivityAt + IDLE_BEFORE_TAKING_OVER_MS + 250 - Date.now()));
+  }
   if (target) follow(target);
   else if (remote) stopFollowing(false);
 }

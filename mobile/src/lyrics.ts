@@ -3,6 +3,7 @@
  * Remembered: what was found once is there without a connection.
  */
 import { useEffect, useState } from "react";
+import { usePlayer } from "./stores/player";
 import { fetchLyrics, type LyricLine } from "./jellyfin";
 import { lrcRows, primaryArtist, queryTitle, sungLines, unfoldStamps, type Track } from "./shared";
 import { readJson, writeJson } from "./storage";
@@ -133,7 +134,50 @@ export function useLyrics(track: Track | undefined): LyricLine[] {
 }
 
 /** The line at this moment; -1 before the first and on lyrics that aren't timed. */
+/**
+ * A line shows this long before it's sung, as on the computer (SyncedLyrics.tsx): read when it
+ * comes, not after. Without it, and with the place told only twice a second, the lines came late.
+ */
+export const LINE_LEAD_MS = 350;
+const CLOCK_EVERY_MS = 100;
+
+/** The place last told, and when: in between, a playing song runs on from there. */
+let told = { ms: 0, at: 0 };
+usePlayer.subscribe((s, prev) => {
+  if (s.positionMs !== prev.positionMs || s.isPlaying !== prev.isPlaying) told = { ms: s.positionMs, at: Date.now() };
+});
+
+/** Where the song is this moment: the player says it twice a second, in between it runs on. */
+export function songNow(): number {
+  const { positionMs, isPlaying, durationMs } = usePlayer.getState();
+  if (!isPlaying || told.ms !== positionMs) return positionMs;
+  const now = told.ms + (Date.now() - told.at);
+  return durationMs > 0 ? Math.min(now, durationMs) : now;
+}
+
+/**
+ * The line being sung (currentLine) as the song goes: looked at ten times a second while it plays,
+ * a new value only when the line changes, so whatever shows it draws anew once a line. Not `active`
+ * (a card under the closed player), it doesn't look at all.
+ */
+export function useLyricLine(lines: LyricLine[], active = true): number {
+  const isPlaying = usePlayer((s) => active && s.isPlaying);
+  const positionMs = usePlayer((s) => (active ? s.positionMs : -1));
+  const [at, setAt] = useState(() => currentLine(lines, songNow()));
+  useEffect(() => {
+    if (!active) return;
+    const look = (): void => setAt(currentLine(lines, songNow()));
+    look();
+    if (!isPlaying) return;
+    const timer = setInterval(look, CLOCK_EVERY_MS);
+    return () => clearInterval(timer);
+  }, [lines, active, isPlaying, positionMs]);
+  return at;
+}
+
+/** The line being sung at `positionMs`, shown LINE_LEAD_MS early; -1 before the first. */
 export function currentLine(lines: LyricLine[], positionMs: number): number {
+  positionMs += LINE_LEAD_MS;
   let at = -1;
   for (let i = 0; i < lines.length; i++) {
     const start = lines[i].at;

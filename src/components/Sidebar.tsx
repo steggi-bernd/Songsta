@@ -9,7 +9,7 @@
  * settings gear).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpDown, Check, ChevronDown, ChevronRight, Disc3, Folder, FolderMinus, FolderPlus, Heart, Library, ListEnd, ListMusic, ListPlus, Music2, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Play, Plus, Shuffle, Sparkles, Ungroup, User, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ChevronRight, Disc3, Folder, FolderMinus, FolderPlus, Heart, ListEnd, ListMusic, ListPlus, Music2, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Play, Plus, Shuffle, Sparkles, Ungroup, User, Trash2 } from "lucide-react";
 import { newestFirst, useLibraryIndex, type LibAlbum } from "../lib/catalogIndex";
 import { arrangeGroups, groupOf, newGroupId, newGroupName, withGroupNamed, withItemIn, withItemOut, withNewGroup, withoutGroup, type Group, type GroupPlace } from "../lib/libraryGroups";
 import { albumListKey, playlistListKey } from "../lib/keptLists";
@@ -152,6 +152,7 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
 
   /** Spotify's filter chips: one category at a time, a second click shows everything again. */
   const [filter, setFilter] = useState<LibFilter | null>(null);
+  const onLibraryPage = useUI((st) => st.view.name === "library" && !st.view.param);
   const sortedAlbums = useMemo(() => {
     const list = [...albums];
     if (libraryOrder === "alpha") return list.sort((a, b) => a.title.localeCompare(b.title));
@@ -919,46 +920,45 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
       className="relative flex-1 min-h-0 flex flex-col glass-pill rounded-2xl overflow-hidden shadow-pill"
       onContextMenu={onLibraryContextMenu}
     >
-      {/* Header */}
-      {collapsed ? (
-        <div className="flex justify-center pt-4 pb-2">
-          <button
-            onClick={() => setCollapsed(false)}
-            title={T("Expand Your Library")}
-            aria-label={T("Expand Your Library")}
-            className="w-10 h-10 grid place-items-center rounded-full text-ink-hi/70 hover:text-ink-hi hover:bg-ink-hi/[0.08] transition-colors"
-          >
-            <PanelLeftOpen className="w-5 h-5" />
-          </button>
-        </div>
-      ) : (
-        // Nothing here may wrap: while the panel widens from the rail, a
-        // wrapped "Your Library" grew the header and pushed every row down.
-        <div className="flex items-center gap-2 px-5 pt-4 pb-2 whitespace-nowrap">
-          <button
-            onClick={() => navigate({ name: "library" })}
-            className="flex items-center gap-2 text-[14px] font-semibold text-ink-hi/75 hover:text-ink-hi transition-colors"
-          >
-            <Library className="w-4 h-4" />{T("Your Library")}</button>
-          <div className="ml-auto flex items-center gap-1">
-            {/* + opens Spotify's create dropdown — Playlist / Folder, no modal. */}
-            <CreateMenu onFolderCreated={(f) => setExpanded((prev) => new Set(prev).add(f.id))} />
-            <button
-              onClick={() => setCollapsed(true)}
-              title={T("Collapse Your Library")}
-              aria-label={T("Collapse Your Library")}
-              className="w-8 h-8 grid place-items-center rounded-full text-ink-hi/60 hover:text-ink-hi hover:bg-ink-hi/[0.08] transition-colors"
-            >
-              <PanelLeftClose className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Header. The fold button stands in one place, open or folded: on the
+          rail's centre line (39px in, under the logo), so the pointer needn't
+          move to fold and unfold. Open, the panel's name and the + follow it.
+          Nothing here may wrap: while the panel widens from the rail, a
+          wrapped "Your Library" grew the header and pushed every row down. */}
+      <div className="flex items-center pl-[19px] pr-4 pt-4 pb-2 whitespace-nowrap">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          title={collapsed ? T("Expand Your Library") : T("Collapse Your Library")}
+          aria-label={collapsed ? T("Expand Your Library") : T("Collapse Your Library")}
+          aria-expanded={!collapsed}
+          className="w-10 h-10 shrink-0 grid place-items-center rounded-full text-ink-hi/70 hover:text-ink-hi hover:bg-ink-hi/[0.08] transition-colors"
+        >
+          {collapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+        </button>
+        {!collapsed && (
+          <>
+            <div className="ml-auto flex items-center">
+              {/* + opens Spotify's create dropdown — Playlist / Folder, no modal. */}
+              <CreateMenu onFolderCreated={(f) => setExpanded((prev) => new Set(prev).add(f.id))} />
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Filter chips, Spotify's: one category at a time (a second click shows
           everything again); the sort button orders the albums. */}
       {!collapsed && (
         <div className="flex items-center gap-2 px-4 pb-2 whitespace-nowrap">
+          {/* The panel's name is a tab of its own: it opens the Your Library page. */}
+          <button
+            onClick={() => navigate({ name: "library" })}
+            aria-current={onLibraryPage ? "page" : undefined}
+            className={`h-8 px-3 shrink-0 rounded-full text-[13px] font-semibold transition-colors ${
+              onLibraryPage ? "bg-accent text-black" : "bg-ink-hi/[0.07] text-ink-hi hover:bg-ink-hi/[0.12]"
+            }`}
+          >
+            {T("Your Library")}
+          </button>
           {(Object.keys(FILTER_LABEL) as LibFilter[]).map((k) => (
             <button
               key={k}
@@ -1121,7 +1121,7 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
                     <div className="min-w-0 flex-1">
                       <div
                         className={`text-[14px] font-semibold truncate ${
-                          isCurrent ? "text-ink-hi" : "text-ink-hi"
+                          isCurrent ? "text-accent" : "text-ink-hi"
                         }`}
                       >
                         {r.title}

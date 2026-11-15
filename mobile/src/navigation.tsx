@@ -18,6 +18,7 @@ import { LibraryScreen } from "./screens/LibraryScreen";
 import { LyricsScreen } from "./screens/LyricsScreen";
 import { QueueScreen } from "./screens/QueueScreen";
 import { SearchScreen } from "./screens/SearchScreen";
+import { ReplayScreen } from "./screens/ReplayScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { colors } from "./theme";
 import { T } from "./shared";
@@ -42,8 +43,9 @@ function tabStack(name: string, First: ComponentType) {
         <Pages.Screen name="Album" component={AlbumScreen} options={pullDownPage} />
         <Pages.Screen name="Artist" component={ArtistScreen} options={pullDownPage} />
         <Pages.Screen name="Collection" component={CollectionScreen} options={pullDownPage} />
-        <Pages.Screen name="Settings" component={SettingsScreen} />
+        <Pages.Screen name="Settings" component={SettingsScreen} options={pullDownPage} />
         <Pages.Screen name="Equalizer" component={EqualizerScreen} />
+        <Pages.Screen name="Replay" component={ReplayScreen} options={pullDownPage} />
       </Pages.Navigator>
     );
   };
@@ -73,7 +75,7 @@ export function AppNavigation() {
     <NavigationContainer theme={theme}>
       <Root.Navigator screenOptions={pageOptions}>
         <Root.Screen name="Main" component={Main} />
-        <Root.Screen name="Lyrics" component={LyricsScreen} options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
+        <Root.Screen name="Lyrics" component={LyricsScreen} options={{ ...pullDownPage, animation: "slide_from_bottom" }} />
         <Root.Screen name="Devices" component={DevicesScreen} options={{ ...pullDownPage, animation: "slide_from_bottom" }} />
         <Root.Screen
           name="Queue"

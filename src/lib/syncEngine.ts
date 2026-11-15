@@ -579,14 +579,17 @@ export function createSyncEngine(host: SyncHost) {
     });
   }
 
-  async function run(mine: number): Promise<void> {
+  /** `again`: a look in between (the app back in front), with everything known kept: only who's around is asked anew. */
+  async function run(mine: number, again = false): Promise<void> {
     let retry = FIRST_RETRY_MS;
-    let synced = false;
-    lastHeardAt = Date.now();
+    let synced = again;
+    let atOnce = again;
+    if (!again) lastHeardAt = Date.now();
     while (running && mine === session) {
       try {
         // Asked for at once the first time round; from then on it waits for news.
-        const wait = seq < 0 ? 0 : LONG_POLL_SEC;
+        const wait = seq < 0 || atOnce ? 0 : LONG_POLL_SEC;
+        atOnce = false;
         const reply = await host.request("GET", `/v1/changes?since=${seq}&wait=${wait}&device=${encodeURIComponent(host.deviceId)}`, undefined, LONG_POLL_TIMEOUT_MS);
         if (!running || mine !== session) return;
         if (reply.status !== 200) throw refused(reply);
@@ -597,16 +600,8 @@ export function createSyncEngine(host: SyncHost) {
         retry = FIRST_RETRY_MS;
         seq = reply.body.seq;
         const revs = reply.body.revs ?? {};
-        if (!synced || revs.playlists !== known.playlists) await syncPlaylists();
-        if (!synced || revs.position !== known.position) await checkPlayback();
-        // A service from before this document doesn't list it.
-        if (revs.likes !== undefined) {
-          if (host.applyLikes) {
-            if (!synced || revs.likes !== known.likes) await pullLikes();
-          } else if (!synced) await pushLikes();
-        }
-        if (revs.muted !== undefined && (!synced || revs.muted !== known.muted)) await pullMuted();
-        await syncLibrary(revs, !synced);
+        // Who's around and what plays there comes first: it's what somebody opening the app looks at,
+        // and no document that takes its time (or fails) may stand in its way.
         hasDevices = revs.devices !== undefined;
         if (hasDevices) {
           if (reply.body.inbox > 0) await takeCommands();
@@ -617,6 +612,16 @@ export function createSyncEngine(host: SyncHost) {
           }
           if (!synced || Date.now() - lastPresenceAt > PRESENCE_EVERY_MS) await sendPresence();
         }
+        if (!synced || revs.position !== known.position) await checkPlayback();
+        if (!synced || revs.playlists !== known.playlists) await syncPlaylists();
+        // A service from before this document doesn't list it.
+        if (revs.likes !== undefined) {
+          if (host.applyLikes) {
+            if (!synced || revs.likes !== known.likes) await pullLikes();
+          } else if (!synced) await pushLikes();
+        }
+        if (revs.muted !== undefined && (!synced || revs.muted !== known.muted)) await pullMuted();
+        await syncLibrary(revs, !synced);
         // Linked: the service answered. Once per start, what it says about itself.
         if (!synced) void checkService(mine);
         synced = true;
@@ -777,6 +782,31 @@ export function createSyncEngine(host: SyncHost) {
     async handOver(deviceId: string): Promise<boolean> {
       await pushPlayback(true).catch(() => undefined);
       return this.sendCommand(deviceId, { action: "takeOver" });
+    },
+
+    /**
+     * The app is looked at again (a phone app back in front, a computer awake again): a wait that may
+     * have died meanwhile is dropped, and who's around and what plays there is asked at once.
+     * Nothing happens when the service answered within `quietMs`: it's listening fine.
+     */
+    lookNow(quietMs = 0): void {
+      if (!enabled) return;
+      if (!running) {
+        this.start();
+        return;
+      }
+      if (status === "connected" && Date.now() - lastHeardAt < quietMs) return;
+      // Never found for this server: it's looked for once a start, not at every look.
+      if (status !== "connected" && host.linked?.() === false) return;
+      session += 1;
+      lastDevicesAt = 0;
+      wakeSleep?.();
+      void run(session, seq >= 0);
+    },
+
+    /** Who's around, asked now: something here changed what this device makes of them. */
+    devicesNow(): Promise<void> {
+      return running && hasDevices ? pullDevices().catch(() => undefined) : Promise.resolve();
     },
 
     /** A retry now instead of at the end of the wait, say after a new address was entered. */

@@ -37,6 +37,7 @@ import { useUI } from "../stores/ui";
 import { useRecents } from "../stores/recents";
 import brandLogo from "../assets/brand/songsta-logo.svg";
 import { T } from "../lib/i18n";
+import { refreshEverything } from "../lib/refreshAll";
 import { useNewerVersion } from "../lib/newVersionWatch";
 
 /** A completion under the search field. */
@@ -317,17 +318,16 @@ export function TopBar() {
     }
   };
 
-  // Refresh is route-aware: Home drops its feed caches and re-orchestrates
-  // (its own central mechanism); every other view gets its data lifecycle
-  // re-run in place — App keys the view container on viewReloadNonce, so the
-  // bump remounts the page and its fetch effects, with route and params
-  // untouched. Never navigates: a refresh on Search stays on Search.
+  // Refresh reads everything again, as a start of the app does, with the
+  // music playing on (lib/refreshAll.ts): the music folder, every server, the
+  // catalogue, the sync service, and the page on screen, which loads afresh
+  // (Home puts its feed together again). Never navigates: a refresh on Search
+  // stays on Search. The arrows turn until it's done.
   const [feedRefreshing, setFeedRefreshing] = useState(false);
   const refreshCurrentView = (): void => {
     if (feedRefreshing) return;
     setFeedRefreshing(true);
-    useUI.getState().bumpViewReload();
-    window.setTimeout(() => setFeedRefreshing(false), 800);
+    void refreshEverything().finally(() => setFeedRefreshing(false));
   };
 
   return (
@@ -347,7 +347,10 @@ export function TopBar() {
           the Mac the mark starts at 36px (30px + its button's 6px) and stays
           there whether the library is open or folded: open, the covers' left
           edge is there (see the list in Sidebar.tsx); folded,
-          the 24px mark sits on the 80px rail's centre (48px). */}
+          the 24px mark sits on the 80px rail's centre (48px).
+          The arrows stand still as well, clear of the folded rail: Back's
+          chevron begins at 96px, where the page beside the rail begins (the
+          rail ends at 88px, and the chevron used to sit right on that line). */}
       <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={goHome}
@@ -361,7 +364,7 @@ export function TopBar() {
           title={T("Go back")}
           aria-label={T("Go back")}
           disabled={!canBack}
-          className={`app-no-drag w-9 h-9 grid place-items-center rounded-full transition-colors ${
+          className={`app-no-drag ml-[11px] w-9 h-9 grid place-items-center rounded-full transition-colors ${
             canBack
               ? "text-ink-hi/90 hover:text-ink-hi hover:bg-ink-hi/[0.08]"
               : "text-ink-hi/30 pointer-events-none"
@@ -560,13 +563,14 @@ export function TopBar() {
               onClick={() => navigate({ name: "explore" })}
               title={T("Explore your library")}
               aria-label={T("Explore")}
-              className={`p-1.5 rounded-full transition-colors ${
+              className={`p-1 rounded-full transition-colors ${
                 view.name === "explore" || view.name === "genre"
                   ? "text-ink-hi bg-ink-hi/[0.10]"
                   : "text-ink-hi/70 hover:text-ink-hi hover:bg-ink-hi/[0.08]"
               }`}
             >
-              <VinylIcon className="w-[18px] h-[18px]" />
+              {/* As large as the search glyph at the field's other end. */}
+              <VinylIcon className="w-6 h-6" />
             </button>
           </div>
         </div>

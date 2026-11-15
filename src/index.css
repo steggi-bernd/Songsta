@@ -1229,3 +1229,9 @@ html.platform-mac .font-display {
 html.platform-mac body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
 }
+
+/* Settings while a search shows rows from all over: the hairlines between rows go, since the rows
+   left standing next to each other aren't the ones the lines were drawn between. */
+.settings-searching .settings-divider {
+  display: none;
+}

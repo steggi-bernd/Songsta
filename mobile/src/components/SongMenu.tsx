@@ -1,7 +1,7 @@
 /** What a song's menu offers, and the download buttons of a song and of a whole list. */
-import { ArrowDown, CircleArrowDown, Disc3, DiscAlbum, ListPlus, ListStart, Share2, Speaker, Split, Undo2, User, Volume2, VolumeX, type LucideIcon } from "lucide-react-native";
+import { ArrowDown, CircleArrowDown, Disc3, DiscAlbum, ListPlus, ListStart, Speaker, Split, Undo2, User, Volume2, VolumeX, type LucideIcon } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, Share, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { create } from "zustand";
 import { albumKeyOf } from "../playingFrom";
@@ -131,7 +131,6 @@ export function SongMenu() {
     } else if (!albumKey) rows.push({ label: T("Put on an album…"), Icon: DiscAlbum, run: () => usePutOnAlbum.getState().open(track) });
     rows.push({ label: T("Go to artist"), Icon: User, run: () => goTo?.("Artist", { name: leadArtist(track.artist) }) });
     rows.push({ label: muted ? T("Play again (unmute)") : T("Mute song"), Icon: muted ? Volume2 : VolumeX, run: () => void useLibrary.getState().toggleMuted(track) });
-    rows.push({ label: T("Share"), Icon: Share2, run: () => void Share.share({ message: `${track.title} · ${track.artist}` }) });
   }
   for (const extra of extras) rows.push(extra);
   return (

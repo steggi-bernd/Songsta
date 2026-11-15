@@ -3,9 +3,10 @@ import { useNavigation } from "@react-navigation/native";
 import { ChevronDown, Pause, Play } from "lucide-react-native";
 import { memo, useEffect, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { PullDownToClose } from "../components/PullDownToClose";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tinted } from "../color";
-import { currentLine, useLyrics } from "../lyrics";
+import { useLyricLine, useLyrics } from "../lyrics";
 import { fmtTime, hasCyrillic, toLatin } from "../shared";
 import { useCoverColor } from "../stores/library";
 import { usePlayer } from "../stores/player";
@@ -67,7 +68,8 @@ export function LyricsScreen() {
   const synced = useSettings((s) => s.syncedLyrics);
   const dim = useSettings((s) => s.dimLyrics);
   const latin = useSettings((s) => s.lyricsLatin);
-  const at = synced ? currentLine(lines, position) : -1;
+  const line = useLyricLine(lines, synced);
+  const at = synced ? line : -1;
   const timed = synced && dim && lines.length > 0 && lines[0].at !== undefined;
 
   useEffect(() => {
@@ -107,6 +109,7 @@ export function LyricsScreen() {
   const part = duration > 0 ? Math.min(1, position / duration) : 0;
 
   return (
+    <PullDownToClose onClose={() => nav.goBack()}>
     <View style={[styles.root, { backgroundColor: background }]}>
       <View style={[styles.top, { paddingTop: insets.top + 2 }]}>
         <Pressable onPress={() => nav.goBack()} accessibilityLabel={T("Close the lyrics")} style={styles.close}>
@@ -158,6 +161,7 @@ export function LyricsScreen() {
         </Pressable>
       </View>
     </View>
+    </PullDownToClose>
   );
 }
 

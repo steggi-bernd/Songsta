@@ -1,6 +1,8 @@
 /**
  * Canvas lookup hook — resolves the current track's looping video artwork
- * once per track, off the render path, only when the user opted in.
+ * once per track, off the render path, only when the user opted in. Asked by
+ * title, artist and album, so a song from the music folder finds one as well
+ * as the same song on a server (they used to be left out).
  */
 import { useEffect, useState } from "react";
 import { useSettings } from "../stores/settings";
@@ -11,7 +13,7 @@ export function useCanvas(track: Track | null): string | null {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !track || track.localPath || !track.thumb) {
+    if (!enabled || !track || !track.title || !track.artist) {
       setUrl(null);
       return;
     }

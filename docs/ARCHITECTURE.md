@@ -41,6 +41,8 @@ Everything plays through `library:trackurl`: the main process answers with a loc
 
 ## Persistence
 
+- The main window's place (`electron/window-place.ts`, store `window`): its own bounds, its screen and whether it's maximized. A window filling one screen while Windows keeps its own bounds on another (taken over while maximized, or screens switched off and on) gets them brought over (`bringHome` in `main.ts`), else it would minimize towards the other screen's taskbar and come back there. The taskbar preview's buttons are set only once the window has been shown: set earlier, Windows says they took and shows none, for good.
+- When a song joined Liked Songs or a playlist (`src/lib/listDates.ts`, store `list-dates`): seen from then on, or the day of a Spotify export, which wins. The song lists' columns (`src/lib/trackColumns.ts`) are a setting of each computer.
 - Library, settings and recents are persisted as JSON in the app's user-data directory and restored on launch (`persist.ts`); the listening history lives next to them (`stats.ts`, `listens.ts`).
 - Offline copies of server songs go to a library folder of their own, and merge with their server songs on the next scan. Lists downloaded as a whole are remembered (`src/lib/keptLists.ts`, shared with the phone) and completed when they or the library change.
 - A device gets a Jellyfin song straight from the server when both are on the same network and the server hands it out without a login. Everything else goes through a small media server in `cast.ts`; a device that never comes for its song there is the sign of a firewall (`status.unreachable`).

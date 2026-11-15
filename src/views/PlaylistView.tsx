@@ -4,20 +4,20 @@
  * "PLAYLIST • N TRACKS • ABOUT 3:2X" metadata line, circular glass controls,
  * then the playlist's own numbered track rows.
  */
-import { FileDown, Heart, ListMusic, ListPlus, MoreHorizontal, Play } from "lucide-react";
+import { useCallback } from "react";
+import { FileDown, ListMusic, ListPlus } from "lucide-react";
 import { exportM3uPlaylist } from "../lib/playlistFiles";
 import { PlaylistHero } from "../components/PlaylistHero";
-import { FileButton } from "../components/TrackList";
-import { Artwork, EmptyState, EqBars } from "../components/primitives";
+import { TrackList } from "../components/TrackList";
+import { EmptyState } from "../components/primitives";
 import { playlistHeaderItems, playlistMenuItems } from "../lib/trackActions";
-import { useDrag } from "../lib/dnd";
+import type { TrackSource } from "../lib/dnd";
+import { useListDates } from "../lib/listDates";
 import { fmtTime, plural } from "../lib/format";
 import { useArtworkPalette } from "../lib/palette";
 import { useStillMissing } from "../lib/playlistRecovery";
 import { upgradeArtwork } from "../lib/artwork";
-import { useLibrary, type Playlist } from "../stores/library";
-import { useIsMuted } from "../stores/muted";
-import { BranchMark } from "../components/primitives";
+import { useLibrary } from "../stores/library";
 import { usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
 import type { Track } from "../types";
@@ -28,6 +28,9 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
   const openContextMenu = useUI((s) => s.openContextMenu);
   const toast = useUI((s) => s.toast);
   const stillMissing = useStillMissing(playlistId);
+  // When each song joined: seen here, or the day it was added on Spotify for a recovered list.
+  const dates = useListDates(playlistId);
+  const menuFor = useCallback((track: Track, from?: TrackSource) => (playlist ? playlistMenuItems(playlist, track, from) : []), [playlist]);
 
   // The picture chosen for it, else: artist-imported playlists wear the
   // artist's photo, not a song cover — the page tint and the hero read from
@@ -55,7 +58,7 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
   const meta = [
     T("Playlist"),
     tracks.length ? plural(tracks.length, T("song"), T("songs")) : "",
-    totalSec > 0 ? `about ${fmtTime(totalSec)}` : "",
+    totalSec > 0 ? T("about {time}", { time: fmtTime(totalSec) }) : "",
   ]
     .filter(Boolean)
     .join(" • ")
@@ -144,14 +147,7 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
           </div>
         )}
         {tracks.length ? (
-          <div>
-            {tracks.map((track, i) => (
-              <div key={`${track.id}-${i}`}>
-                <PlaylistTrackRow track={track} index={i} queue={tracks} playlist={playlist} />
-                {i < tracks.length - 1 && <div className="h-px bg-ink-hi/[0.05] ml-[112px] mr-3" />}
-              </div>
-            ))}
-          </div>
+          <TrackList tracks={tracks} showAlbum sourceName={playlist.name} menuFor={menuFor} addedDates={dates} listKey={playlist.id} searchLabel={T("Search in this playlist")} />
         ) : (
           <EmptyState
             icon={ListMusic}
@@ -180,108 +176,6 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
             }
           />
         )}
-      </div>
-    </div>
-  );
-}
-
-function PlaylistTrackRow({
-  track,
-  index,
-  queue,
-  playlist,
-}: {
-  track: Track;
-  index: number;
-  queue: Track[];
-  playlist: Playlist;
-}) {
-  const playQueue = usePlayer((s) => s.playQueue);
-  const openContextMenu = useUI((s) => s.openContextMenu);
-  const currentId = usePlayer((s) => s.queue[s.index]?.id ?? null);
-  const playing = usePlayer((s) => s.playing);
-  const liked = useLibrary((s) => s.liked.some((t) => t.id === track.id));
-  const toggleLike = useLibrary((s) => s.toggleLike);
-  // The playlist is the song's list: Branch off from the menu or a drop into the queue continues in it.
-  const from = { name: playlist.name, tracks: queue, index };
-  const drag = useDrag({ track, from });
-  const isCurrent = currentId === track.id;
-
-  const muted = useIsMuted(track.id);
-  const openMenu = (x: number, y: number): void => {
-    openContextMenu(x, y, playlistMenuItems(playlist, track, from));
-  };
-
-  return (
-    <div
-      {...drag.props}
-      onClick={() => playQueue(queue, index)}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        openMenu(e.clientX, e.clientY);
-      }}
-      className={`group flex items-center gap-3.5 h-[64px] px-3 rounded-lg cursor-pointer select-none ${
-        isCurrent ? "bg-ink-hi/[0.14]" : "hover:bg-ink-hi/[0.05]"
-      } ${drag.dragging ? "opacity-40" : muted ? "opacity-60" : ""}`}
-    >
-      {/* The playlist's own running order — numbered rows, play on hover. */}
-      <div className="row-number w-7 shrink-0 grid place-items-center text-[13px] text-ink-faint tabular-nums">
-        {isCurrent && playing ? (
-          <EqBars />
-        ) : (
-          <>
-            <span className={`group-hover:hidden ${isCurrent ? "text-accent font-medium" : ""}`}>{index + 1}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isCurrent) usePlayer.getState().toggle();
-                else playQueue(queue, index);
-              }}
-              className="hidden group-hover:block text-ink-hi hover:text-ink-hi transition-colors"
-              title={T("Play")}
-              aria-label={T("Play {title}", { title: track.title })}
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-            </button>
-          </>
-        )}
-      </div>
-      <Artwork src={track.thumb} className="w-[52px] h-[52px] rounded-lg shrink-0" iconClassName="w-4 h-4" alt="" />
-      <div className="flex-1 min-w-0">
-        <div className={`flex items-center gap-1.5 text-[16px] font-semibold tracking-[-0.2px] ${isCurrent ? "text-accent" : muted ? "text-red-300" : "text-ink-hi"}`}>
-          <span className="truncate">{track.title}</span>
-          <BranchMark id={track.id} />
-        </div>
-        <div className="text-[14px] truncate text-ink-dim mt-0.5">{track.artist}</div>
-      </div>
-      {/* A like and a saved copy stay in view; the rest shows on hover. */}
-      <div className="w-[88px] shrink-0 flex items-center justify-end gap-0.5">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleLike(track);
-          }}
-          title={liked ? T("Remove from Liked Songs") : T("Add to Liked Songs")}
-          aria-label={liked ? T("Remove from Liked Songs") : T("Add to Liked Songs")}
-          className={`p-1.5 rounded-md text-ink-faint hover:text-ink-hi hover:bg-ink-hi/[0.07] transition-[color,background-color,opacity] ${liked ? "" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}
-        >
-          <Heart key={liked ? "liked" : "unliked"} className={`w-4 h-4 animate-icon-pop ${liked ? "fill-accent text-accent" : ""}`} />
-        </button>
-        <FileButton track={track} />
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            openMenu(e.clientX, e.clientY);
-          }}
-          title={T("More options")}
-          aria-label={T("More options for {title}", { title: track.title })}
-          className="p-1.5 rounded-md text-ink-faint hover:text-ink-hi hover:bg-ink-hi/[0.07] transition-[color,background-color,opacity] opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="w-11 shrink-0 text-right text-xs text-ink-faint tabular-nums">
-        {track.duration > 0 ? fmtTime(track.duration) : "—"}
       </div>
     </div>
   );
