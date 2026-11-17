@@ -36,7 +36,7 @@ import { pathToFileURL } from "node:url";
  * SONGSTA_SYNC_VERSION it was built with); built from this folder, this file says it, and it goes
  * up with each release like the apps' own.
  */
-export const VERSION = process.env.SONGSTA_SYNC_VERSION || "1.7.0";
+export const VERSION = process.env.SONGSTA_SYNC_VERSION || "1.8.0";
 
 /** `merged` documents are built on a revision and a write must say which; the rest is last writer wins. */
 const DOCS = {
