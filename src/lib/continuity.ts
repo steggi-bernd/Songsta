@@ -15,6 +15,8 @@ export interface SongEdges {
   outroSilence: number;
   headDb: number;
   tailDb: number;
+  /** measured from a stretch in the middle (a server song): its ends are not known */
+  excerpt?: boolean;
 }
 
 /** Louder than this at the very start or end, a song is sounding there. */
@@ -46,5 +48,6 @@ export function runsOn(cur: Track, next: Track, edges: { cur?: SongEdges; next?:
   if (runsOnByNature(cur)) return true;
   const a = edges.cur;
   const b = edges.next;
+  if (a?.excerpt || b?.excerpt) return false;
   return !!a && !!b && a.tailDb > SOUNDING_DB && a.outroSilence < BRIEF_SILENCE_S && b.headDb > SOUNDING_DB && b.introSilence < BRIEF_SILENCE_S;
 }

@@ -19,7 +19,7 @@ export const useAppUpdate = create<UpdateState>(() => NO_UPDATE);
 
 /** Opens in the system browser (the main window's open handler). */
 export function openReleasePage(): void {
-  window.open(RELEASE_PAGE, "_blank");
+  window.open(RELEASE_PAGE, "_blank", "noopener,noreferrer");
 }
 
 /** The note about a failure comes once per version, unless someone pressed for another try. */
@@ -27,7 +27,23 @@ let failureTold = "";
 /** Somebody pressed for this: whatever the hints say, they get an answer. */
 let pressed = false;
 
+/** GitHub switched off in Settings → Network & privacy: nothing is asked there, not even which version is the newest. */
+const githubOffIn = (s: { netOwnOnly: boolean; netOff: string[] }): boolean => s.netOwnOnly || s.netOff.includes("github");
+const githubOff = (): boolean => githubOffIn(useSettings.getState());
+
+/** Pressed with GitHub switched off: where to switch it on. */
+function tellGitHubOff(): void {
+  useUI.getState().toast(T("GitHub is switched off in Network & privacy"), "info", 10_000, {
+    label: T("Network & privacy"),
+    run: () => useUI.getState().navigate({ name: "settings", param: "privacy" }),
+  });
+}
+
 export function startUpdate(): void {
+  if (githubOff()) {
+    tellGitHubOff();
+    return;
+  }
   failureTold = "";
   pressed = true;
   void window.bytune?.startUpdate();
@@ -63,7 +79,7 @@ const fetchesByItself = (): boolean => useAppUpdate.getState().canInstall && use
 
 function fetchIfDue(): void {
   const current = window.bytune?.versions.app ?? "";
-  if (shouldFetchUpdate(useSettings.getState().newVersion.latest, current, useAppUpdate.getState(), fetchesByItself())) {
+  if (!githubOff() && shouldFetchUpdate(useSettings.getState().newVersion.latest, current, useAppUpdate.getState(), fetchesByItself())) {
     void window.bytune?.startUpdate();
   }
 }
@@ -72,6 +88,10 @@ function fetchIfDue(): void {
 export async function lookNow(): Promise<void> {
   const bridge = window.bytune;
   if (!bridge) return;
+  if (githubOff()) {
+    tellGitHubOff();
+    return;
+  }
   const settings = useSettings.getState();
   const { toast } = useUI.getState();
   const { memory } = await lookForNewVersion(bridge.versions.app, { ...settings.newVersion, checkedAt: 0 }, Date.now(), () => bridge.latestVersion());
@@ -140,7 +160,7 @@ export function watchNewVersion(): () => void {
   let looking = false;
   const look = async (): Promise<void> => {
     const settings = useSettings.getState();
-    if (looking || (!settings.checkNewVersion && !fetchesByItself())) return;
+    if (looking || githubOff() || (!settings.checkNewVersion && !fetchesByItself())) return;
     looking = true;
     try {
       const { memory, tell } = await lookForNewVersion(bridge.versions.app, settings.newVersion, Date.now(), () => bridge.latestVersion());
@@ -157,9 +177,10 @@ export function watchNewVersion(): () => void {
   };
   const first = setTimeout(() => void look(), NEW_VERSION_FIRST_LOOK_MS);
   const every = setInterval(() => void look(), NEW_VERSION_LOOK_EVERY_MS);
-  // Switched back on: there's no need to wait for the next hour.
+  // Switched back on (GitHub's switch too): there's no need to wait for the next hour.
   const off = useSettings.subscribe((now, before) => {
-    if ((now.checkNewVersion && !before.checkNewVersion) || (now.autoUpdate && !before.autoUpdate)) void look();
+    const githubBack = githubOffIn(before) && !githubOffIn(now);
+    if ((now.checkNewVersion && !before.checkNewVersion) || (now.autoUpdate && !before.autoUpdate) || githubBack) void look();
   });
   return () => {
     clearTimeout(first);

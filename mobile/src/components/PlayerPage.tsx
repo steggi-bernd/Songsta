@@ -298,7 +298,8 @@ export function PlayerPage({
       <View onLayout={(e) => onCardsHeight(e.nativeEvent.layout.height)} style={[styles.cards, { paddingBottom: insets.bottom + 18 }]}>
         {lyrics.length > 0 && <LyricsCard lines={lyrics} track={track} active={expanded} />}
         <NextUpCard />
-        <AboutSongCard track={track} active={expanded} />
+        {/* Klingt wie lives among the pages under the player: it folds away first, as for the album or artist. */}
+        <AboutSongCard track={track} active={expanded} onSoundsLike={() => onContext({ screen: "SoundsLike", params: { id: track.id } })} />
         <AboutArtistCard track={track} active={expanded} onOpen={() => onArtist(track)} />
       </View>
     </>

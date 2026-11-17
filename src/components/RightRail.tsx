@@ -29,7 +29,7 @@ import { DevicesPanel } from "./DevicesPanel";
 import { useLibrary } from "../stores/library";
 import { useSettings } from "../stores/settings";
 import { soundOf, useSound } from "../stores/sound";
-import { keyName } from "../../electron/sound-analysis";
+import { keyLabel } from "../lib/soundMatch";
 import type { Track } from "../types";
 import { upgradeArtwork } from "../lib/artwork";
 import { usePlayingFrom } from "../lib/recentlyPlayed";
@@ -636,7 +636,7 @@ function AboutSongCard({ track }: { track: Track }) {
   useEffect(() => setOpen(false), [track.id]);
   const info = songInfo && (songInfo.description || songInfo.credits.length || songInfo.released) ? songInfo : null;
   const tempo = sound?.bpm ? `${Math.round(sound.bpm)} BPM` : "";
-  const key = sound ? keyName(sound.key, sound.minor) : "";
+  const key = sound ? keyLabel(sound.key, sound.minor) : "";
   if (!info && !tempo && !key) return null;
 
   const credits = !info ? [] : open ? info.credits : info.credits.slice(0, 4);
@@ -647,7 +647,7 @@ function AboutSongCard({ track }: { track: Track }) {
         <h3 className="text-[15px] font-bold text-ink-hi">{T("About the song")}</h3>
         {info && (
           <button
-            onClick={() => window.open(info.url, "_blank")}
+            onClick={() => window.open(info.url, "_blank", "noopener,noreferrer")}
             title={T("Open the song on Genius")}
             className="shrink-0 h-7 px-3 rounded-full border border-ink-hi/30 text-[12px] font-bold text-ink-hi hover:border-ink-hi/60 hover:bg-ink-hi/[0.06] transition-all active:scale-[0.98]"
           >{T("Genius")}</button>
@@ -657,7 +657,7 @@ function AboutSongCard({ track }: { track: Track }) {
         <div className="text-[12.5px] text-ink-hi/55 mt-1 truncate">{[info.released, info.album].filter(Boolean).join(" · ")}</div>
       )}
       {(tempo || key) && (
-        <dl className="mt-2.5 flex gap-7" title={T("Measured from the audio by the sound analysis")}>
+        <dl className="mt-2.5 flex items-end gap-7" title={T("Measured from the audio by the sound analysis")}>
           {tempo && (
             <div>
               <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-hi/45">{T("Tempo")}</dt>
@@ -670,6 +670,13 @@ function AboutSongCard({ track }: { track: Track }) {
               <dd className="text-[13px] text-ink-hi/85 mt-0.5">{key}</dd>
             </div>
           )}
+          {/* Klingt wie: the songs that sound like this one (views/SoundsLikeView.tsx). */}
+          <button
+            onClick={() => useUI.getState().navigate({ name: "soundslike", param: track.id })}
+            className="ml-auto h-7 px-3 rounded-full bg-accent/[0.14] text-accent text-[12px] font-bold hover:bg-accent/[0.24] transition-colors whitespace-nowrap"
+          >
+            {T("Sounds like")} →
+          </button>
         </dl>
       )}
       {info?.description && (
@@ -782,7 +789,7 @@ function AboutArtistCard({ track }: { track: Track }) {
               onClick={(e) => {
                 e.stopPropagation();
                 // The main window's open handler sends web links to the system browser.
-                window.open(about.wikiUrl as string, "_blank");
+                window.open(about.wikiUrl as string, "_blank", "noopener,noreferrer");
               }}
               className="shrink-0 h-8 px-4 rounded-full border border-ink-hi/30 text-[13px] font-bold text-ink-hi hover:border-ink-hi/60 hover:bg-ink-hi/[0.06] transition-all active:scale-[0.98]"
             >{T("Wikipedia")}</button>

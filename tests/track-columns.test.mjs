@@ -19,9 +19,9 @@ const song = (title, rest = {}) => ({ id: `t:${title}`, title, artist: "", album
 
 test("the columns stand as they come, the time last, until one is moved", () => {
   const plain = { shown: ["album", "added", "time"], widths: {} };
-  assert.deepEqual(orderOf(plain), ["album", "added", "released", "genre", "format", "plays", "time"]);
+  assert.deepEqual(orderOf(plain), ["album", "added", "released", "genre", "format", "tempo", "key", "plays", "heard", "time"]);
   const pulled = moved(plain, "added", "album");
-  assert.deepEqual(orderOf(pulled), ["added", "album", "released", "genre", "format", "plays", "time"]);
+  assert.deepEqual(orderOf(pulled), ["added", "album", "released", "genre", "format", "tempo", "key", "plays", "heard", "time"]);
   // To the end: in front of nothing, and the time stays behind it.
   const toEnd = moved(plain, "album", null);
   assert.equal(orderOf(toEnd).at(-2), "album");
@@ -90,6 +90,34 @@ test("quality and release days order as numbers", () => {
   assert.ok(formatRank({ codec: "FLAC", bitsPerSample: 16, sampleRate: 44100 }) > formatRank({ codec: "MP3", bitrate: 320000 }));
   assert.ok(releasedValue({ date: "2021-05-04" }) > releasedValue({ originalYear: 2019 }));
   assert.equal(releasedValue({}), 0);
+});
+
+test("tempo, key and time listened order as numbers; unmeasured songs go last, unplayed ones count as none", () => {
+  const slow = song("slow", { duration: 200 });
+  const fast = song("fast", { duration: 100 });
+  const none = song("none", { duration: 300 });
+  const bpm = { "t:slow": 72, "t:fast": 128, "t:none": 0 };
+  const sense = { tempo: (t) => bpm[t.id], keyRank: (t) => ({ "t:slow": 17, "t:fast": 4, "t:none": 0 })[t.id], heard: (t) => ({ "t:slow": 2, "t:fast": 9, "t:none": 0 })[t.id] * t.duration };
+  assert.deepEqual(sortTracks([none, fast, slow], { key: "tempo", desc: false }, () => 0, () => 0, sense).map((t) => t.title), ["slow", "fast", "none"]);
+  assert.deepEqual(sortTracks([none, fast, slow], { key: "tempo", desc: true }, () => 0, () => 0, sense).map((t) => t.title), ["fast", "slow", "none"]);
+  assert.deepEqual(sortTracks([none, slow, fast], { key: "key", desc: false }, () => 0, () => 0, sense).map((t) => t.title), ["fast", "slow", "none"]);
+  // 9 × 100 s beats 2 × 200 s; the unplayed song is a real zero, at the end only because it's the least.
+  assert.deepEqual(sortTracks([none, slow, fast], { key: "heard", desc: true }, () => 0, () => 0, sense).map((t) => t.title), ["fast", "slow", "none"]);
+  assert.deepEqual(sortTracks([slow, none, fast], { key: "heard", desc: false }, () => 0, () => 0, sense).map((t) => t.title), ["none", "slow", "fast"]);
+  // A click on the column starts from the lowest tempo and key, from the most listened.
+  assert.deepEqual(nextListSort(null, "tempo"), { key: "tempo", desc: false });
+  assert.deepEqual(nextListSort(null, "heard"), { key: "heard", desc: true });
+  assert.deepEqual(readListSort({ key: "flow", desc: false }), { key: "flow", desc: false });
+});
+
+test("the flowing order is the list's flow, turned round when asked; without a flow the list stays", () => {
+  const a = song("a");
+  const b = song("b");
+  const c = song("c");
+  const flow = (list) => [list[2], list[0], list[1]];
+  assert.deepEqual(sortTracks([a, b, c], { key: "flow", desc: false }, () => 0, () => 0, { flow }).map((t) => t.title), ["c", "a", "b"]);
+  assert.deepEqual(sortTracks([a, b, c], { key: "flow", desc: true }, () => 0, () => 0, { flow }).map((t) => t.title), ["b", "a", "c"]);
+  assert.deepEqual(sortTracks([a, b, c], { key: "flow", desc: false }, () => 0, () => 0).map((t) => t.title), ["a", "b", "c"]);
 });
 
 test("the search takes every word, wherever it stands, without accents", () => {

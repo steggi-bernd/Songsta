@@ -8,9 +8,16 @@
  */
 import { app } from "electron";
 import type { AppUpdater } from "electron-updater";
-import { isNewerVersion, latestVersion, NO_UPDATE, type UpdateState } from "../src/lib/newVersion";
+import { isNewerVersion, latestVersion, NO_UPDATE, RELEASE_PAGE, type UpdateState } from "../src/lib/newVersion";
+import { passes } from "./net-gate";
 
 const canInstall = !!app.isPackaged && process.platform === "win32";
+
+/**
+ * The updater asks GitHub through a session of its own, past the gate every other request passes
+ * (net-gate.ts): GitHub's switch in Network & privacy is asked here first, noted as one request.
+ */
+const mayAskGitHub = (): boolean => passes(RELEASE_PAGE);
 
 let state: UpdateState = { ...NO_UPDATE, canInstall };
 let announce: (state: UpdateState) => void = () => undefined;
@@ -55,6 +62,7 @@ export function updateState(): UpdateState {
 /** The newest version there is. A release without its update files (yet) still has a number on GitHub. */
 export async function latestKnown(): Promise<string | null> {
   if (canInstall) {
+    if (!mayAskGitHub()) return null;
     try {
       const found = await loadUpdater().checkForUpdates();
       if (found) return found.updateInfo.version;
@@ -67,7 +75,8 @@ export async function latestKnown(): Promise<string | null> {
 
 /** Fetches the newest version; it then waits for the app to close. */
 export async function startUpdate(): Promise<void> {
-  if (!canInstall || state.phase === "downloading") return;
+  // Switched off: whatever is ready stays ready, nothing is fetched.
+  if (!canInstall || state.phase === "downloading" || !mayAskGitHub()) return;
   set({ phase: "downloading", percent: 0 });
   try {
     const loaded = loadUpdater();

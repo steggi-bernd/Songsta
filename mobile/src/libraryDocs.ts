@@ -20,10 +20,12 @@ import {
   type AlbumPicturesDoc,
   type EditValues,
   type GroupsDoc,
+  type KeysDoc,
   type LibraryDocHost,
   type LibraryDocName,
   type LibrarySort,
   type OrderDoc,
+  type SoundsDoc,
   type StampedMap,
 } from "./shared";
 import { useAlbumEdits } from "./stores/albumEdits";
@@ -31,6 +33,7 @@ import { useExplore } from "./stores/explore";
 import { useLibrarySync } from "./stores/librarySync";
 import { usePlayed } from "./stores/played";
 import { useSettings } from "./stores/settings";
+import { useSoundShare } from "./stores/soundShare";
 
 /** what Your Library pins itself; Liked Songs, playlists' places and smart playlists are kept as they come */
 const PHONE_KINDS = new Set(["album", "artist", "mix"]);
@@ -47,7 +50,7 @@ function quietly(change: () => void): void {
   }
 }
 
-const localChanges: Record<LibraryDocName, number> = { order: 0, groups: 0, albumedits: 0, albumpictures: 0 };
+const localChanges: Record<LibraryDocName, number> = { order: 0, groups: 0, albumedits: 0, albumpictures: 0, sounds: 0, keys: 0 };
 const readAt: Partial<Record<LibraryDocName, number>> = {};
 let tell: ((name: LibraryDocName) => void) | null = null;
 
@@ -185,6 +188,9 @@ export function libraryDocHosts(): Partial<Record<LibraryDocName, LibraryDocHost
     groups: side("groups", readGroupsHere, (doc) => applyGroups(doc as GroupsDoc)),
     albumedits: side("albumedits", readEdits, (doc) => applyEdits(doc as AlbumEditsDoc)),
     albumpictures: side("albumpictures", readPictures, (doc) => applyPictures(doc as AlbumPicturesDoc)),
+    // Tempo, key and energy, and keys set by hand: the computer measures and sets them, the phone takes them in (stores/soundShare.ts).
+    sounds: side("sounds", () => useSoundShare.getState().sounds, (doc) => useSoundShare.getState().keepSounds(doc as SoundsDoc)),
+    keys: side("keys", () => useSoundShare.getState().keys, (doc) => useSoundShare.getState().keepKeys(doc as KeysDoc)),
   };
 }
 

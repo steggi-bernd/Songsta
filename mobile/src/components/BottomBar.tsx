@@ -3,6 +3,7 @@
  * slot so the player's page can slide up over the tabs, which stay where they are.
  */
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { House, Library, Search } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
@@ -25,8 +26,16 @@ export function BottomBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(0, { useNativeDriver: true })).current;
   const [expanded, setExpanded] = useState(false);
-  // The open player covers the tab bar and the mini player: notes sit lower then.
-  useOverBottomBar(expanded);
+  // The Replay story takes the whole screen: the tabs and the player step aside while it shows.
+  const story = getFocusedRouteNameFromRoute(state.routes[state.index]) === "Replay";
+  const shown = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const run = Animated.timing(shown, { toValue: story ? 0 : 1, duration: 180, useNativeDriver: true });
+    run.start();
+    return () => run.stop();
+  }, [story, shown]);
+  // The open player, or the story, covers the tab bar and the mini player: notes sit lower then.
+  useOverBottomBar(expanded || story);
   const pickingFor = useZones((s) => s.pickingFor);
   const shownTab = state.routes[state.index].name;
   const goTo = (screen: string, params: object): void => navigation.navigate(shownTab, { screen, params });
@@ -35,7 +44,7 @@ export function BottomBar({ state, navigation }: BottomTabBarProps) {
   });
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+    <Animated.View style={[StyleSheet.absoluteFill, { opacity: shown }]} pointerEvents={story ? "none" : "box-none"}>
       <View pointerEvents={expanded ? "none" : "box-none"} style={styles.tabsLayer}>
         <LinearGradient colors={["rgba(0,0,0,0.72)", colors.base]} locations={[0, 0.5]} style={{ paddingBottom: insets.bottom }}>
           <View style={styles.tabs} accessibilityRole="tablist">
@@ -78,7 +87,7 @@ export function BottomBar({ state, navigation }: BottomTabBarProps) {
         setExpanded={setExpanded}
         goTo={goTo}
       />
-    </View>
+    </Animated.View>
   );
 }
 

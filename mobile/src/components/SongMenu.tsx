@@ -1,5 +1,5 @@
 /** What a song's menu offers, and the download buttons of a song and of a whole list. */
-import { ArrowDown, CircleArrowDown, Disc3, DiscAlbum, ListPlus, ListStart, Speaker, Split, Undo2, User, Volume2, VolumeX, type LucideIcon } from "lucide-react-native";
+import { ArrowDown, AudioWaveform, CircleArrowDown, Disc3, DiscAlbum, ListPlus, ListStart, Speaker, Split, Undo2, User, Volume2, VolumeX, type LucideIcon } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
@@ -14,6 +14,7 @@ import { useLibrary } from "../stores/library";
 import { usePlayer } from "../stores/player";
 import { usePlaylists } from "../stores/playlists";
 import { showDialog, toast } from "../stores/popups";
+import { sharedSoundOf } from "../stores/soundShare";
 import { canPlay, deviceName, startOwnMusicOn, useZones } from "../stores/zones";
 import { colors } from "../theme";
 import { MenuSheet, type SheetRow } from "./Sheet";
@@ -130,6 +131,8 @@ export function SongMenu() {
       });
     } else if (!albumKey) rows.push({ label: T("Put on an album…"), Icon: DiscAlbum, run: () => usePutOnAlbum.getState().open(track) });
     rows.push({ label: T("Go to artist"), Icon: User, run: () => goTo?.("Artist", { name: leadArtist(track.artist) }) });
+    // Songs that sound like this one, by tempo and key — once the computer has measured it.
+    if (sharedSoundOf(track)) rows.push({ label: T("Sounds like"), Icon: AudioWaveform, run: () => goTo?.("SoundsLike", { id: track.id }) });
     rows.push({ label: muted ? T("Play again (unmute)") : T("Mute song"), Icon: muted ? Volume2 : VolumeX, run: () => void useLibrary.getState().toggleMuted(track) });
   }
   for (const extra of extras) rows.push(extra);

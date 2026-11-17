@@ -32,6 +32,10 @@ export interface SoundFacts {
   /** level of the first / the last half second, dBFS — a song that runs into the next ends loud */
   headDb: number;
   tailDb: number;
+  /** measured from a stretch in the middle (a server song): tempo, key and energy hold, its two ends are not known */
+  excerpt?: boolean;
+  /** the key was set by hand (src/stores/keyEdits.ts): what the analysis measured */
+  measuredKey?: { key: number; minor: boolean };
 }
 
 /** Onset strength (spectral flux per unit of spectrum) below which nothing beats. */

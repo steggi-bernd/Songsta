@@ -7,10 +7,11 @@
  * is Android's own list: no app can connect those by itself.
  */
 import { useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import { PullDownToClose } from "../components/PullDownToClose";
 import { Bluetooth, Cable, Check, ChevronDown, CircleStop, Crosshair, Headphones, Heart, Laptop, Link2, ListChecks, ListMusic, Minus, MoreHorizontal, Pause, Pencil, Play, Plus, Power, RefreshCw, Search, SkipBack, SkipForward, Smartphone, Speaker, Split, Timer, Trash2, Tv, Volume2, X, type LucideIcon } from "lucide-react-native";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, FlatList, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
 import Player, { type SoundOutput } from "../../modules/media3-player";
 import { NameDialog } from "../components/PlaylistSheets";
@@ -63,6 +64,8 @@ import { T } from "../shared";
 
 const SIDE = 16;
 const GAP = 10;
+/** Inside a room's card. */
+const ROOM_PAD = 10;
 
 const iconOf = (d: FoundDevice): LucideIcon => (looksLikeTv(d) ? Tv : d.kind === "echo" ? Bluetooth : Speaker);
 
@@ -482,7 +485,8 @@ export function DevicesScreen() {
     return () => sub.remove();
   }, []);
 
-  const tileWidth = (width - SIDE * 2 - GAP) / 2;
+  // Two tiles a row inside a room's card.
+  const tileWidth = (width - SIDE * 2 - ROOM_PAD * 2 - GAP) / 2;
   const main = zones.find((z) => z.main);
   const taken = new Set(zones.flatMap((z) => z.members.map((m) => m.id)));
   const free = found.filter((d) => canPlay(d) && !taken.has(d.id));
@@ -638,6 +642,21 @@ export function DevicesScreen() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + (choosing ? 150 : 28) }} showsVerticalScrollIndicator={false}>
         <SwitchingOff />
+        {/* Playing on this phone alone: what and where, as a card on top (the zone cards say it otherwise). */}
+        {!zones.length && !remote && hereActive && !!track && (
+          <LinearGradient colors={["#173F3A", "#151518"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.nowCard}>
+            <Cover uri={track.thumb} size={48} radius={6} />
+            <View style={styles.nowText}>
+              <Text numberOfLines={1} style={styles.nowTitle}>
+                {track.title}
+              </Text>
+              <Text numberOfLines={1} style={styles.nowLine}>
+                {output.kind === "phone" ? T("Playing on this phone") : `${T("Playing on this phone")} · ${outputLine(output)}`}
+              </Text>
+            </View>
+            {playing && <Volume2 size={18} color="#5EEAD4" />}
+          </LinearGradient>
+        )}
         {(zones.length > 0 || !!remote) && (
           <View style={styles.cards}>
             <FollowedCard />
@@ -777,6 +796,14 @@ export function DevicesScreen() {
           <Plus size={18} color={colors.dim} />
           <Text style={styles.addText}>{T("Add a device by its address")}</Text>
         </Pressable>
+
+        {/* Several at once, in plain sight: the same choosing a long press starts, this phone already in it. */}
+        {!choosing && free.length > 0 && (
+          <Pressable onPress={() => startChoosing(THIS_PHONE.id)} style={styles.together}>
+            <ListChecks size={18} color={colors.onAccent} />
+            <Text style={styles.togetherText}>{T("Play on several together")}</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {choosing && (
@@ -880,11 +907,17 @@ const styles = StyleSheet.create({
   memberRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, minHeight: 34 },
   memberName: { width: 82, fontSize: 13 },
   noVolume: { flex: 1, fontSize: 12 },
-  section: { marginTop: 22, paddingHorizontal: SIDE },
-  sectionTitle: { color: colors.dim, fontSize: 12, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 },
+  section: { marginTop: 14, marginHorizontal: SIDE, padding: ROOM_PAD, paddingTop: 12, borderRadius: 20, backgroundColor: "#141416" },
+  sectionTitle: { color: colors.dim, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", marginLeft: 4, marginBottom: 10 },
+  nowCard: { flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: SIDE, marginTop: 6, padding: 12, borderRadius: 18 },
+  nowText: { flex: 1, minWidth: 0 },
+  nowTitle: { color: colors.ink, fontSize: 15, fontWeight: "700" },
+  nowLine: { color: "#5EEAD4", fontSize: 12.5, fontWeight: "700", marginTop: 2 },
+  together: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, height: 48, marginHorizontal: SIDE, marginTop: 14, borderRadius: 24, backgroundColor: "#5EEAD4" },
+  togetherText: { color: "#042F2E", fontSize: 15, fontWeight: "800" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
   empty: { color: colors.dim, fontSize: 14, paddingVertical: 6 },
-  tile: { minHeight: 112, borderRadius: 18, backgroundColor: colors.panel, padding: 12, justifyContent: "space-between" },
+  tile: { minHeight: 112, borderRadius: 16, backgroundColor: "#222225", padding: 12, justifyContent: "space-between" },
   tileActive: { backgroundColor: colors.accent },
   tilePressed: { backgroundColor: colors.button },
   tilePicked: { borderWidth: 2, borderColor: colors.accent, padding: 10 },

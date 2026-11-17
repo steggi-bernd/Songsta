@@ -61,7 +61,17 @@ export type ReplayPeriod = "month" | "lastMonth" | "year" | "all";
 export interface ReplaySummary {
   totalMs: number;
   plays: number;
+  /** the most listened, by time */
   tracks: (TrackEntry & { id: string })[];
+  /** the most played, by plays (then time) */
+  topPlayed: (TrackEntry & { id: string })[];
+  /** every song of the period, by id: how long and how often (genres, formats and sources are worked out from the library) */
+  every: { id: string; ms: number; plays: number }[];
+  /** how many different songs, artists and albums */
+  counts: { tracks: number; artists: number; albums: number };
+  /** songs first heard in this period (nothing kept from before it had them) — the most listened first */
+  fresh: (TrackEntry & { id: string })[];
+  freshCount: number;
   artists: NameEntry[];
   albums: NameEntry[];
   hours: number[];
@@ -340,6 +350,45 @@ export function recordListening(track: Track, listenedMs: number, at = new Date(
   scheduleFlush();
 }
 
+/**
+ * Plays counted on another device (the shared listening history, src/lib/listenSync.ts), folded in
+ * the way that device counted them: a play each, the song's length as the time listened.
+ */
+export function recordRemotePlays(listens: { at: number; id: string; title: string; artist: string; album?: string; ms: number; thumb?: string }[]): void {
+  if (!ready || !listens.length) return;
+  loadAll();
+  const touched = new Set<MonthBucket>();
+  for (const l of listens) {
+    const at = new Date(l.at);
+    const month = monthKey(at);
+    const b = open.get(month) ?? newBucket(month);
+    open.set(month, b);
+    touched.add(b);
+    const ms = Math.max(0, l.ms);
+    const day = `${month}-${String(at.getDate()).padStart(2, "0")}`;
+    const t = (b.tracks[l.id] ??= { title: l.title, artist: l.artist, thumb: l.thumb ?? "", ms: 0, plays: 0, lastAt: 0 });
+    if (!t.thumb && l.thumb) t.thumb = l.thumb;
+    t.ms += ms;
+    t.plays += 1;
+    t.lastAt = Math.max(t.lastAt, l.at);
+    const key = (l.artist || "Unknown artist").toLowerCase();
+    const a = (b.artists[key] ??= { name: l.artist || "Unknown artist", ms: 0, plays: 0 });
+    a.ms += ms;
+    a.plays += 1;
+    if (l.album) {
+      const al = (b.albums[`${l.album.toLowerCase()}|${key}`] ??= { name: l.album, artist: l.artist, ms: 0, plays: 0 });
+      al.ms += ms;
+      al.plays += 1;
+      if (!al.thumb && l.thumb) al.thumb = l.thumb;
+    }
+    b.hours[at.getHours()] += ms;
+    b.days[day] = (b.days[day] ?? 0) + ms;
+  }
+  for (const b of touched) pruneBucket(b);
+  dirty = true;
+  scheduleFlush();
+}
+
 function monthsForPeriod(period: ReplayPeriod): string[] {
   const now = new Date();
   if (period === "month") return [monthKey(now)];
@@ -416,10 +465,20 @@ export function summary(period: ReplayPeriod): ReplaySummary {
     for (const [d, ms] of Object.entries(b.days)) days.set(d, (days.get(d) ?? 0) + ms);
   }
 
+  // Heard before the period? Any kept month before its first one that has the song.
+  const earlier = [...open.keys()].filter((m) => months.length > 0 && m < months[0]).map((m) => open.get(m)!);
+  const heardBefore = (id: string): boolean => earlier.some((b) => !!b.tracks[id]);
+  const fresh = period === "all" ? [] : [...tracks.values()].filter((t) => !heardBefore(t.id));
+  const all = [...tracks.values()];
   return {
     totalMs,
     plays,
-    tracks: [...tracks.values()].sort((x, y) => y.ms - x.ms).slice(0, 50),
+    tracks: [...all].sort((x, y) => y.ms - x.ms).slice(0, 50),
+    topPlayed: [...all].sort((x, y) => y.plays - x.plays || y.ms - x.ms).slice(0, 20),
+    every: all.map((t) => ({ id: t.id, ms: t.ms, plays: t.plays })),
+    counts: { tracks: tracks.size, artists: artists.size, albums: albums.size },
+    fresh: fresh.sort((x, y) => y.ms - x.ms).slice(0, 8),
+    freshCount: fresh.length,
     artists: [...artists.values()].sort((x, y) => y.ms - x.ms).slice(0, 50),
     albums: [...albums.values()].sort((x, y) => y.ms - x.ms).slice(0, 50),
     hours,

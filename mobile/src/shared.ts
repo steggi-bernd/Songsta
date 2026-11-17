@@ -45,6 +45,10 @@ export {
   type GenreRow,
 } from "../../src/lib/exploreRows";
 export { allMixes, type Mix } from "../../src/lib/mixes";
+export { familyOf, type GenreFamily } from "../../src/lib/genres";
+export { flowOrder } from "../../src/lib/flowOrder";
+export { camelotLabel, camelotOf, DEFAULT_MATCH, keyLabel, keyOfCamelot, keyStep, matchSong, mixRules, songsInKey, type Camelot, type MatchOptions, type MatchResult } from "../../src/lib/soundMatch";
+export { ringSlice } from "../../src/lib/ringSlice";
 export { recordDeletionChanges, type DeletionChange } from "../../src/lib/deletion-sync";
 export { likedInOrder, mergePlaylistDocs, oneCopyEach, songFinder, toPlaylistDoc, toWireTrack, type PlaylistDoc, type WirePlaylist, type WireTrack } from "../../src/lib/playlistSync";
 export { createSyncEngine, defaultSyncAddress, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "../../src/lib/syncEngine";
@@ -95,11 +99,11 @@ export { utf8Bytes, utf8Text, type CastSocket } from "../../src/lib/castV2";
 export { devicesFromMdns, MDNS_ADDRESS, MDNS_PORT, mdnsQuery, readMdns, SSDP_ADDRESS, SSDP_PORT, SSDP_SEARCH, type MdnsService, type NetDevice } from "../../src/lib/netScan";
 export { Zone, type ZoneDriver, type ZoneMember, type ZonePlayState, type ZoneSong } from "../../src/lib/zoneEngine";
 export { playCreditSeconds } from "../../src/lib/favoriteSync";
-export { fmtLength, fmtTime, plural } from "../../src/lib/format";
+export { fmtLength, fmtMinutes, fmtTime, plural } from "../../src/lib/format";
 export { RELEASE_LABEL } from "../../src/lib/releases";
 export { isNewerVersion, latestApk, latestVersion, lookForNewVersion, NEW_VERSION_FIRST_LOOK_MS, NEW_VERSION_LOOK_EVERY_MS, NO_VERSION_MEMORY, RELEASE_PAGE, type NewVersionMemory, type ReleaseApk } from "../../src/lib/newVersion";
 export { handRows, jumpTarget, lineInList, listAround, placeOf, putBack, tendedBranches, withoutSongs, type HandRow, type QueueBranch } from "../../src/lib/queueSections";
-export { currentLanguage, languageOf, LANGUAGES, setLanguage, T, type Language, type LanguageChoice } from "../../src/lib/i18n";
+export { currentLanguage, languageOf, LANGUAGES, setLanguage, T, textLocale, type Language, type LanguageChoice } from "../../src/lib/i18n";
 // How the library is organised, the same as on the computer: album edits, and the documents they travel in.
 export {
   applyAlbumLooks,
@@ -141,5 +145,9 @@ export {
   type OrderDoc,
   type StampedMap,
 } from "../../src/lib/librarySync";
-export type { LibraryDocHost } from "../../src/lib/syncEngine";
+export type { LibraryDocHost, ListenHost } from "../../src/lib/syncEngine";
+export { fromWireSound, soundKeyOf, soundKeysOf, type KeysDoc, type SoundsDoc } from "../../src/lib/soundShare";
+export type { SoundFacts } from "../../electron/sound-analysis";
+export { LISTEN_BATCH, listenKey, readListenPage, sharesListens, wireListen, type ListenDevice, type ListenPage, type SharedListen, type WireListen } from "../../src/lib/listenSync";
+export { hostsOf, judgeRequest, NET_SERVICES, type NetService } from "../../src/lib/netServices";
 export { problemKey, serviceProblem, SYNC_UPDATE_COMMAND, type SyncServiceInfo, type SyncServiceProblem } from "../../src/lib/syncService";

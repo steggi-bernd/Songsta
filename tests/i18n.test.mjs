@@ -15,7 +15,7 @@ const out = await build({
   format: "esm",
   write: false,
 });
-const { T, setLanguage, languageOf, currentLanguage, de } = await import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString("base64")}`);
+const { T, setLanguage, languageOf, currentLanguage, textLocale, de } = await import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString("base64")}`);
 
 afterEach(() => setLanguage("en"));
 
@@ -46,6 +46,24 @@ test("a system's locale means a language we have, or English", () => {
   assert.equal(languageOf("fr_FR"), "en");
   assert.equal(languageOf(""), "en");
   assert.equal(languageOf(null), "en");
+});
+
+test("dates in a sentence speak the interface's language, in the system's region when it speaks it too", () => {
+  const real = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const system = (language) => Object.defineProperty(globalThis, "navigator", { value: { language }, configurable: true, writable: true });
+  try {
+    system("en-GB");
+    assert.equal(textLocale(), "en-GB");
+    setLanguage("de");
+    assert.equal(textLocale(), "de", "a German interface on an English system: German weekdays");
+    system("de-AT");
+    assert.equal(textLocale(), "de-AT");
+    setLanguage("en");
+    assert.equal(textLocale(), "en", "an English interface on a German system: English weekdays");
+  } finally {
+    if (real) Object.defineProperty(globalThis, "navigator", real);
+    else delete globalThis.navigator;
+  }
 });
 
 const holes = (s) => (s.match(/\{\w+\}/g) ?? []).sort();

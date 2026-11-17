@@ -8,7 +8,7 @@
  */
 import { useNavigation } from "@react-navigation/native";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, FolderMinus, FolderPlus, LayoutGrid, List, Pencil, Play, Plus, Shuffle, Ungroup } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Pressable, SectionList, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GroupOrderSheet } from "../components/GroupOrderSheet";
@@ -46,7 +46,9 @@ import {
   withoutGroup,
   type AlbumRow,
   type ArtistRow,
+  familyOf,
   type ExploreTab,
+  type GenreFamily,
   type GenreRow,
   type Group,
   type Track,
@@ -160,6 +162,63 @@ function Art({ item, size }: { item: Item; size: number }) {
   return <CoverGrid tracks={item.row.genre.tracks} size={size} />;
 }
 
+/** A genre's own colour: its family's hue, turned a little by its name, so neighbours differ. */
+const FAMILY_HUE: Record<GenreFamily, number> = {
+  Electronic: 188,
+  Pop: 318,
+  Rock: 132,
+  "Hip-Hop": 50,
+  "R&B & Soul": 286,
+  "Folk & Country": 30,
+  "Jazz & Blues": 12,
+  Classical: 348,
+  Soundtrack: 222,
+  Metal: 0,
+  World: 92,
+  Other: 258,
+};
+/**
+ * Each genre's tile colour: its family's hue, and siblings of one family (Electronic, Synthwave, Ambient)
+ * spread evenly around it so they don't look alike. Alphabetical within the family, so the colours stay
+ * put whichever way the list is sorted.
+ */
+function genreTints(names: string[]): Map<string, string> {
+  const families = new Map<GenreFamily, string[]>();
+  for (const name of names) {
+    const family = familyOf(name);
+    families.set(family, [...(families.get(family) ?? []), name]);
+  }
+  const out = new Map<string, string>();
+  for (const [family, members] of families) {
+    const sorted = [...new Set(members)].sort((a, b) => a.localeCompare(b));
+    const spread = Math.min(64, (sorted.length - 1) * 22);
+    sorted.forEach((name, i) => {
+      const offset = sorted.length > 1 ? -spread / 2 + (spread * i) / (sorted.length - 1) : 0;
+      const hue = Math.round(FAMILY_HUE[family] + offset + 360) % 360;
+      out.set(name, `hsl(${hue}, 58%, ${i % 2 ? 33 : 37}%)`);
+    });
+  }
+  return out;
+}
+
+/**
+ * The genres as coloured tiles with a cover of theirs tilted into the corner (the user's pick from the
+ * search mockups, 2026-11-16): two to a row, the name big, what the order counts small under it.
+ */
+function GenreTile({ name, line, art, tint, width, onPress, onLongPress }: { name: string; line: string; art: ReactNode; tint: string; width: number; onPress: () => void; onLongPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [styles.genreTile, { width, backgroundColor: tint, opacity: pressed ? 0.85 : 1 }]}>
+      <Text numberOfLines={2} style={styles.genreName}>
+        {name}
+      </Text>
+      <Text numberOfLines={1} style={styles.genreLine}>
+        {line}
+      </Text>
+      <View style={styles.genreArt}>{art}</View>
+    </Pressable>
+  );
+}
+
 /** A group folded: its first covers in a small grid, the way Discord shows a folder of servers. */
 function GroupArt({ members, size, round }: { members: Item[]; size: number; round: boolean }) {
   const pad = Math.round(size / 14);
@@ -203,10 +262,12 @@ export function ExploreList() {
   }, [tab, sort, albums, artists, genres, tracks, counts]);
 
   const byKey = useMemo(() => new Map(items.map((item) => [groupKeyOf(item), item])), [items]);
+  const tints = useMemo(() => genreTints(genres.map((g) => g.name)), [genres]);
 
   const lines = useMemo<Line[]>(() => {
     const out: Line[] = [];
-    const size = layout === "grid" ? COLUMNS : 1;
+    // The genres always stand as coloured tiles, two to a row.
+    const size = tab === "genres" ? 2 : layout === "grid" ? COLUMNS : 1;
     let line: Cell[] = [];
     const cellKey = (c: Cell): string => (c.kind === "group" ? `group:${c.group.id}` : c.item.key);
     const flush = (): void => {
@@ -230,7 +291,7 @@ export function ExploreList() {
     }
     flush();
     return out;
-  }, [groups, items, open, layout]);
+  }, [groups, items, open, layout, tab]);
 
   const openItem = useCallback(
     (item: Item) => {
@@ -369,6 +430,39 @@ export function ExploreList() {
     );
   };
 
+  const genreWidth = (width - SIDE * 2 - 10) / 2;
+  const genreTileOf = (cell: Cell) => {
+    if (cell.kind === "item") {
+      const { item } = cell;
+      const name = titleOf(item);
+      return (
+        <GenreTile
+          key={item.key}
+          name={name}
+          line={shortOf(item, sort.by)}
+          tint={tints.get(name) ?? colors.panel}
+          width={genreWidth}
+          art={<Cover uri={coverOf(item)} size={74} radius={6} />}
+          onPress={() => openItem(item)}
+          onLongPress={() => hold({ item, inGroup: cell.inGroup })}
+        />
+      );
+    }
+    const { group, members } = cell;
+    return (
+      <GenreTile
+        key={`group:${group.id}`}
+        name={group.name}
+        line={groupLine(tab, members.length)}
+        tint={colors.panel}
+        width={genreWidth}
+        art={<GroupArt members={members} size={74} round={false} />}
+        onPress={() => toggle(group.id)}
+        onLongPress={() => hold({ group, members })}
+      />
+    );
+  };
+
   const rowOf = (cell: Cell) => {
     if (cell.kind === "item") {
       const { item } = cell;
@@ -429,18 +523,22 @@ export function ExploreList() {
                 <ArrowUpDown size={16} color={colors.ink} />
                 <Text style={styles.sortText}>{sortLabel}</Text>
               </Pressable>
-              <Pressable
-                onPress={() => setLayout(layout === "grid" ? "list" : "grid")}
-                accessibilityLabel={layout === "grid" ? T("Show as list") : T("Show as tiles")}
-                style={styles.layout}
-              >
-                {layout === "grid" ? <List size={20} color={colors.ink} /> : <LayoutGrid size={20} color={colors.ink} />}
-              </Pressable>
+              {tab !== "genres" && (
+                <Pressable
+                  onPress={() => setLayout(layout === "grid" ? "list" : "grid")}
+                  accessibilityLabel={layout === "grid" ? T("Show as list") : T("Show as tiles")}
+                  style={styles.layout}
+                >
+                  {layout === "grid" ? <List size={20} color={colors.ink} /> : <LayoutGrid size={20} color={colors.ink} />}
+                </Pressable>
+              )}
             </View>
           </View>
         )}
         renderItem={({ item: line }) =>
-          layout === "grid" ? (
+          tab === "genres" ? (
+            <View style={[styles.genreRow, !!line.inGroup && styles.groupFrame]}>{line.cells.map(genreTileOf)}</View>
+          ) : layout === "grid" ? (
             <View style={[styles.tiles, !!line.inGroup && styles.groupFrame]}>{line.cells.map(tileOf)}</View>
           ) : (
             rowOf(line.cells[0])
@@ -525,4 +623,9 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, minWidth: 0 },
   rowTitle: { color: colors.ink, fontSize: 15, fontWeight: "600" },
   rowSub: { color: colors.dim, fontSize: 13, marginTop: 3 },
+  genreRow: { flexDirection: "row", gap: 10, paddingHorizontal: SIDE, paddingBottom: 10 },
+  genreTile: { height: 100, borderRadius: 10, overflow: "hidden", padding: 12 },
+  genreName: { maxWidth: "72%", color: "#FFFFFF", fontSize: 16, fontWeight: "900", letterSpacing: -0.2 },
+  genreLine: { maxWidth: "62%", color: "rgba(255,255,255,0.78)", fontSize: 11.5, marginTop: 3 },
+  genreArt: { position: "absolute", right: -14, bottom: -8, transform: [{ rotate: "24deg" }], elevation: 6, shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 6 } },
 });

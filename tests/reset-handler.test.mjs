@@ -6,8 +6,20 @@ import os from "node:os";
 import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { transform, build } from "esbuild";
+import { transform, build, buildSync } from "esbuild";
 const require = createRequire(import.meta.url);
+
+/** A module the main process shares with the renderer (src/lib), bundled as the build does. */
+const sharedModules = new Map();
+function sharedModule(name) {
+  if (!sharedModules.has(name)) {
+    const { outputFiles } = buildSync({ entryPoints: [fileURLToPath(new URL(`../electron/${name}.ts`, import.meta.url))], bundle: true, platform: "node", format: "cjs", write: false });
+    const module = { exports: {} };
+    vm.runInNewContext(outputFiles[0].text, { module, exports: module.exports, console, URL });
+    sharedModules.set(name, module.exports);
+  }
+  return sharedModules.get(name);
+}
 
 test("actual main reset IPC clears files and stops the real stats timer", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bytune-reset-handler-"));
@@ -35,6 +47,11 @@ test("actual main reset IPC clears files and stops the real stats timer", async 
         if (name === "./downloads") return { resetDownloads: async () => {}, addDownloadListener() {} };
         if (name === "./local-library") return { resetLocalLibrary: async () => {} };
         if (name === "./pip") return { registerPipIpc() {}, isTrustedSender: () => true, restrictNavigation() {}, rendererUrl: () => "http://127.0.0.1:5173/" };
+        if (name === "./album-genres") return { albumGenresKnown: () => ({}), askAlbumGenres: () => 0, stopAlbumGenres() {}, onAlbumGenres() {} };
+        if (name === "./net-gate") return { installNetGate() {}, gatePages() {}, netActivity: () => ({ log: [], services: {}, own: { count: 0, last: 0 }, since: 0 }), privacy: () => ({ ownOnly: false, off: [], recordListening: true }), setPrivacy: () => ({}), trustEntered() {}, ownServersChanged() {} };
+        if (name === "./data-location") return { askMove: () => "Choose a whole folder", cancelMove() {}, clearCachesAtStart() {}, dataPlace: () => ({}), forgetLeftover: () => false, networkCaches: () => [] };
+        if (name === "./data-place") return { sizeOf: async () => 0 };
+        if (name.startsWith("../src/")) return sharedModule(name);
         if (name.startsWith("./")) return {};
         return require(name);
       },

@@ -13,7 +13,7 @@
  */
 
 /** Device-local settings a backup must never carry or overwrite: a folder, an output device, what this install has heard of. */
-export const DEVICE_LOCAL_SETTINGS = new Set(["pairHinted", "localMusicFolder", "audioSinkId", "newVersion", "lastVersion", "keptLists", "setupDone", "pairedTvs", "trackColumns", "listSorts"]);
+export const DEVICE_LOCAL_SETTINGS = new Set(["pairHinted", "localMusicFolder", "audioSinkId", "newVersion", "lastVersion", "keptLists", "setupDone", "pairedTvs", "trackColumns", "listSorts", "soundAnalysisStarted"]);
 
 /** Known settings keys — junk in, junk never out. Every setting of stores/settings.ts stands here (a test sees to that). */
 export const SETTINGS_KEYS = new Set([
@@ -69,12 +69,23 @@ export const SETTINGS_KEYS = new Set([
   "storeLinks",
   "lyricsLatin",
   "soundAnalysis",
+  "soundAnalysisStarted",
+  "albumGenresOnline",
+  "netOff",
+  "netOwnOnly",
+  "recordListening",
+  "recordSearches",
+  "recordSkips",
+  "shareListens",
+  "shareLibrary",
   "exploreTab",
   "exploreLayout",
   "exploreSort",
   "rightRailWidth",
   "corners",
   "accent",
+  "nowPlayingLook",
+  "libraryField",
 ]);
 
 /** Inner state of a persisted store: unwraps the envelope, or passes a bare map through. */

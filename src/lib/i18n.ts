@@ -31,6 +31,16 @@ let current: Language = "en";
 
 export const currentLanguage = (): Language => current;
 
+/**
+ * The locale for dates and numbers inside the interface's sentences: the system's when it speaks the
+ * interface's language (the region keeps its own formats), else the interface's language itself, so a
+ * German interface on an English system says "Sonntag war dein Tag", not "Sunday war dein Tag".
+ */
+export function textLocale(): string {
+  const system = typeof navigator !== "undefined" ? navigator.language || "" : "";
+  return system.toLowerCase().startsWith(current) ? system : current;
+}
+
 /** The language a system's locale means, English if we don't have it. */
 export function languageOf(locale: string | null | undefined): Language {
   const code = (locale ?? "").toLowerCase().slice(0, 2);

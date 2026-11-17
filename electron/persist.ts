@@ -184,6 +184,12 @@ export async function resetAppData(): Promise<void> {
         "device-names",
         "server-sync",
         "song-info",
+        "list-dates",
+        "skips",
+        "albums-seen",
+        "listen-sync",
+        "album-genres",
+        "key-edits",
       ]);
       // Enumerate after draining so every ownership archive is accounted for.
       for (const f of fs.readdirSync(dir)) {

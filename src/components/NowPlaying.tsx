@@ -24,6 +24,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChevronDown, Heart, Music2 } from "lucide-react";
 import { PlayerBar } from "./PlayerBar";
+import { LookSwitch, VisualizerControls, VisualizerStage } from "./NowPlayingVisualizer";
 import { QueuePanel } from "./RightRail";
 import { LyricsView } from "./SyncedLyrics";
 import { requestLyrics } from "./LyricsCenter";
@@ -362,13 +363,40 @@ export function NowPlaying() {
 
   const heroDrag = useDrag({ track: track ?? { id: "", title: "", artist: "", duration: 0, thumb: "" } });
 
+  // The look: rays dancing round the cover (the default) or the classic cover beside the lyrics.
+  const look = useSettings((st) => st.nowPlayingLook);
+  const setLook = useSettings((st) => st.setNowPlayingLook);
+  const party = look === "visualizer" && !!track;
+  // In the party look the controls and the pointer step aside after three quiet seconds, for a TV or a projector.
+  const [idle, setIdle] = useState(false);
+  useEffect(() => {
+    setIdle(false);
+    if (!open || !party) return;
+    let timer = window.setTimeout(() => setIdle(true), 3000);
+    const wake = (): void => {
+      setIdle(false);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setIdle(true), 3000);
+    };
+    window.addEventListener("pointermove", wake);
+    window.addEventListener("pointerdown", wake);
+    window.addEventListener("keydown", wake);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pointermove", wake);
+      window.removeEventListener("pointerdown", wake);
+      window.removeEventListener("keydown", wake);
+    };
+  }, [open, party]);
+  const fade = `transition-opacity duration-500 ${idle ? "opacity-0" : "opacity-100"}`;
+
   if (!mounted) return null;
 
   return (
     <div
       className={`fixed inset-0 z-[100] overflow-hidden bg-black animate-fade-in ${
         exiting ? "fs-exiting" : ""
-      }`}
+      } ${idle ? "cursor-none" : ""}`}
     >
       <FsBackdrop artwork={track?.thumb ?? null} boost={boost} legacy={legacyMesh} />
 
@@ -388,8 +416,8 @@ export function NowPlaying() {
           </div>
         </div>
 
-        {/* Header — close (mobile: the iOS sheet-grabber). */}
-        <div className="relative h-14 shrink-0 flex items-center px-3">
+        {/* Header — close (mobile: the iOS sheet-grabber), and the look at the right. */}
+        <div className={`relative h-14 shrink-0 flex items-center justify-between px-3 ${fade}`}>
           <button
             onClick={close}
             title={T("Close (Esc)")}
@@ -398,6 +426,11 @@ export function NowPlaying() {
           >
             <ChevronDown className="w-5 h-5" />
           </button>
+          {track && (
+            <div className="relative z-10 pr-1">
+              <LookSwitch look={look} onChange={setLook} />
+            </div>
+          )}
         </div>
 
         {!track ? (
@@ -410,6 +443,8 @@ export function NowPlaying() {
               <p className="text-[13px] text-white/55 mt-1">{T("Play something and it will show up here.")}</p>
             </div>
           </div>
+        ) : party ? (
+          <VisualizerStage track={track} playing={playing} palette={palette} />
         ) : (
           /* Body — artwork column and lyrics column share the space between
              the header and the play bar. Percent-based widths + min() sizing,
@@ -537,9 +572,7 @@ export function NowPlaying() {
         {/* The existing play bar — the exact component the shell renders,
             unchanged; fullscreen adds nothing to it. No top border: the bar's
             black and the backdrop's near-black floor meet seamlessly. */}
-        <div className="shrink-0">
-          <PlayerBar />
-        </div>
+        <div className={`shrink-0 ${party ? fade : ""}`}>{party ? <VisualizerControls /> : <PlayerBar />}</div>
       </div>
     </div>
   );

@@ -290,6 +290,8 @@ export function TopBar() {
   const submitSearch = (text: string): void => {
     const t = text.trim();
     if (!t) return;
+    // Kept for the recent-searches panel while that's switched on (Settings → Network & privacy).
+    useRecents.getState().pushSearch(t);
     setQuery(t);
     closeDropdown();
     setFieldFocused(false);

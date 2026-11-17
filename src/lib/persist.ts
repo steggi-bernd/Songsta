@@ -67,7 +67,7 @@ export const storage: StateStorage = {
  */
 const COALESCED_WRITE_MS = 2_000;
 
-/** The write scheduler behind both coalescing storages. A value is held as a
+/** The write scheduler behind the coalescing storage. A value is held as a
     thunk, so its text is only produced when it is actually written. */
 const coalescer = (() => {
   const pending = new Map<string, () => string>();
@@ -118,18 +118,6 @@ const coalescer = (() => {
     },
   };
 })();
-
-export const coalescedStorage: StateStorage = {
-  getItem: (name) => storage.getItem(name),
-  setItem: (name, value) => {
-    coalescer.set(name, () => value);
-    return Promise.resolve();
-  },
-  removeItem: (name) => {
-    coalescer.remove(name);
-    return storage.removeItem(name);
-  },
-};
 
 /**
  * The coalescing storage for zustand's persist that also serializes lazily.

@@ -6,7 +6,7 @@
  */
 import type { Track } from "../types";
 
-export type TrackColumn = "album" | "added" | "released" | "genre" | "plays" | "format" | "time";
+export type TrackColumn = "album" | "added" | "released" | "genre" | "plays" | "format" | "tempo" | "key" | "heard" | "time";
 
 export interface ColumnSpec {
   key: TrackColumn;
@@ -25,7 +25,11 @@ export const TRACK_COLUMNS: ColumnSpec[] = [
   { key: "released", width: 92, min: 56, max: 160 },
   { key: "genre", width: 128, min: 72, max: 260 },
   { key: "format", width: 116, min: 72, max: 200 },
+  // What the sound analysis measured, and how long you've listened to a song (its plays times its length).
+  { key: "tempo", width: 64, min: 52, max: 120, right: true },
+  { key: "key", width: 64, min: 52, max: 150 },
   { key: "plays", width: 56, min: 44, max: 110, right: true },
+  { key: "heard", width: 124, min: 88, max: 180, right: true },
   { key: "time", width: 44, min: 44, max: 44, right: true },
 ];
 
@@ -105,7 +109,8 @@ const GAP = 14;
 /** The title keeps this much whatever is switched on. */
 export const TITLE_MIN = 180;
 /** Given up first when a list is too narrow for all that's asked for. */
-const GOES_FIRST: TrackColumn[] = ["format", "plays", "genre", "released", "added", "album"];
+// The wide album column gives way before the narrow measured ones the user turned on for this.
+const GOES_FIRST: TrackColumn[] = ["format", "genre", "released", "added", "plays", "album", "heard", "key", "tempo"];
 
 /**
  * The columns a list draws: the chosen ones it has something to show for, in the rows' order, as
@@ -147,17 +152,20 @@ export function releasedCell(t: Track): string {
 
 /* ------------------------------------------------------------------ ordering a list by a column */
 
-/** What a list can be ordered by: its columns, and the artist under each title. */
-export type SortKey = "title" | "artist" | "album" | "added" | "released" | "genre" | "format" | "plays" | "time";
+/**
+ * What a list can be ordered by: its columns, the artist under each title, and "flow" — an order
+ * in which each song leads into the next (close in key and tempo, the energy rising and easing off).
+ */
+export type SortKey = "title" | "artist" | "album" | "added" | "released" | "genre" | "format" | "tempo" | "key" | "plays" | "heard" | "time" | "flow";
 export interface ListSort {
   key: SortKey;
   /** newest, most, longest or Z first */
   desc: boolean;
 }
 
-export const SORT_KEYS: SortKey[] = ["title", "artist", "album", "added", "released", "genre", "format", "plays", "time"];
+export const SORT_KEYS: SortKey[] = ["title", "artist", "album", "added", "released", "genre", "format", "tempo", "key", "plays", "heard", "time", "flow"];
 
-/** Where the first click starts: names from A, dates newest first, counts and quality highest first, lengths shortest first. */
+/** Where the first click starts: names from A, dates newest first, counts and quality highest first, lengths, tempos and keys from the lowest. */
 export const FIRST_DESC: Record<SortKey, boolean> = {
   title: false,
   artist: false,
@@ -166,9 +174,25 @@ export const FIRST_DESC: Record<SortKey, boolean> = {
   added: true,
   released: true,
   format: true,
+  tempo: false,
+  key: false,
   plays: true,
+  heard: true,
   time: false,
+  flow: false,
 };
+
+/** What else a list may know to order by: the sound analysis' tempo and key, the time listened, and a flowing order. */
+export interface SortSense {
+  /** beats per minute; 0 when not measured */
+  tempo?: (t: Track) => number;
+  /** the key's place on the Camelot wheel (1A, 1B, 2A … as 2, 3, 4 …); 0 when not measured */
+  keyRank?: (t: Track) => number;
+  /** seconds listened to the song */
+  heard?: (t: Track) => number;
+  /** the songs in an order that flows */
+  flow?: (tracks: Track[]) => Track[];
+}
 
 /** A click on a column's name: ordered by it, then the other way round, then the list's own order again. */
 export function nextListSort(now: ListSort | null, key: SortKey): ListSort | null {
@@ -236,15 +260,36 @@ const fold = (s: string | undefined): string =>
  * The songs in the order asked for; ties keep the list's own order. Songs that have nothing for that
  * column go to the end, whichever way round. `added` and `plays` give each song's number by its place.
  */
-export function sortTracks(tracks: Track[], sort: ListSort | null, added: (i: number) => number, plays: (t: Track) => number): Track[] {
+export function sortTracks(tracks: Track[], sort: ListSort | null, added: (i: number) => number, plays: (t: Track) => number, sense: SortSense = {}): Track[] {
   if (!sort) return tracks;
+  if (sort.key === "flow") {
+    const flowing = sense.flow ? sense.flow(tracks) : tracks;
+    return sort.desc ? [...flowing].reverse() : flowing;
+  }
   const text = (t: Track): string =>
     sort.key === "title" ? fold(t.title) : sort.key === "artist" ? fold(t.artist) : sort.key === "album" ? fold(t.album) : sort.key === "genre" ? fold(t.genre) : "";
   const number = (t: Track, i: number): number =>
-    sort.key === "added" ? added(i) : sort.key === "released" ? releasedValue(t) : sort.key === "format" ? formatRank(t) : sort.key === "plays" ? plays(t) : sort.key === "time" ? t.duration || 0 : 0;
+    sort.key === "added"
+      ? added(i)
+      : sort.key === "released"
+        ? releasedValue(t)
+        : sort.key === "format"
+          ? formatRank(t)
+          : sort.key === "plays"
+            ? plays(t)
+            : sort.key === "time"
+              ? t.duration || 0
+              : sort.key === "tempo"
+                ? (sense.tempo?.(t) ?? 0)
+                : sort.key === "key"
+                  ? (sense.keyRank?.(t) ?? 0)
+                  : sort.key === "heard"
+                    ? (sense.heard?.(t) ?? 0)
+                    : 0;
   const byText = sort.key === "title" || sort.key === "artist" || sort.key === "album" || sort.key === "genre";
   const rows = tracks.map((t, i) => ({ t, i, text: byText ? text(t) : "", n: byText ? 0 : number(t, i) }));
-  const empty = (r: (typeof rows)[number]): boolean => (byText ? !r.text : sort.key === "plays" ? false : r.n <= 0);
+  // Unplayed songs still have a count (none); unmeasured ones have no tempo or key and go last.
+  const empty = (r: (typeof rows)[number]): boolean => (byText ? !r.text : sort.key === "plays" || sort.key === "heard" ? false : r.n <= 0);
   const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
   rows.sort((a, b) => {
     const ea = empty(a);

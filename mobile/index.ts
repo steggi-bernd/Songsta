@@ -24,7 +24,11 @@ const { restoreSettings } = require('./src/stores/settings') as typeof import('.
 function Boot() {
   const [App, setApp] = useState<ComponentType | null>(null);
   useEffect(() => {
-    void restoreSettings().then(() => setApp(() => require('./App').default));
+    void restoreSettings().then(() => {
+      // From here on, the app's requests pass the switches in Settings → Network & privacy.
+      (require('./src/netGate') as typeof import('./src/netGate')).installNetGate();
+      setApp(() => require('./App').default);
+    });
   }, []);
   return App ? createElement(App) : null;
 }

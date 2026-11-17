@@ -10,6 +10,7 @@ import { songKey, useCatalog } from "../stores/catalog";
 import { useLibrary } from "../stores/library";
 import { useLibraryOrder } from "../stores/libraryOrder";
 import { usePlayer } from "../stores/player";
+import { useSettings } from "../stores/settings";
 import type { Track } from "../types";
 import { collectionOf, seedPlayed, type Collection, type Shelves } from "./libraryOrder";
 
@@ -102,7 +103,8 @@ export function watchRecentlyPlayed(): () => void {
     const started = s.playing && (!prev.playing || s.index !== prev.index || s.queue !== prev.queue || s.seekNonce !== prev.seekNonce);
     if (!started) return;
     if (plays === undefined) plays = collectionOf(s.queue, shelves());
-    if (plays) useLibraryOrder.getState().touch(plays);
+    // Only while plays are kept (Settings → Network & privacy).
+    if (plays && useSettings.getState().recordListening) useLibraryOrder.getState().touch(plays);
   });
 
   // Once, when the library, the catalog and these times are all loaded.

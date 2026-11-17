@@ -48,6 +48,17 @@ test("canvas manifest URLs are https-only", async () => {
   assert.equal(canvasUrlOk(""), false);
 });
 
+test("the community canvas index: a bare list or its newer { items } form, https only", async () => {
+  const outfile = await bundle("../electron/canvas.ts", {}, []);
+  const { manifestEntries } = require(outfile);
+  const row = { song: "Dracula", artist: "Tame Impala", album: "Deadbeat", url: "https://example.com/Song/1.mp4" };
+  assert.deepEqual(manifestEntries([row]), [row]);
+  assert.deepEqual(manifestEntries({ items: [row] }), [row], "the index answers { items: [...] } now");
+  assert.deepEqual(manifestEntries({ items: [{ ...row, url: "file:///C:/x.mp4" }, { ...row, song: "" }] }), [], "no file URLs, no rows without a song");
+  assert.deepEqual(manifestEntries({ items: [{ song: "A", artist: "B", url: "https://example.com/a.mp4" }] }), [{ song: "A", artist: "B", album: "", url: "https://example.com/a.mp4" }]);
+  for (const nothing of [null, undefined, {}, { items: "x" }, "x", 3]) assert.deepEqual(manifestEntries(nothing), []);
+});
+
 test("artwork scheme gate: web/data/blob/localart only, hostile schemes collapse to empty", async () => {
   const outfile = await bundle("../src/lib/artwork.ts", {}, []);
   const { upgradeArtwork } = require(outfile);

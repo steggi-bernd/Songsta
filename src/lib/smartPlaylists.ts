@@ -2,11 +2,22 @@
  * Smart playlist rules: what each field means, which comparisons it offers,
  * how a rule is checked against a song, and how the matches are ordered.
  */
+import type { SoundFacts } from "../../electron/sound-analysis";
 import type { PlayCounts } from "../stores/catalog";
 import type { RuleField, RuleOp, SmartPlaylist, SmartRule, SmartSort } from "../stores/smartPlaylists";
 import type { Track } from "../types";
-import { genresOf } from "./catalogIndex";
+import { genresOfTrack } from "./albumGenres";
+import { flowOrder } from "./flowOrder";
+import { familyOf, GENRE_FAMILIES } from "./genres";
 import { T } from "./i18n";
+import { camelotLabel, camelotOf, keyLabel, keyStep } from "./soundMatch";
+
+/** The wheel's 24 keys as choices: "8A · A minor" (in German "8A · a-Moll"). */
+const CAMELOT_CHOICES = Array.from({ length: 24 }, (_, i) => ({ key: i % 12, minor: i >= 12 }))
+  .map(({ key, minor }) => ({ c: camelotOf(key, minor), name: keyLabel(key, minor) }))
+  .filter((k): k is { c: NonNullable<ReturnType<typeof camelotOf>>; name: string } => !!k.c)
+  .sort((a, b) => a.c.n - b.c.n || a.c.ring.localeCompare(b.c.ring))
+  .map((k) => ({ value: camelotLabel(k.c), label: `${camelotLabel(k.c)} · ${k.name}` }));
 
 type Kind = "text" | "number" | "days" | "choice";
 
@@ -25,9 +36,9 @@ export const FIELDS: Record<RuleField, FieldDef> = {
   album: { label: T("Album"), kind: "text", ops: ["contains", "notContains", "is", "isNot"] },
   title: { label: T("Title"), kind: "text", ops: ["contains", "notContains", "is", "isNot"] },
   year: { label: T("Year"), kind: "number", ops: ["is", "gt", "lt", "between"] },
-  added: { label: T("Added"), kind: "days", ops: ["inLast", "notInLast"], unit: "days" },
+  added: { label: T("Added"), kind: "days", ops: ["inLast", "notInLast"], unit: T("days") },
   plays: { label: T("Plays"), kind: "number", ops: ["gt", "lt", "is"] },
-  lastPlayed: { label: T("Last played"), kind: "days", ops: ["inLast", "notInLast"], unit: "days" },
+  lastPlayed: { label: T("Last played"), kind: "days", ops: ["inLast", "notInLast"], unit: T("days") },
   duration: { label: T("Length"), kind: "number", ops: ["gt", "lt"], unit: "min" },
   format: {
     label: T("Format"),
@@ -56,6 +67,10 @@ export const FIELDS: Record<RuleField, FieldDef> = {
       { value: "no", label: T("No") },
     ],
   },
+  bpm: { label: T("Tempo"), kind: "number", ops: ["between", "gt", "lt", "is"], unit: "BPM" },
+  energy: { label: T("Energy"), kind: "number", ops: ["gt", "lt", "between"], unit: "%" },
+  camelot: { label: T("Key"), kind: "choice", ops: ["is", "near"], choices: CAMELOT_CHOICES },
+  family: { label: T("Genre family"), kind: "choice", ops: ["is", "isNot"], choices: GENRE_FAMILIES.map((f) => ({ value: f, label: T(f) })) },
 };
 
 export const OP_LABEL: Record<RuleOp, string> = {
@@ -68,6 +83,7 @@ export const OP_LABEL: Record<RuleOp, string> = {
   between: "is between",
   inLast: "in the last",
   notInLast: "not in the last",
+  near: "is on or next to",
 };
 
 export const SORT_LABEL: Record<SmartSort, string> = {
@@ -78,6 +94,7 @@ export const SORT_LABEL: Record<SmartSort, string> = {
   title: T("Title"),
   artist: T("Artist"),
   year: T("Newest first"),
+  flow: T("Flow (tempo, key, energy)"),
 };
 
 /** Format family of a track's codec — "MPEG 1 Layer 3" → MP3, "MPEG-4/AAC" → AAC … */
@@ -100,10 +117,41 @@ function formatOf(t: Track): string {
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * A random order that holds while the app runs: a song gets the same place on every look, so the list
+ * doesn't shuffle itself after each play counted; another smart playlist, another order; another
+ * start, another order.
+ */
+const SESSION_SEED = Math.floor(Math.random() * 2 ** 31);
+export function randomKey(id: string, salt: string, seed = SESSION_SEED): number {
+  let h = (2166136261 ^ seed) >>> 0;
+  const text = `${salt}|${id}`;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // A last stir, so ids that differ only at their end still land far apart.
+  h ^= h >>> 15;
+  h = Math.imul(h, 2246822507);
+  h ^= h >>> 13;
+  return (h >>> 0) / 2 ** 32;
+}
+
+const shuffled = (tracks: Track[], salt: string): Track[] =>
+  tracks
+    .map((t) => ({ t, k: randomKey(t.id, salt) }))
+    .sort((x, y) => x.k - y.k)
+    .map((x) => x.t);
+
+/** Whether a smart playlist reads the play counts: if not, a play counted changes nothing in it. */
+export const readsPlays = (sp: SmartPlaylist): boolean => sp.sort === "plays" || sp.sort === "lastPlayed" || sp.rules.some((r) => r.field === "plays" || r.field === "lastPlayed");
+
 interface Ctx {
   counts: PlayCounts;
   liked: Set<string>;
   now: number;
+  /** a song's measured sound, if the analysis has it */
+  sound: (t: Track) => SoundFacts | undefined;
 }
 
 function textMatch(op: RuleOp, hay: string[], needle: string): boolean {
@@ -149,7 +197,7 @@ export function ruleMatches(rule: SmartRule, t: Track, ctx: Ctx): boolean {
   const b = rule.value2 !== undefined && rule.value2 !== "" ? Number(rule.value2) : undefined;
   switch (rule.field) {
     case "genre":
-      return textMatch(rule.op, genresOf(t).length ? genresOf(t) : [""], rule.value);
+      return textMatch(rule.op, genresOfTrack(t).length ? genresOfTrack(t) : [""], rule.value);
     case "artist":
       return textMatch(rule.op, [t.artist, t.albumArtist ?? ""], rule.value);
     case "album":
@@ -180,6 +228,27 @@ export function ruleMatches(rule: SmartRule, t: Track, ctx: Ctx): boolean {
     }
     case "liked":
       return ctx.liked.has(t.id) === (rule.value === "yes");
+    case "bpm": {
+      const bpm = ctx.sound(t)?.bpm || undefined;
+      // A tempo "is" within two beats: nobody's measure is exact.
+      return rule.op === "is" ? bpm !== undefined && Math.abs(bpm - a) <= 2 : numberMatch(rule.op, bpm, a, b);
+    }
+    case "energy": {
+      const f = ctx.sound(t);
+      return numberMatch(rule.op, f && f.loudness > -70 ? f.energy * 100 : undefined, a, b);
+    }
+    case "camelot": {
+      const f = ctx.sound(t);
+      const here = f ? camelotOf(f.key, f.minor) : null;
+      const want = /^(\d{1,2})([AB])$/.exec(rule.value);
+      if (!here || !want) return false;
+      const step = keyStep(here, { n: Number(want[1]), ring: want[2] as "A" | "B" });
+      return rule.op === "near" ? step < 2 : step === 0;
+    }
+    case "family": {
+      const families = genresOfTrack(t).map((g) => familyOf(g));
+      return rule.op === "is" ? families.includes(rule.value as never) : !families.includes(rule.value as never);
+    }
     default:
       return false;
   }
@@ -192,8 +261,15 @@ function ruleIsSet(r: SmartRule): boolean {
   return r.value !== "" && Number.isFinite(Number(r.value));
 }
 
-export function evaluateSmartPlaylist(sp: SmartPlaylist, tracks: Track[], counts: PlayCounts, likedIds: Set<string>): Track[] {
-  const ctx: Ctx = { counts, liked: likedIds, now: Date.now() };
+export function evaluateSmartPlaylist(
+  sp: SmartPlaylist,
+  tracks: Track[],
+  counts: PlayCounts,
+  likedIds: Set<string>,
+  sound: (t: Track) => SoundFacts | undefined = () => undefined,
+  skips: (t: Track) => number = () => 0
+): Track[] {
+  const ctx: Ctx = { counts, liked: likedIds, now: Date.now(), sound };
   const rules = sp.rules.filter(ruleIsSet);
   let out = rules.length
     ? tracks.filter((t) => (sp.match === "all" ? rules.every((r) => ruleMatches(r, t, ctx)) : rules.some((r) => ruleMatches(r, t, ctx))))
@@ -202,7 +278,7 @@ export function evaluateSmartPlaylist(sp: SmartPlaylist, tracks: Track[], counts
   const last = (t: Track): number => counts[t.id]?.lastAt ?? 0;
   switch (sp.sort) {
     case "random":
-      out = out.map((t) => ({ t, k: Math.random() })).sort((x, y) => x.k - y.k).map((x) => x.t);
+      out = shuffled(out, sp.id);
       break;
     case "added":
       out.sort((x, y) => (y.addedAt ?? 0) - (x.addedAt ?? 0));
@@ -222,6 +298,11 @@ export function evaluateSmartPlaylist(sp: SmartPlaylist, tracks: Track[], counts
     case "year":
       out.sort((x, y) => (y.year ?? 0) - (x.year ?? 0));
       break;
+    case "flow": {
+      // The limit first (a random pick of that many, the same one while the app runs), then the order that flows (lib/flowOrder.ts).
+      const pool = sp.limit && sp.limit > 0 ? shuffled(out, sp.id).slice(0, sp.limit) : out;
+      return flowOrder(pool.map((t) => ({ item: t, facts: sound(t), artist: t.artist, skips: skips(t) })), { arc: true });
+    }
   }
   return sp.limit && sp.limit > 0 ? out.slice(0, sp.limit) : out;
 }
@@ -231,10 +312,10 @@ export function describeRules(sp: SmartPlaylist): string {
   const parts = sp.rules.filter(ruleIsSet).map((r) => {
     const f = FIELDS[r.field];
     const value = f.choices?.find((c) => c.value === r.value)?.label ?? r.value;
-    const range = r.op === "between" ? `${value} and ${r.value2 ?? ""}` : value;
-    return `${f.label} ${OP_LABEL[r.op]} ${range}${f.unit ? ` ${f.unit}` : ""}`;
+    const range = r.op === "between" ? `${value} ${T("and")} ${r.value2 ?? ""}` : value;
+    return `${f.label} ${T(OP_LABEL[r.op])} ${range}${f.unit ? ` ${f.unit}` : ""}`;
   });
-  return parts.join(sp.match === "all" ? " · " : " or ") || T("All songs");
+  return parts.join(sp.match === "all" ? " · " : ` ${T("or")} `) || T("All songs");
 }
 
 /** Starting points offered when a new smart playlist is created. */
@@ -244,4 +325,7 @@ export const SMART_PRESETS: { name: string; rules: SmartRule[]; sort: SmartSort;
   { name: T("Never played"), rules: [{ field: "plays", op: "is", value: "0" }], sort: "random", limit: 100 },
   { name: T("Most played"), rules: [{ field: "plays", op: "gt", value: "2" }], sort: "plays", limit: 50 },
   { name: T("Not played in a while"), rules: [{ field: "plays", op: "gt", value: "0" }, { field: "lastPlayed", op: "notInLast", value: "90" }], sort: "random", limit: 100 },
+  // Made from how songs sound, in an order that flows.
+  { name: T("Workout"), rules: [{ field: "bpm", op: "between", value: "120", value2: "140" }, { field: "energy", op: "gt", value: "60" }], sort: "flow", limit: 60 },
+  { name: T("Wind down"), rules: [{ field: "energy", op: "lt", value: "40" }, { field: "bpm", op: "lt", value: "100" }], sort: "flow", limit: 60 },
 ];

@@ -156,3 +156,24 @@ test("listening records cover art for albums", async () => {
     } finally { again.close(); }
   } finally { h.close(); }
 });
+
+test("another device's plays count in Replay: a play each, the song's length as the time", async () => {
+  const h = await loadStats();
+  try {
+    h.api.initStats();
+    const now = Date.now();
+    h.api.recordRemotePlays([
+      { at: now - 60_000, id: "jf:1", title: "Night Ferry", artist: "Lumen Harbor", album: "Lanterns", ms: 200_000 },
+      { at: now - 30_000, id: "jf:1", title: "Night Ferry", artist: "Lumen Harbor", album: "Lanterns", ms: 200_000 },
+      { at: now - 10_000, id: "jf:2", title: "Low Tide", artist: "Lumen Harbor", ms: 180_000 },
+    ]);
+    const month = h.api.summary("month");
+    assert.equal(month.plays, 3);
+    assert.equal(month.totalMs, 580_000);
+    assert.equal(month.tracks.find((t) => t.id === "jf:1").plays, 2);
+    assert.equal(month.albums[0].name, "Lanterns");
+    assert.equal(h.api.playCounts()["jf:1"].plays, 2, "the library's play counts know them too");
+  } finally {
+    h.close();
+  }
+});

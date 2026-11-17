@@ -22,9 +22,14 @@ export type RuleField =
   | "sampleRate"
   | "bitDepth"
   | "source"
-  | "liked";
+  | "liked"
+  // How it sounds (lib/soundMatch.ts, electron/sound-analysis.ts) and its genre family (lib/genres.ts).
+  | "bpm"
+  | "energy"
+  | "camelot"
+  | "family";
 
-export type RuleOp = "contains" | "notContains" | "is" | "isNot" | "gt" | "lt" | "between" | "inLast" | "notInLast";
+export type RuleOp = "contains" | "notContains" | "is" | "isNot" | "gt" | "lt" | "between" | "inLast" | "notInLast" | "near";
 
 export interface SmartRule {
   field: RuleField;
@@ -34,7 +39,7 @@ export interface SmartRule {
   value2?: string;
 }
 
-export type SmartSort = "random" | "added" | "plays" | "lastPlayed" | "title" | "artist" | "year";
+export type SmartSort = "random" | "added" | "plays" | "lastPlayed" | "title" | "artist" | "year" | "flow";
 
 export interface SmartPlaylist {
   id: string;

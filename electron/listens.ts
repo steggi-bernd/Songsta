@@ -4,8 +4,10 @@
  * song, at least 30 s, at most 4 minutes in — the rule in stats.ts), stamped
  * with when it began, as Last.fm and ListenBrainz stamp theirs.
  *
- * It lives in data/listens.jsonl, is never synced to an account, and Replay
- * shows it and exports it as a spreadsheet (CSV). The songs' plays reach a
+ * It lives in data/listens.jsonl and Replay shows it and exports it as a
+ * spreadsheet (CSV). With a sync service the devices share their listens
+ * (src/lib/listenSync.ts): the others' plays are written here too, each with
+ * the device that played it, and this computer's go out from here. The songs' plays reach a
  * Jellyfin or Navidrome server only through the separate "Count plays on the
  * server" switch (src/lib/serverSync.ts).
  */
@@ -13,6 +15,7 @@ import { app } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import type { Track } from "../src/types";
+import { listenKey, type ListenDevice, type SharedListen } from "../src/lib/listenSync";
 
 export interface Listen {
   /** when the listen began, ms */
@@ -23,6 +26,10 @@ export interface Listen {
   album: string;
   /** the song's length, seconds */
   duration: number;
+  /** another device's play, taken from the shared history: which device, what it's called, what it is */
+  device?: string;
+  deviceName?: string;
+  deviceKind?: "phone" | "computer";
 }
 
 const FILE = "listens.jsonl";
@@ -89,13 +96,64 @@ function readAll(): Listen[] {
     try {
       const l = JSON.parse(line) as Partial<Listen>;
       if (typeof l.at === "number" && typeof l.title === "string" && typeof l.id === "string") {
-        out.push({ at: l.at, id: l.id, title: l.title, artist: String(l.artist ?? ""), album: String(l.album ?? ""), duration: Number(l.duration) || 0 });
+        out.push({
+          at: l.at,
+          id: l.id,
+          title: l.title,
+          artist: String(l.artist ?? ""),
+          album: String(l.album ?? ""),
+          duration: Number(l.duration) || 0,
+          ...(typeof l.device === "string" && l.device
+            ? { device: l.device, deviceName: String(l.deviceName ?? ""), ...(l.deviceKind === "phone" || l.deviceKind === "computer" ? { deviceKind: l.deviceKind } : {}) }
+            : {}),
+        });
       }
     } catch {
       /* a line cut by a crash — the rest stands */
     }
   }
   return out;
+}
+
+/**
+ * This computer's own listens from a place on (how many of them the shared history has), in the order
+ * they were counted, and how many there are. By place, not by moment: one listen stamped by a clock
+ * that ran ahead doesn't hold back the ones after it.
+ */
+export async function ownListensFrom(from: number, max: number): Promise<{ listens: Listen[]; total: number }> {
+  await flushListens();
+  const own = readAll().filter((l) => !l.device);
+  const start = Math.max(0, Math.floor(from) || 0);
+  return { listens: own.slice(start, start + Math.max(1, Math.min(1000, Math.floor(max) || 500))), total: own.length };
+}
+
+/** The other devices' listens already here, by who played them and when. */
+let remoteKeys: Set<string> | null = null;
+
+/**
+ * Plays counted on other devices (the shared history), written here with the device that played
+ * them; one already here is left out. The ones new here come back, for Replay's counts.
+ */
+export async function noteRemoteListens(listens: SharedListen[], devices: Record<string, ListenDevice>): Promise<SharedListen[]> {
+  await flushListens();
+  remoteKeys ??= new Set(readAll().filter((l) => l.device).map((l) => listenKey(l.device as string, l)));
+  const keys = remoteKeys;
+  const fresh = listens.filter((l) => {
+    const key = listenKey(l.device, l);
+    if (keys.has(key)) return false;
+    keys.add(key);
+    return true;
+  });
+  if (!fresh.length) return fresh;
+  const lines = fresh
+    .map((l) => {
+      const from = devices[l.device];
+      return JSON.stringify({ at: l.at, id: l.id, title: l.title, artist: l.artist, album: l.album ?? "", duration: Math.round(l.ms / 1000), device: l.device, deviceName: from?.name ?? "", ...(from?.kind ? { deviceKind: from.kind } : {}) });
+    })
+    .join("\n");
+  writing = writing.then(() => fs.promises.appendFile(file(), `${lines}\n`, "utf8")).catch(() => undefined);
+  await writing;
+  return fresh;
 }
 
 /** Newest first, a page at a time: the listens before `before` (ms), and whether older ones exist. */
@@ -146,6 +204,57 @@ export function scoreMoments(listens: readonly Listen[], now: number): MomentSco
     .slice(0, 150);
 }
 
+/** A pause longer than this between two plays ends a listening session. */
+const SESSION_GAP_MS = 30 * 60_000;
+
+/**
+ * The songs played around a song (Klingt wie's "Often played together"): within the same listening
+ * session (pauses under half an hour) on the same device, up to four songs either side, the nearer the
+ * more; a session loses half its weight every 180 days. `ids` are the song's copies (a file and the
+ * server's). Each device's sessions apart: the phone in the car and the computer at home playing at the
+ * same time weren't one session (the shared history holds both). Pure.
+ */
+export function scoreTogether(listens: readonly Listen[], ids: readonly string[], now: number, limit = 40): MomentScore[] {
+  const byDevice = new Map<string, Listen[]>();
+  for (const l of listens) {
+    const list = byDevice.get(l.device ?? "");
+    if (list) list.push(l);
+    else byDevice.set(l.device ?? "", [l]);
+  }
+  const want = new Set(ids);
+  const scores = new Map<string, number>();
+  for (const list of byDevice.values()) {
+    const all = list.sort((a, b) => a.at - b.at);
+    let start = 0;
+    for (let i = 1; i <= all.length; i++) {
+      const ends = i === all.length || all[i].at - (all[i - 1].at + all[i - 1].duration * 1000) > SESSION_GAP_MS;
+      if (!ends) continue;
+      const session = all.slice(start, i);
+      start = i;
+      for (let k = 0; k < session.length; k++) {
+        if (!want.has(session[k].id)) continue;
+        const fade = Math.pow(0.5, Math.max(0, now - session[k].at) / (180 * 86_400_000));
+        for (let d = 1; d <= 4; d++) {
+          for (const other of [session[k - d], session[k + d]]) {
+            if (!other || want.has(other.id)) continue;
+            scores.set(other.id, (scores.get(other.id) ?? 0) + fade / d);
+          }
+        }
+      }
+    }
+  }
+  return [...scores]
+    .map(([id, score]) => ({ id, score: Math.round(score * 1000) / 1000 }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+/** The songs played around a song, from the whole history (every device's, with a sync service). */
+export async function togetherScores(ids: string[], limit = 40, now = Date.now()): Promise<MomentScore[]> {
+  await flushListens();
+  return scoreTogether(readAll(), ids, now, limit);
+}
+
 /** This moment's songs from the whole history (the home page's time-of-day mix). */
 export async function momentScores(now = Date.now()): Promise<MomentScore[]> {
   await flushListens();
@@ -162,8 +271,8 @@ export async function listensCsv(): Promise<{ csv: string; count: number }> {
     return /[",\n\r;]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
   };
   const rows = readAll().sort((a, b) => a.at - b.at);
-  const lines = ["Listened at (UTC),Title,Artist,Album,Length (s)"];
-  for (const l of rows) lines.push([new Date(l.at).toISOString(), l.title, l.artist, l.album, l.duration].map(cell).join(","));
+  const lines = ["Listened at (UTC),Title,Artist,Album,Length (s),Device"];
+  for (const l of rows) lines.push([new Date(l.at).toISOString(), l.title, l.artist, l.album, l.duration, l.device ? l.deviceName || l.device : ""].map((v) => cell(v)).join(","));
   return { csv: `\ufeff${lines.join("\r\n")}\r\n`, count: rows.length };
 }
 
@@ -179,6 +288,7 @@ export async function clearListens(): Promise<void> {
   if (timer) clearTimeout(timer);
   timer = null;
   pending = [];
+  remoteKeys = null;
   await writing;
   await fs.promises.rm(file(), { force: true });
 }

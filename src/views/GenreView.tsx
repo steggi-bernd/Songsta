@@ -8,7 +8,9 @@ import { Tags } from "lucide-react";
 import { AlbumTile, CollectionHeader } from "../components/LibraryCards";
 import { TrackList } from "../components/TrackList";
 import { EmptyState, ShelfScroller } from "../components/primitives";
-import { genresOf, newestFirst, useLibraryGenres, useLibraryIndex } from "../lib/catalogIndex";
+import { newestFirst, useLibraryGenres, useLibraryIndex } from "../lib/catalogIndex";
+import { genreKey } from "../lib/genres";
+import { genresOfTrack } from "../lib/albumGenres";
 import { plural } from "../lib/format";
 import { T } from "../lib/i18n";
 
@@ -24,7 +26,7 @@ export function GenreView({ param }: { param: string }) {
   }, [param]);
   const genre = useMemo(() => genres.find((g) => g.key === key) ?? null, [genres, key]);
   const own = useMemo(
-    () => (genre ? albums.filter((a) => a.tracks.some((t) => genresOf(t).some((g) => g.toLowerCase() === genre.key))).sort(newestFirst) : []),
+    () => (genre ? albums.filter((a) => a.tracks.some((t) => genresOfTrack(t).some((g) => genreKey(g) === genreKey(genre.name)))).sort(newestFirst) : []),
     [albums, genre]
   );
   // Album by album, each in its own order — the way the shelf above lists them.

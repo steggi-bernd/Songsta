@@ -237,14 +237,14 @@ function device(id, { at = base, old = OLD_ON_PHONE, oldService = false, log = [
     deviceId: id,
     async request(method, url, body) {
       me.log.push(`${method} ${url.split("?")[0]}`);
-      if (oldService && /\/v1\/docs\/(order|groups|albumedits|albumpictures)/.test(url)) return { status: 404, body: { error: "No such document" } };
+      if (oldService && /\/v1\/docs\/(order|groups|albumedits|albumpictures|sounds|keys)/.test(url)) return { status: 404, body: { error: "No such document" } };
       const res = await fetch(`${at}${url}`, {
         method,
         headers: { Authorization: `MediaBrowser Token="t"`, ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
       const reply = { status: res.status, body: await res.json() };
-      if (oldService && url.startsWith("/v1/changes")) for (const name of ["order", "groups", "albumedits", "albumpictures"]) delete reply.body.revs[name];
+      if (oldService && url.startsWith("/v1/changes")) for (const name of ["order", "groups", "albumedits", "albumpictures", "sounds", "keys"]) delete reply.body.revs[name];
       return reply;
     },
     readPlaylists: () => toPlaylistDoc({ playlists: [], folders: [] }),
@@ -333,5 +333,7 @@ test("an older app's look at the changes isn't disturbed by the new documents", 
   const body = await res.json();
   for (const name of ["playlists", "queue", "position", "likes", "muted", "devices"]) assert.equal(typeof body.revs[name], "number", name);
   const health = await (await fetch(`${base}/health`)).json();
-  assert.deepEqual(health.docs.slice(-4), ["order", "groups", "albumedits", "albumpictures"]);
+  assert.deepEqual(health.docs.slice(-6), ["order", "groups", "albumedits", "albumpictures", "sounds", "keys"]);
+  assert.deepEqual(health.features, ["listens", "listens-remove"], "and the shared listening history, since 1.8, from which a device's plays can be taken out");
+  assert.equal(typeof body.revs.listens, "number");
 });

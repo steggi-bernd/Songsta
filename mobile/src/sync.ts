@@ -8,7 +8,8 @@ import { AppState, type NativeEventSubscription } from "react-native";
 import { create } from "zustand";
 import { authHeader } from "./jellyfin";
 import { libraryDocHosts, watchLibraryDocs } from "./libraryDocs";
-import { createSyncEngine, defaultSyncAddress, problemKey, serviceProblem, toPlaylistDoc, T, type SyncEngine, type SyncServiceInfo, type SyncServiceProblem, type SyncStatus } from "./shared";
+import { createSyncEngine, defaultSyncAddress, problemKey, serviceProblem, sharesListens, toPlaylistDoc, T, type ListenHost, type SyncEngine, type SyncServiceInfo, type SyncServiceProblem, type SyncStatus } from "./shared";
+import { useSettings } from "./stores/settings";
 import { toast } from "./stores/popups";
 import { useAlbumEdits } from "./stores/albumEdits";
 import { useLibrarySync } from "./stores/librarySync";
@@ -19,6 +20,7 @@ import { adoptPlayback, hearDevices, linkDevices, onPlaybackActivity, phonePrese
 import { usePlaylists } from "./stores/playlists";
 import { useDevices } from "./stores/devices";
 import { useSession } from "./stores/session";
+import { onListenNoted, useListens } from "./stores/listens";
 import Player from "../modules/media3-player";
 
 const FILE = "sync-settings.json";
@@ -108,6 +110,34 @@ export function syncAddress(): string | null {
   return session ? defaultSyncAddress(session.server) : null;
 }
 
+/**
+ * This phone's plays taken off the sync service's shared history (Settings → Network & privacy): the
+ * other devices keep what they already took in, this phone keeps its own and doesn't send those again.
+ */
+export async function removeSharedListens(): Promise<"removed" | "old-service" | "not-linked" | "failed"> {
+  const session = useSession.getState().session;
+  const base = syncAddress();
+  if (!session || !base || !isLinked()) return "not-linked";
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20_000);
+  try {
+    const res = await fetch(`${base}/v1/listens?device=${encodeURIComponent(session.deviceId)}`, {
+      method: "DELETE",
+      headers: { Authorization: authHeader(session.deviceId, session.token), Accept: "application/json" },
+      signal: ctrl.signal,
+    });
+    // A service from before this can't take anything out.
+    if (res.status === 404 || res.status === 405) return "old-service";
+    if (!res.ok) return "failed";
+    useListens.getState().keepOwnHere();
+    return "removed";
+  } catch {
+    return "failed";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let engine: SyncEngine | null = null;
 let appState: NativeEventSubscription | null = null;
 let offPlaylists: (() => void) | null = null;
@@ -115,6 +145,12 @@ let offReach: (() => void) | null = null;
 let offMuted: (() => void) | null = null;
 let offPlaying: (() => void) | null = null;
 let offLibraryDocs: (() => void) | null = null;
+let offListens: (() => void) | null = null;
+
+/** The shared listening history read now (Replay opened): with a sync service, the other devices' plays. */
+export function readListensNow(): Promise<void> {
+  return engine?.listensNow() ?? Promise.resolve();
+}
 let offAddress: (() => void) | null = null;
 let applying = false;
 let lastPlayingAt = 0;
@@ -147,6 +183,18 @@ export async function startSync(): Promise<void> {
   if (engine || !useSession.getState().session) return;
 
   const device = { id: session.deviceId, name: phonePresence().name };
+  await useListens.getState().load();
+  // Plays read from another sync service don't carry on in this one.
+  useListens.getState().useServer(serverKey() ?? "");
+  const libraryHosts = libraryDocHosts();
+  const listenHost: ListenHost = {
+    device: () => ({ name: phonePresence().name, kind: "phone" }),
+    pending: async (max) => useListens.getState().pending(max),
+    sent: (last) => useListens.getState().markSent(last),
+    readUpTo: () => useListens.getState().readUpTo,
+    take: (listens, devices, upTo, startOver) => useListens.getState().take(listens, devices, upTo, startOver),
+    missing: () => useListens.getState().setMissing(true),
+  };
   const created = createSyncEngine({
     deviceId: session.deviceId,
     async request(method, path, body, timeoutMs = 20_000) {
@@ -202,8 +250,16 @@ export async function startSync(): Promise<void> {
       linkedServers = [...linkedServers.filter((k) => k !== key), key].slice(-LINKED_KEPT);
       saveSettings();
     },
-    // How the library is organised, the same as on the computer: pins, sort, groups, album edits.
-    library: libraryDocHosts(),
+    // How the library is organised, the same as on the computer: pins, sort, groups, album edits; and the
+    // listening history all devices share (lib/listenSync.ts, stores/listens.ts): each only while it's
+    // shared (Settings → Network & privacy), the history only while plays are kept here at all, since
+    // the other devices' come into it. The engine asks for them each time.
+    get library() {
+      return useSettings.getState().shareLibrary ? libraryHosts : undefined;
+    },
+    get listens() {
+      return sharesListens(useSettings.getState()) ? listenHost : undefined;
+    },
     onService: hearService,
     onListening() {
       // Nothing played here for a while, and nobody looks: it can rest.
@@ -216,6 +272,7 @@ export async function startSync(): Promise<void> {
     if (!applying && (s.playlists !== prev.playlists || s.folders !== prev.folders)) created.playlistsChanged();
   });
   offLibraryDocs = watchLibraryDocs((name) => created.libraryChanged(name));
+  offListens = onListenNoted(() => created.listensChanged());
   onPlaybackActivity((routine) => {
     // In the background timers don't run: what the others should know goes out at once.
     if (!routine && AppState.currentState !== "active") void created.flushPlayback();
@@ -272,10 +329,20 @@ export async function startSync(): Promise<void> {
       if (!playingHere() && Date.now() - lastPlayingAt > LISTENS_AFTER_PLAYING_MS) created.rest();
     }
   });
+  // Shared again (or not any more): a fresh start says everything once, as at the app's start.
+  offShares = useSettings.subscribe((s, prev) => {
+    if (s.shareLibrary === prev.shareLibrary && s.shareListens === prev.shareListens && s.recordListening === prev.recordListening) return;
+    stopSync();
+    void startSync();
+  });
   created.start();
 }
 
+let offShares: (() => void) | null = null;
+
 export function stopSync(): void {
+  offShares?.();
+  offShares = null;
   offReach?.();
   offReach = null;
   offAddress?.();
@@ -295,6 +362,8 @@ export function stopSync(): void {
   offPlaying = null;
   offLibraryDocs?.();
   offLibraryDocs = null;
+  offListens?.();
+  offListens = null;
   keysLevel = -1;
   void Player.followVolumeKeys(-1).catch(() => undefined);
   onPlaybackActivity(null);

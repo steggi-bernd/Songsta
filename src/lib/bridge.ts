@@ -7,10 +7,6 @@ declare global {
   }
 }
 
-export function hasBridge(): boolean {
-  return typeof window !== "undefined" && !!window.bytune;
-}
-
 export function requireBridge(): ByTuneApi {
   if (typeof window === "undefined" || !window.bytune) {
     throw new Error("Not running inside the Songsta desktop shell.");

@@ -342,7 +342,7 @@ export function GroupCard({
         ui.toggle(group.id);
       }}
       {...ui.groupProps(group, songs)}
-      className={`group relative w-[184px] shrink-0 text-left cursor-pointer select-none rounded-xl p-2 transition-colors duration-200 hover:bg-ink-hi/[0.08] ${open ? "bg-ink-hi/[0.06]" : ""} ${ui.groupLook(group)}`}
+      className={`group relative w-full min-w-0 text-left cursor-pointer select-none rounded-xl p-2 transition-colors duration-200 hover:bg-ink-hi/[0.08] ${open ? "bg-ink-hi/[0.06]" : ""} ${ui.groupLook(group)}`}
     >
       <div className="relative">
         <GroupCover covers={covers} round={round} className="w-full aspect-square rounded-xl" />

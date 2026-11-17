@@ -7,11 +7,12 @@
  * Listening history is deliberately absent — it lives in the queue panel's
  * "Recently played" tab, not in the library.
  */
-import { useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Download, Folder, FolderOpen, Heart, ListMusic, Music2, Pin, PinOff, Play, RotateCw, Shuffle, Trash2, Pencil } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronRight, Download, Folder, ListMusic, Music2, Pin, Play, RotateCw, Shuffle, Trash2, Pencil } from "lucide-react";
 import { TrackList } from "../components/TrackList";
-import { Btn, EmptyState, PlayOverlay } from "../components/primitives";
-import { LibraryFront } from "../components/LibraryFront";
+import { Btn, EmptyState } from "../components/primitives";
+import { LibraryFront, LibraryShelves } from "../components/LibraryFront";
+import { MixGallery } from "../components/MixGallery";
 import { LikedSongsView } from "./LikedSongsView";
 import { CreateMenu } from "../components/CreateMenu";
 import { downloadForOffline } from "../lib/downloads";
@@ -23,7 +24,7 @@ import { usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
 import { dragHasPlaylist, readPlaylist, useDrag } from "../lib/dnd";
 import { playlistFolderItems, playlistHeaderItems } from "../lib/trackActions";
-import { plural } from "../lib/format";
+import { plural, fmtTime } from "../lib/format";
 import { upgradeArtwork } from "../lib/artwork";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
@@ -39,13 +40,15 @@ function tabFromParam(param: string | undefined): LibTab {
   return "playlists";
 }
 
+/**
+ * A playlist on the Your Library page: a collage of four of its albums' covers (or its own picture)
+ * with its name over the foot. The card opens it; the pin and the round play button stand at its
+ * corners and only light up, they never move over anything. The rest is in its menu (right-click).
+ */
 function LibraryPlaylistCard({ playlist }: { playlist: Playlist }) {
   const navigate = useUI((s) => s.navigate);
   const openContextMenu = useUI((s) => s.openContextMenu);
-  const openDialog = useUI((s) => s.openDialog);
-  const deletePlaylist = useLibrary((s) => s.deletePlaylist);
   const togglePin = useLibrary((s) => s.togglePinPlaylist);
-  const toast = useUI((s) => s.toast);
   // Local playlists drag into sidebar folders to file them there.
   const drag = useDrag({
     playlist: {
@@ -54,119 +57,71 @@ function LibraryPlaylistCard({ playlist }: { playlist: Playlist }) {
       thumb: playlist.cover ?? (playlist.tracks[0]?.thumb || undefined),
     },
   });
+  const covers: string[] = [];
+  const seen = new Set<string>();
+  for (const t of playlist.tracks) {
+    const album = (t.album || t.title).toLowerCase();
+    if (!t.thumb || seen.has(album)) continue;
+    seen.add(album);
+    covers.push(t.thumb);
+    if (covers.length === 4) break;
+  }
+  const seconds = playlist.tracks.reduce((sum, t) => sum + (t.duration || 0), 0);
+  const line = [plural(playlist.tracks.length, T("song"), T("songs")), seconds > 0 ? fmtTime(seconds) : ""].filter(Boolean).join(" · ");
 
   return (
     <div
       {...drag.props}
       title={T("Drag onto a sidebar folder to file it there")}
-      className={`group relative w-44 text-left ${drag.dragging ? "opacity-40" : ""}`}
+      className={`group relative rounded-2xl overflow-hidden bg-[#141418] shadow-[0_18px_40px_-20px_rgba(0,0,0,0.8)] ${drag.dragging ? "opacity-40" : ""}`}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        openContextMenu(e.clientX, e.clientY, [
-          ...playlistHeaderItems(playlist),
-          ...playlistFolderItems(playlist),
-        ]);
+        openContextMenu(e.clientX, e.clientY, [...playlistHeaderItems(playlist), ...playlistFolderItems(playlist)]);
       }}
     >
-      <div className="rounded-xl bg-ink-hi/[0.03] p-3 card-lift duration-200 group-hover:bg-ink-hi/[0.07]">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            togglePin(playlist.id);
-          }}
-          title={playlist.pinned ? T("Unpin") : T("Pin to top")}
-          aria-label={playlist.pinned ? T("Unpin playlist") : T("Pin playlist")}
-          className={`absolute top-1 right-1 z-10 p-1.5 rounded-md transition-opacity ${
-            playlist.pinned
-              ? "text-accent opacity-100"
-              : "text-ink-hi/60 opacity-0 group-hover:opacity-100 hover:text-ink-hi"
-          }`}
-        >
-          <Pin className={`w-3.5 h-3.5 ${playlist.pinned ? "fill-current" : ""}`} />
-        </button>
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => navigate({ name: "playlist", param: playlist.id })}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") navigate({ name: "playlist", param: playlist.id });
-          }}
-          title={playlist.name}
-          className={`relative w-full aspect-square rounded-lg bg-gradient-to-br ${COVER_FALLBACK} border border-ink-hi/[0.05] overflow-hidden cursor-pointer`}
-        >
-          {playlist.cover ? (
-            <img src={playlist.cover} alt="" className="absolute inset-0 w-full h-full object-cover p-1.5 rounded-lg bg-ink-hi/[0.04]" />
-          ) : playlist.tracks.length > 0 ? (
-            playlist.tracks.length === 1 ? (
-              <img
-                src={upgradeArtwork(playlist.tracks[0].thumb)}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
-                className="absolute inset-0 w-full h-full object-cover p-1.5 rounded-lg bg-ink-hi/[0.04]"
-              />
-            ) : (
-              <div className="grid grid-cols-2 gap-px w-full h-full p-1.5 rounded-lg overflow-hidden">
-                {playlist.tracks.slice(0, 4).map((t) => (
-                  <img
-                    key={t.id}
-                    src={upgradeArtwork(t.thumb)}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")}
-                    className="w-full h-full object-cover rounded-sm bg-ink-hi/[0.04]"
-                  />
-                ))}
-              </div>
-            )
+      <button onClick={() => navigate({ name: "playlist", param: playlist.id })} aria-label={playlist.name} className="block w-full text-left">
+        <span className="block relative aspect-square">
+          {playlist.cover || covers.length === 1 ? (
+            <img src={playlist.cover ?? upgradeArtwork(covers[0])} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+          ) : covers.length > 1 ? (
+            <span className="absolute inset-0 grid grid-cols-2">
+              {[0, 1, 2, 3].map((i) => (
+                <img key={i} src={upgradeArtwork(covers[i % covers.length])} alt="" loading="lazy" className="w-full h-full object-cover" />
+              ))}
+            </span>
           ) : (
-            <div className="absolute inset-0 grid place-items-center">
-              <Music2 className="w-8 h-8 text-ink-hi/25" />
-            </div>
+            <span className={`absolute inset-0 grid place-items-center bg-gradient-to-br ${COVER_FALLBACK}`}>
+              <Music2 className="w-10 h-10 text-ink-hi/25" />
+            </span>
           )}
-          <span className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors" aria-hidden />
-          <PlayOverlay
-            title={T("Play playlist")}
-            onClick={() => {
-              if (!playlist.tracks.length) {
-                navigate({ name: "playlist", param: playlist.id });
-                return;
-              }
-              usePlayer.getState().playAll(playlist.tracks);
-            }}
-          />
-        </div>
-
-        <div className="mt-3 flex items-start justify-between gap-1">
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-ink truncate">{playlist.name}</div>
-            <div className="text-[13px] text-ink-faint mt-0.5">{plural(playlist.tracks.length, T("song"), T("songs"))}</div>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              openDialog({
-                title: T("Delete \"{name}\"?", { name: playlist.name }),
-                body: T("This can't be undone. The tracks themselves aren't affected."),
-                confirmLabel: T("Delete"),
-                danger: true,
-                onConfirm: () => {
-                  deletePlaylist(playlist.id);
-                  toast(T("Playlist deleted"), "info");
-                },
-              });
-            }}
-            title={T("Delete playlist")}
-            aria-label={T("Delete {name}", { name: playlist.name })}
-            className="p-1.5 rounded-md text-ink-ghost hover:text-red-400 hover:bg-ink-hi/10 opacity-0 group-hover:opacity-100 transition-all shrink-0"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+          <span aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/90 transition-colors group-hover:to-black/80" />
+          <span className="absolute left-3.5 right-16 bottom-3">
+            <span className="block text-[22px] font-black tracking-[-0.03em] text-white truncate">{playlist.name}</span>
+            <span className="block text-[12px] text-white/70 truncate">{line}</span>
+          </span>
+        </span>
+      </button>
+      <button
+        onClick={() => togglePin(playlist.id)}
+        title={playlist.pinned ? T("Unpin") : T("Pin to top")}
+        aria-label={playlist.pinned ? T("Unpin playlist") : T("Pin playlist")}
+        className={`absolute top-2 right-2 w-8 h-8 grid place-items-center rounded-full bg-black/45 transition-opacity ${
+          playlist.pinned ? "text-accent opacity-100" : "text-white/80 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-white"
+        }`}
+      >
+        <Pin className={`w-3.5 h-3.5 ${playlist.pinned ? "fill-current" : ""}`} />
+      </button>
+      {playlist.tracks.length > 0 && (
+        <button
+          onClick={() => usePlayer.getState().playAll(playlist.tracks)}
+          title={T("Play playlist")}
+          aria-label={T("Play {name}", { name: playlist.name })}
+          className="absolute right-3 bottom-3 w-11 h-11 grid place-items-center rounded-full bg-accent text-[#0b0b0d] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:brightness-110"
+        >
+          <Play className="w-[18px] h-[18px] fill-current" />
+        </button>
+      )}
     </div>
   );
 }
@@ -260,7 +215,7 @@ function FolderSection({
         </span>
       </button>
       {expanded && (
-        <div className="flex flex-wrap gap-5 mt-3">
+        <div className="grid gap-[18px] grid-cols-[repeat(auto-fill,minmax(190px,1fr))] mt-3">
           {playlists.length ? (
             playlists.map((p) => <LibraryPlaylistCard key={p.id} playlist={p} />)
           ) : (
@@ -272,81 +227,12 @@ function FolderSection({
   );
 }
 
-/** Pinned shortcut tile (Liked / Downloads / Local) with a pin toggle. */
-function ShortcutTile({
-  title,
-  subtitle,
-  pinned,
-  onTogglePin,
-  onOpen,
-  artClassName,
-  art,
-}: {
-  title: string;
-  subtitle: string;
-  pinned: boolean;
-  onTogglePin: () => void;
-  onOpen: () => void;
-  artClassName: string;
-  art: ReactNode;
-}) {
-  const openContextMenu = useUI((s) => s.openContextMenu);
-  return (
-    <div
-      className="group relative w-44 text-left"
-      onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openContextMenu(e.clientX, e.clientY, [
-          {
-            label: pinned ? T("Unpin") : T("Pin to top"),
-            icon: pinned ? PinOff : Pin,
-            action: onTogglePin,
-          },
-        ]);
-      }}
-    >
-      <div className="rounded-xl bg-ink-hi/[0.03] p-3 card-lift duration-200 group-hover:bg-ink-hi/[0.07]">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin();
-          }}
-          title={pinned ? T("Unpin") : T("Pin to top")}
-          aria-label={pinned ? T("Unpin {title}", { title }) : T("Pin {title}", { title })}
-          className={`absolute top-1 right-1 z-10 p-1.5 rounded-md transition-opacity ${
-            pinned
-              ? "text-accent opacity-100"
-              : "text-ink-hi/60 opacity-0 group-hover:opacity-100 hover:text-ink-hi"
-          }`}
-        >
-          <Pin className={`w-3.5 h-3.5 ${pinned ? "fill-current" : ""}`} />
-        </button>
-        <button onClick={onOpen} className="block w-full text-left">
-          <div
-            className={`relative w-full aspect-square rounded-lg bg-gradient-to-br border border-ink-hi/[0.05] grid place-items-center overflow-hidden ${artClassName}`}
-          >
-            {art}
-          </div>
-          <div className="mt-3">
-            <div className="text-sm font-medium text-ink truncate">{title}</div>
-            <div className="text-[13px] text-ink-faint mt-0.5">{subtitle}</div>
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function LibraryView() {
   const view = useUI((s) => s.view);
   const navigate = useUI((s) => s.navigate);
-  const liked = useLibrary((s) => s.liked);
   const playlists = useLibrary((s) => s.playlists);
   const folders = useLibrary((s) => s.folders);
   const downloads = useLibrary((s) => s.downloads);
-  const pinnedSingles = useLibrary((s) => s.pinnedSingles);
-  const togglePinSingle = useLibrary((s) => s.togglePinSingle);
 
   // Which of the three pages: the route says (the sidebar's Liked Songs row leads to `liked`).
   const tab = tabFromParam(view.param);
@@ -382,8 +268,10 @@ export function LibraryView() {
   return (
     <div className="pb-12">
       {tab === "playlists" && <LibraryFront downloaded={downloadedTracks.length} />}
+      {/* What joined last and the genres come first, the playlists under them (the user's wish, 2026-11-16). */}
+      {tab === "playlists" && <LibraryShelves />}
       {/* Header — the shared create dropdown (Playlist / Folder) */}
-      <div className={tab === "playlists" ? "mt-9" : ""}>
+      <div className={tab === "playlists" ? "mt-10" : ""}>
         <div className="flex items-end justify-between gap-4 animate-slide-up">
           {tab === "downloaded" ? (
             <div>
@@ -429,7 +317,7 @@ export function LibraryView() {
                   {folders.length > 0 && (
                     <h2 className="text-[15px] font-semibold text-ink-hi mb-3">{T("Playlists")}</h2>
                   )}
-                  <div className="flex flex-wrap gap-5">
+                  <div className="grid gap-[18px] grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
                     {pinnedFirst.map((p) => (
                       <LibraryPlaylistCard key={p.id} playlist={p} />
                     ))}
@@ -440,6 +328,9 @@ export function LibraryView() {
           )}
         </div>
       )}
+
+      {/* The mixes stand at the foot of the page, as wide cards (the user's pick, 2026-11-16). */}
+      {tab === "playlists" && <MixGallery />}
 
       {tab === "downloaded" && (
         <div className="mt-6">

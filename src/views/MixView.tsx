@@ -5,9 +5,11 @@ import { CollectionHeader } from "../components/LibraryCards";
 import { TrackList } from "../components/TrackList";
 import { EmptyState } from "../components/primitives";
 import { useLibraryIndex } from "../lib/catalogIndex";
-import { mixById, momentMix } from "../lib/mixes";
+import { genresOfTrack, useAlbumGenres } from "../lib/albumGenres";
+import { inFlow, mixById, momentMix } from "../lib/mixes";
 import { useMomentScores } from "../lib/moments";
-import { energyOf, useSound } from "../stores/sound";
+import { energyOf, soundOf, useSound } from "../stores/sound";
+import { skipsOf } from "../stores/skips";
 import { songKey, useCatalog, useFreshPlayCounts } from "../stores/catalog";
 import { T } from "../lib/i18n";
 
@@ -17,12 +19,14 @@ export function MixView({ param }: { param: string }) {
   useFreshPlayCounts();
   const moment = useMomentScores();
   const sound = useSound((s) => s.facts);
+  const voted = useAlbumGenres((s) => s.voted);
   const mix = useMemo(
     () =>
       param === "moment"
-        ? momentMix(tracks, moment.scores, songKey, moment.at || Date.now())
-        : mixById(param, tracks, playCounts, (t) => energyOf(t, sound)),
-    [param, tracks, playCounts, moment.scores, moment.at, sound]
+        ? inFlow(momentMix(tracks, moment.scores, songKey, moment.at || Date.now()), (t) => soundOf(t, sound), (t) => skipsOf(t.id))
+        : mixById(param, tracks, playCounts, { energyOf: (t) => energyOf(t, sound), sound: (t) => soundOf(t, sound), skips: (t) => skipsOf(t.id), genres: genresOfTrack }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [param, tracks, playCounts, moment.scores, moment.at, sound, voted]
   );
 
   if (!loaded) return null;

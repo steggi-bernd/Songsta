@@ -32,11 +32,19 @@ import { tintHoverHandlers, useUI, type MenuItem } from "../stores/ui";
 import { trackMenuItems } from "../lib/trackActions";
 import { downloadForOffline, SERVER_SONG } from "../lib/downloads";
 import { useDrag, type TrackSource } from "../lib/dnd";
-import { fmtTime } from "../lib/format";
+import { fmtMinutes, fmtTime } from "../lib/format";
+import { flowOrder } from "../lib/flowOrder";
+import { camelotLabel, camelotOf, keyLabel } from "../lib/soundMatch";
+import { soundOf, useSound } from "../stores/sound";
+import { skipsOf } from "../stores/skips";
+import type { SoundFacts } from "../../electron/sound-analysis";
 import { Artwork, EqBars, EmptyState } from "./primitives";
 import { ArtistLinks } from "./ArtistLinks";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
+
+/** How long you've listened to a song, as short as a column needs it: "38 min", "2 h 5 min". */
+const heardCell = (seconds: number): string => (seconds < 60 ? "" : fmtMinutes(seconds));
 
 /** How much of a download is in: a ring the size of the row's other glyphs. */
 function ProgressRing({ value }: { value: number }) {
@@ -145,6 +153,8 @@ interface TrackRowProps {
   added: number;
   /** how often it was played, when that column shows */
   plays: number;
+  /** what the sound analysis measured, when the tempo or key column shows */
+  facts?: SoundFacts;
   /** the list's name and songs (stable references, so the row memo holds): Branch off continues there */
   sourceName?: string;
   sourceTracks?: Track[];
@@ -166,6 +176,7 @@ const TrackRow = memo(function TrackRow({
   columns,
   added,
   plays,
+  facts,
   sourceName,
   sourceTracks,
 }: TrackRowProps) {
@@ -276,6 +287,12 @@ const TrackRow = memo(function TrackRow({
               (track.genre ?? "")
             ) : c.key === "format" ? (
               formatCell(track)
+            ) : c.key === "tempo" ? (
+              facts && facts.bpm > 0 ? Math.round(facts.bpm) : ""
+            ) : c.key === "key" ? (
+              <KeyCell facts={facts} />
+            ) : c.key === "heard" ? (
+              heardCell(plays * (track.duration || 0))
             ) : plays > 0 ? (
               plays
             ) : (
@@ -321,6 +338,17 @@ const TrackRow = memo(function TrackRow({
   );
 });
 
+/** A song's key as its place on the Camelot wheel ("8A"), its name ("a-Moll") on hover. */
+function KeyCell({ facts }: { facts?: SoundFacts }) {
+  const c = facts && facts.key >= 0 ? camelotOf(facts.key, facts.minor) : null;
+  if (!c || !facts) return null;
+  return (
+    <span title={keyLabel(facts.key, facts.minor)} className="inline-flex items-center h-5 px-1.5 rounded-md bg-ink-hi/[0.07] text-[11px] font-bold text-ink-dim tabular-nums">
+      {camelotLabel(c)}
+    </span>
+  );
+}
+
 type ShownColumn = { key: TrackColumn; width: number; right: boolean };
 
 /** A column's width comes from the list (a CSS variable), so pulling it moves every row without a single one being drawn anew. */
@@ -332,10 +360,14 @@ const COLUMN_LABEL: Record<TrackColumn, string> = {
   released: T("Released"),
   genre: T("Genre"),
   format: T("Format"),
+  tempo: T("Tempo"),
+  key: T("Key"),
   plays: T("Plays"),
+  heard: T("Heard by you"),
   time: T("Time"),
 };
 const NO_COUNTS = {};
+const NO_FACTS: Record<string, SoundFacts> = {};
 
 const SORT_LABEL: Record<SortKey, string> = {
   title: T("Title"),
@@ -345,8 +377,12 @@ const SORT_LABEL: Record<SortKey, string> = {
   released: T("Release date"),
   genre: T("Genre"),
   format: T("Quality"),
+  tempo: T("Tempo"),
+  key: T("Key"),
   plays: T("Plays"),
+  heard: T("Heard by you"),
   time: T("Duration"),
+  flow: T("Flowing"),
 };
 
 /** Which way a list stands ordered by this column, as the small mark beside its name. */
@@ -457,7 +493,18 @@ interface TrackListProps {
 }
 
 /** A column's name, as an order: the time column orders by length. */
-const SORT_OF: Record<TrackColumn, SortKey> = { album: "album", added: "added", released: "released", genre: "genre", format: "format", plays: "plays", time: "time" };
+const SORT_OF: Record<TrackColumn, SortKey> = {
+  album: "album",
+  added: "added",
+  released: "released",
+  genre: "genre",
+  format: "format",
+  tempo: "tempo",
+  key: "key",
+  plays: "plays",
+  heard: "heard",
+  time: "time",
+};
 
 export function TrackList({
   tracks,
@@ -514,6 +561,9 @@ export function TrackList({
   // dates were kept (likes from older versions, say) fall back to the day the library got them —
   // close enough, and better than a blank — as does a list that keeps no dates of its own.
   const addedOf = useCallback((t: Track): number => (addedDates?.get(songKey(t.id)) || t.addedAt) ?? 0, [addedDates]);
+  // The sound analysis' facts, only while a column or the order needs them.
+  const wantsSound = choice.shown.includes("tempo") || choice.shown.includes("key") || sort?.key === "tempo" || sort?.key === "key" || sort?.key === "flow";
+  const facts = useSound((s) => (wantsSound ? s.facts : NO_FACTS));
   // A column nobody here could fill stays away, whatever is switched on.
   const has = useMemo(
     () => ({
@@ -522,11 +572,14 @@ export function TrackList({
       released: tracks.some((t) => !!releasedCell(t)),
       genre: tracks.some((t) => !!t.genre),
       format: tracks.some((t) => !!formatCell(t)),
+      tempo: tracks.some((t) => (soundOf(t, facts)?.bpm ?? 0) > 0),
+      key: tracks.some((t) => (soundOf(t, facts)?.key ?? -1) >= 0),
     }),
-    [tracks, showAlbum, addedOf]
+    [tracks, showAlbum, addedOf, facts]
   );
   const columns = useMemo(() => columnsFor(choice, has, room), [choice, has, room]);
-  const showsPlays = columns.some((c) => c.key === "plays") || sort?.key === "plays";
+  const showsPlays = columns.some((c) => c.key === "plays" || c.key === "heard") || sort?.key === "plays" || sort?.key === "heard";
+  const showsSound = columns.some((c) => c.key === "tempo" || c.key === "key");
   const playCounts = useCatalog((s) => (showsPlays ? s.playCounts : NO_COUNTS)) as Record<string, { plays: number } | undefined>;
   const widths = useMemo(() => Object.fromEntries(TRACK_COLUMNS.map((c) => [`--col-${c.key}`, `${widthOf(choice, c.key)}px`])) as CSSProperties, [choice]);
 
@@ -534,11 +587,21 @@ export function TrackList({
   const shown = useMemo(() => {
     let list = tracks;
     if (sort) {
-      const order = sort.key === "added" ? addedForOrder(tracks.map(addedOf), newestFirst) : null;
-      list = sortTracks(tracks, sort, (i) => order?.[i] ?? 0, (t) => playCounts[t.id]?.plays ?? 0);
+      const order = sort.key === "added" ? addedForOrder(tracks.map((t) => addedOf(t)), newestFirst) : null;
+      const playsOf = (t: Track): number => playCounts[t.id]?.plays ?? 0;
+      list = sortTracks(tracks, sort, (i) => order?.[i] ?? 0, playsOf, {
+        tempo: (t) => soundOf(t, facts)?.bpm ?? 0,
+        keyRank: (t) => {
+          const f = soundOf(t, facts);
+          const c = f && f.key >= 0 ? camelotOf(f.key, f.minor) : null;
+          return c ? c.n * 2 + (c.ring === "B" ? 1 : 0) : 0;
+        },
+        heard: (t) => playsOf(t) * (t.duration || 0),
+        flow: (list) => flowOrder(list.map((t) => ({ item: t, facts: soundOf(t, facts), artist: t.artist, skips: skipsOf(t.id) })), { arc: true }),
+      });
     }
     return query.trim() ? list.filter((t) => matchesSearch(t, query)) : list;
-  }, [tracks, sort, addedOf, newestFirst, playCounts, query]);
+  }, [tracks, sort, addedOf, newestFirst, playCounts, query, facts]);
 
   const pull = useCallback((key: TrackColumn, width: number) => {
     const spec = TRACK_COLUMNS.find((c) => c.key === key)!;
@@ -627,7 +690,22 @@ export function TrackList({
   const sortByColumn = useCallback((key: TrackColumn) => sortBy(SORT_OF[key]), [sortBy]);
 
   const chooseOrder = (x: number, y: number): void => {
-    const keys: SortKey[] = ["title", "artist", ...(has.album ? (["album"] as SortKey[]) : []), ...(has.added ? (["added"] as SortKey[]) : []), ...(has.released ? (["released"] as SortKey[]) : []), ...(has.genre ? (["genre"] as SortKey[]) : []), ...(has.format ? (["format"] as SortKey[]) : []), "plays", "time"];
+    // Tempo, key and the flowing order need songs the analysis measured; the facts are read now, not kept.
+    const measured = tracks.some((t) => soundOf(t)?.bpm);
+    const keys: SortKey[] = [
+      "title",
+      "artist",
+      ...(has.album ? (["album"] as SortKey[]) : []),
+      ...(has.added ? (["added"] as SortKey[]) : []),
+      ...(has.released ? (["released"] as SortKey[]) : []),
+      ...(has.genre ? (["genre"] as SortKey[]) : []),
+      ...(has.format ? (["format"] as SortKey[]) : []),
+      ...(measured ? (["tempo", "key"] as SortKey[]) : []),
+      "plays",
+      "heard",
+      "time",
+      ...(measured ? (["flow"] as SortKey[]) : []),
+    ];
     openContextMenu(
       x,
       y,
@@ -821,6 +899,7 @@ export function TrackList({
                 columns={columns}
                 added={addedOf(track)}
                 plays={showsPlays ? (playCounts[track.id]?.plays ?? 0) : 0}
+                facts={showsSound ? soundOf(track, facts) : undefined}
                 sourceName={sourceName}
                 sourceTracks={shown}
               />

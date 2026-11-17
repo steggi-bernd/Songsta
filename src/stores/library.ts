@@ -255,14 +255,12 @@ export const useLibrary = create<LibraryState>()(
       },
 
       addToPlaylist(playlistId, track) {
-        const playlists = get().playlists.map((p) => {
-          if (p.id !== playlistId) return p;
-          if (p.tracks.some((t) => t.id === track.id)) return p;
-          return { ...p, tracks: [...p.tracks, track] };
-        });
+        // Once per song: another copy of one already in it (the server's of a local file) is the same song.
+        const key = songKey(track.id);
         const target = get().playlists.find((p) => p.id === playlistId);
-        const dup = target?.tracks.some((t) => t.id === track.id) ?? false;
+        const dup = target?.tracks.some((t) => t.id === track.id || songKey(t.id) === key) ?? false;
         if (!target || dup) return false;
+        const playlists = get().playlists.map((p) => (p.id === playlistId ? { ...p, tracks: [...p.tracks, track] } : p));
         withChanges(set, get, { playlists },
           [{ kind: "add", group: "tracks", id: track.id, parent: playlistId }]);
         return true;

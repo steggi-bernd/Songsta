@@ -4,7 +4,7 @@
  * service a device has reached (lib/syncEngine.ts): without one, nothing is looked up or said.
  * Pure, one copy for the desktop and the phone.
  */
-import { LIBRARY_DOCS, type LibraryDocName } from "./librarySync";
+import { REQUIRED_LIBRARY_DOCS, type LibraryDocName } from "./librarySync";
 import { isNewerVersion } from "./newVersion";
 
 /**
@@ -42,10 +42,11 @@ export function readServiceInfo(body: unknown): SyncServiceInfo | null {
 /** Why the service is too old for this app, or null when it isn't (or can't be judged). */
 export function serviceProblem(info: SyncServiceInfo | null): SyncServiceProblem | null {
   if (!info) return null;
-  const missing = LIBRARY_DOCS.filter((name) => !info.docs?.includes(name));
+  // The sound documents (lib/soundShare.ts) are left out: without them a service is no older than it was.
+  const missing = REQUIRED_LIBRARY_DOCS.filter((name) => !info.docs?.includes(name));
   const behind = !!info.version && isNewerVersion(SYNC_SERVICE_MIN_VERSION, info.version);
   if (!missing.length && !behind) return null;
-  return { missing: behind && !missing.length ? [...LIBRARY_DOCS] : missing, ...(info.version ? { version: info.version } : {}) };
+  return { missing: behind && !missing.length ? [...REQUIRED_LIBRARY_DOCS] : missing, ...(info.version ? { version: info.version } : {}) };
 }
 
 /** The same problem, as one word to remember it was told: told once, not again until it changes. */

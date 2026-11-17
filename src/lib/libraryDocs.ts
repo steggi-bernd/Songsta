@@ -8,10 +8,13 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useAlbumEdits } from "../stores/albumEdits";
+import { useCatalog } from "../stores/catalog";
+import { useKeyEdits } from "../stores/keyEdits";
 import { useLibrary } from "../stores/library";
 import { useLibraryOrder } from "../stores/libraryOrder";
 import { useSettings } from "../stores/settings";
 import { useSmartPlaylists } from "../stores/smartPlaylists";
+import { useSound } from "../stores/sound";
 import { albumRoute, parseRoute } from "./libraryCore";
 import { readExploreGroups, readGroups } from "./libraryGroups";
 import {
@@ -37,7 +40,9 @@ import {
 } from "./librarySync";
 import { storage } from "./persist";
 import { albumPictureToShare, keepSharedAlbumPicture } from "./pickPicture";
+import { keyChangesFor, keysDocOf, sharedFor, soundsDocOf, type KeysDoc, type SoundsDoc } from "./soundShare";
 import type { LibraryDocHost } from "./syncEngine";
+import type { Track } from "../types";
 
 interface Moments {
   /** the latest moment seen anywhere: a change here comes after it */
@@ -79,13 +84,14 @@ export function librarySyncReady(): boolean {
     useLibraryOrder.persist.hasHydrated() &&
     useSettings.persist.hasHydrated() &&
     useSmartPlaylists.persist.hasHydrated() &&
-    useLibrary.persist.hasHydrated()
+    useLibrary.persist.hasHydrated() &&
+    useKeyEdits.persist.hasHydrated()
   );
 }
 
 /** Calls back when the last of them has been read. */
 export function onLibrarySyncReady(then: () => void): () => void {
-  const offs = [useMoments, useAlbumEdits, useLibraryOrder, useSettings, useSmartPlaylists, useLibrary].map((store) => store.persist.onFinishHydration(then));
+  const offs = [useMoments, useAlbumEdits, useLibraryOrder, useSettings, useSmartPlaylists, useLibrary, useKeyEdits].map((store) => store.persist.onFinishHydration(then));
   return () => offs.forEach((off) => off());
 }
 
@@ -100,7 +106,7 @@ function quietly(change: () => void): void {
   }
 }
 
-const localChanges: Record<LibraryDocName, number> = { order: 0, groups: 0, albumedits: 0, albumpictures: 0 };
+const localChanges: Record<LibraryDocName, number> = { order: 0, groups: 0, albumedits: 0, albumpictures: 0, sounds: 0, keys: 0 };
 const readAt: Partial<Record<LibraryDocName, number>> = {};
 let tell: ((name: LibraryDocName) => void) | null = null;
 
@@ -328,6 +334,55 @@ async function applyPictures(doc: AlbumPicturesDoc): Promise<void> {
   }
 }
 
+/* ------------------------------------------------------------------ tempo, key and energy; keys set by hand */
+
+/** A song copy by its own id (a file, the server's copy): what the shared documents know it by (lib/soundShare.ts). */
+const copyOf = (id: string): Track | undefined => useCatalog.getState().byId.get(id);
+
+/** What this computer measured, as the "sounds" document has it; nothing to say before the catalogue is read. */
+function readSounds(): SoundsDoc | null {
+  if (!useCatalog.getState().loaded) return null;
+  return soundsDocOf(useSound.getState().measured, copyOf);
+}
+
+/** Measurements of songs here that another device made: taken in, so they aren't measured again (electron/sound-library.ts adoptSounds). */
+async function applySounds(doc: SoundsDoc): Promise<void> {
+  const { loaded, byId } = useCatalog.getState();
+  if (!loaded) return;
+  const entries = sharedFor(byId.values(), doc, useSound.getState().measured);
+  for (let i = 0; i < entries.length; i += 2000) await window.bytune?.soundAdopt(entries.slice(i, i + 2000));
+}
+
+function readKeys(): KeysDoc | null {
+  if (!useCatalog.getState().loaded) return null;
+  const { keys, gone } = useKeyEdits.getState();
+  return keysDocOf(keys, gone, copyOf);
+}
+
+function applyKeys(doc: KeysDoc): void {
+  const { loaded, byId } = useCatalog.getState();
+  if (!loaded) return;
+  const { keys, gone } = useKeyEdits.getState();
+  const changes = keyChangesFor(byId.values(), doc, keys, gone);
+  quietly(() => useKeyEdits.getState().applyRemote(changes));
+}
+
+/** New measurements go out at most every two minutes: the first run measures thousands, twenty at a time. */
+const SOUNDS_EVERY_MS = 120_000;
+let soundsTimer: ReturnType<typeof setTimeout> | null = null;
+let soundsSaidAt = 0;
+function soundsChanged(): void {
+  if (soundsTimer) return;
+  soundsTimer = setTimeout(
+    () => {
+      soundsTimer = null;
+      soundsSaidAt = Date.now();
+      changedHere("sounds");
+    },
+    Math.max(0, soundsSaidAt + SOUNDS_EVERY_MS - Date.now())
+  );
+}
+
 /* ------------------------------------------------------------------ the engine's side */
 
 export function libraryDocHosts(): Partial<Record<LibraryDocName, LibraryDocHost>> {
@@ -336,6 +391,8 @@ export function libraryDocHosts(): Partial<Record<LibraryDocName, LibraryDocHost
     groups: side("groups", readGroupsHere, (doc) => applyGroups(doc as GroupsDoc)),
     albumedits: side("albumedits", readEdits, (doc) => applyEdits(doc as AlbumEditsDoc)),
     albumpictures: side("albumpictures", readPictures, (doc) => applyPictures(doc as AlbumPicturesDoc)),
+    sounds: side("sounds", readSounds, (doc) => applySounds(doc as SoundsDoc)),
+    keys: side("keys", readKeys, (doc) => applyKeys(doc as KeysDoc)),
   };
 }
 
@@ -391,9 +448,20 @@ export function watchLibraryDocs(onChange: (name: LibraryDocName) => void): () =
         changedHere("albumpictures");
       }
     }),
+    // Measured here (or taken in: then the document already has them, and nothing goes out).
+    useSound.subscribe((s, prev) => {
+      if (s.measured !== prev.measured) soundsChanged();
+    }),
+    // The keys keep their own moments (stores/keyEdits.ts).
+    useKeyEdits.subscribe((s, prev) => {
+      if (!ready(useKeyEdits) || (s.keys === prev.keys && s.gone === prev.gone)) return;
+      changedHere("keys");
+    }),
   ];
   return () => {
     tell = null;
+    if (soundsTimer) clearTimeout(soundsTimer);
+    soundsTimer = null;
     offs.forEach((off) => off());
   };
 }

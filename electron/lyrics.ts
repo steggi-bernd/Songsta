@@ -1290,7 +1290,7 @@ function identifyRecording(q: LyricQuery): Promise<RecordingHit | null> {
   ]);
 }
 
-async function fetchBini(q: LyricQuery, hitPromise: Promise<RecordingHit | null>): Promise<ProviderResult | null> {
+async function fetchBini(_q: LyricQuery, hitPromise: Promise<RecordingHit | null>): Promise<ProviderResult | null> {
   const hit = await hitPromise;
   if (!hit) return null;
   let url = hit.lyricsUrl;

@@ -88,7 +88,7 @@ function HowToExport({ onPick, error, playlist = false }: { onPick: () => void; 
         <div className="text-[14px] text-ink-hi/85 leading-relaxed space-y-3">
           <p>
             <span className="font-semibold text-ink-hi">{T("Exportify")}</span>{" "}{T("(recommended): open")}{" "}
-            <button onClick={() => window.open("https://exportify.net", "_blank")} className="font-semibold text-ink-hi underline">{T("exportify.net")}</button>
+            <button onClick={() => window.open("https://exportify.net", "_blank", "noopener,noreferrer")} className="font-semibold text-ink-hi underline">{T("exportify.net")}</button>
             {playlist ? T(", sign in with Spotify and click Export next to the playlist. The CSV keeps the playlist's order.") : T(", sign in with Spotify and click Export next to “Liked Songs”. The CSV says when you liked each song, so the order comes over exactly.")}
           </p>
           <p>
@@ -595,7 +595,7 @@ export function SpotifyImportView({ param }: { param?: string }) {
                                     storeLinks(row.entry, navigator.language).map((l) => ({
                                       label: T("Search on {store}", { store: l.store }),
                                       icon: ExternalLink,
-                                      action: () => window.open(l.url, "_blank"),
+                                      action: () => window.open(l.url, "_blank", "noopener,noreferrer"),
                                     })),
                                     { alignRight: true }
                                   );
@@ -616,7 +616,7 @@ export function SpotifyImportView({ param }: { param?: string }) {
                             )}
                             {link && (
                               <button
-                                onClick={() => window.open(link, "_blank")}
+                                onClick={() => window.open(link, "_blank", "noopener,noreferrer")}
                                 title={T("Open in Spotify")}
                                 aria-label={T("Open {title} in Spotify", { title: row.entry.title })}
                                 className="p-1.5 rounded-md text-ink-faint hover:text-ink-hi hover:bg-ink-hi/[0.07] transition-colors"

@@ -63,6 +63,11 @@ import {
 } from "./audio-output";
 import { T } from "./i18n";
 
+/** "Recently played" notes what starts, only while plays are kept (Settings → Network & privacy). */
+function noteRecent(track: Track): void {
+  if (useSettings.getState().recordListening) useLibrary.getState().pushHistory(track);
+}
+
 let elements: [HTMLAudioElement, HTMLAudioElement] | null = null;
 /** which element is the session player right now */
 let mainIdx: 0 | 1 = 0;
@@ -403,28 +408,69 @@ function eqPlan(): { preampDb: number; bands: EqBandPlan[] } | null {
  * detached from its source node again, so turning the EQ off afterwards
  * leaves an empty, transparent chain (preamp at 0 dB, no bands).
  */
+/**
+ * The context, both decks and the preamp node, built once: on the EQ's first
+ * switch-on, or when the full-screen visualizer first wants to hear the music.
+ */
+function buildGraph(): void {
+  if (eqCtx || !elements) return;
+  const ctx = new AudioContext();
+  eqCtx = ctx;
+  // Brick-wall-ish limiter for boosts the preamp doesn't cover (the
+  // 10-band sliders have no preamp: it pulled everything down by the
+  // largest boost). It only touches peaks pushed past full scale.
+  eqLimiter = ctx.createDynamicsCompressor();
+  eqLimiter.threshold.value = -0.5;
+  eqLimiter.knee.value = 0;
+  eqLimiter.ratio.value = 20;
+  eqLimiter.attack.value = 0.002;
+  eqLimiter.release.value = 0.15;
+  eqLimiter.connect(ctx.destination);
+  eqInput = ctx.createGain();
+  for (const e of elements) ctx.createMediaElementSource(e).connect(eqInput);
+  applySink();
+}
+
+/** The visualizer's ear on the preamp node: a chain rebuilt with disconnect() lets go of it, so it's put back. */
+let vizAnalyser: AnalyserNode | null = null;
+function reattachViz(): void {
+  if (vizAnalyser && eqInput) eqInput.connect(vizAnalyser);
+}
+
+/**
+ * What plays, for the full-screen visualizer to read (frequencies and levels):
+ * an analyser on the preamp node, so it hears whichever deck plays, before the
+ * EQ. The first call builds the audio graph as the EQ's first switch-on does;
+ * with the EQ off that's an empty chain, so nothing you hear changes. Null
+ * before the engine starts.
+ */
+export function visualizerTap(): AnalyserNode | null {
+  if (!elements) return null;
+  if (!eqCtx) {
+    buildGraph();
+    applyEq();
+  }
+  if (!eqCtx || !eqInput) return null;
+  if (!vizAnalyser) {
+    vizAnalyser = eqCtx.createAnalyser();
+    vizAnalyser.fftSize = 2048;
+    vizAnalyser.smoothingTimeConstant = 0.55;
+    vizAnalyser.minDecibels = -92;
+    vizAnalyser.maxDecibels = -18;
+    reattachViz();
+  }
+  if (eqCtx.state === "suspended") void eqCtx.resume();
+  return vizAnalyser;
+}
+
 function applyEq(): void {
   if (!elements) return;
   const plan = eqPlan();
   if (!eqCtx) {
     if (!plan) return;
-    const ctx = new AudioContext();
-    eqCtx = ctx;
-    // Brick-wall-ish limiter for boosts the preamp doesn't cover (the
-    // 10-band sliders have no preamp: it pulled everything down by the
-    // largest boost). It only touches peaks pushed past full scale.
-    eqLimiter = ctx.createDynamicsCompressor();
-    eqLimiter.threshold.value = -0.5;
-    eqLimiter.knee.value = 0;
-    eqLimiter.ratio.value = 20;
-    eqLimiter.attack.value = 0.002;
-    eqLimiter.release.value = 0.15;
-    eqLimiter.connect(ctx.destination);
-    eqInput = ctx.createGain();
-    for (const e of elements) ctx.createMediaElementSource(e).connect(eqInput);
-    applySink();
+    buildGraph();
   }
-  const ctx = eqCtx;
+  const ctx = eqCtx!;
   const input = eqInput!;
   const bands = plan?.bands ?? [];
   const nyquist = ctx.sampleRate / 2;
@@ -433,6 +479,7 @@ function applyEq(): void {
   const shape = bands.map((b) => b.type).join(",");
   if (shape !== eqShape || !eqTail) {
     input.disconnect();
+    reattachViz();
     for (const f of eqFilters) f.disconnect();
     eqFilters = bands.map((b) => {
       const f = ctx.createBiquadFilter();
@@ -468,6 +515,8 @@ function applyEq(): void {
   if (limit !== eqLimited && eqTail) {
     eqTail.disconnect();
     eqTail.connect(limit ? eqLimiter! : ctx.destination);
+    // With no bands the tail is the preamp node itself: its disconnect let go of the visualizer too.
+    reattachViz();
     eqLimited = limit;
   }
   if (ctx.state === "suspended") void ctx.resume();
@@ -831,7 +880,7 @@ function completeTransition(reason: "blend-complete" | "outgoing-ended" | "incom
     flushAccum("stop");
     accum = { id: f.toId, playedMs: 0, pendingMs: 0, lastPos: pos };
     emitPlayEvent("start", state.queue[ni], pos, 0, 0);
-    useLibrary.getState().pushHistory(state.queue[ni]);
+    noteRecent(state.queue[ni]);
     advancingToId = f.toId;
     usePlayer.setState({ index: ni, position: pos, playing: true, error: null });
     advancingToId = null;
@@ -937,7 +986,7 @@ export function castHeard(trackId: string, position: number, playing: boolean): 
   if (historyForId !== cur.id) {
     flushAccum("stop");
     historyForId = cur.id;
-    useLibrary.getState().pushHistory(cur);
+    noteRecent(cur);
     accum = { id: cur.id, playedMs: 0, pendingMs: 0, lastPos: position };
     emitPlayEvent("start", cur, position, 0, 0);
     return;
@@ -1123,7 +1172,7 @@ export function initAudioEngine(): void {
       const cur = usePlayer.getState().queue[usePlayer.getState().index];
       if (cur && historyForId !== cur.id) {
         historyForId = cur.id;
-        useLibrary.getState().pushHistory(cur);
+        noteRecent(cur);
         accum = { id: cur.id, playedMs: 0, pendingMs: 0, lastPos: el().currentTime };
         emitPlayEvent("start", cur, el().currentTime, 0, 0);
       } else if (cur) {

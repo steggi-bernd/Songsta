@@ -4,6 +4,7 @@ import { create } from "zustand";
 import Player from "../../modules/media3-player";
 import { atAddress } from "../addresses";
 import { acceptsLogin, authHeader, normalizeServer, serverIdAt, signIn, signOut, type Session } from "../jellyfin";
+import { trustEntered } from "../netGate";
 
 const KEY = "session";
 const ASK_MS = 8000;
@@ -55,12 +56,16 @@ export const useSession = create<SessionState>((set, get) => {
       set({ session, ready: true });
     },
 
+    // An address typed in for your own server goes through even with "only my own servers" on (netGate.ts).
     async signIn(server, username, password) {
+      trustEntered(server);
       await adopt(await signIn(server, username, password));
     },
 
     async signOut() {
       const { session } = get();
+      // The logout goes out after the login is gone from here.
+      trustEntered(session?.server);
       set({ session: null });
       await SecureStore.deleteItemAsync(KEY);
       if (session) await signOut(session);
@@ -80,6 +85,7 @@ export const useSession = create<SessionState>((set, get) => {
         return;
       }
       const address = normalizeServer(input, which === "away");
+      trustEntered(address);
       const id = await serverIdAt(address, ASK_MS);
       if (!id) throw new Error("No Jellyfin server answers at that address");
       const same = session.serverId ? id === session.serverId : await acceptsLogin(address, session);

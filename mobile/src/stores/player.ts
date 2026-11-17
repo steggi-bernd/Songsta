@@ -19,7 +19,7 @@ import { streamUrl, type Session } from "../jellyfin";
 import { withoutServer } from "../addresses";
 import { branched } from "../playingFrom";
 import { chooseStream, levelGain, ORIGINAL, sameChoice, stepDown, type Leveling, type QualityMode, type StreamChoice } from "../quality";
-import { jumpTarget, lineInList, listAround, placeOf, playCreditSeconds, putBack, tendedBranches, toWireTrack, withoutSongs, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueBranch, type QueueDoc, type RemoteDevice, type Track, type WireTrack } from "../shared";
+import { flowOrder, jumpTarget, lineInList, listAround, placeOf, playCreditSeconds, putBack, tendedBranches, toWireTrack, withoutSongs, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueBranch, type QueueDoc, type RemoteDevice, type Track, type WireTrack } from "../shared";
 import { readJson, writeJson } from "../storage";
 import { useConnection } from "./connection";
 import { isAround, useDevices } from "./devices";
@@ -30,6 +30,7 @@ import { findSong } from "./playlists";
 import { toast } from "./popups";
 import { here, useSession } from "./session";
 import { useSettings } from "./settings";
+import { sharedSoundOf } from "./soundShare";
 import { T } from "../shared";
 
 const FILE = "player.json";
@@ -184,6 +185,12 @@ interface PlayerState {
   skipBy(delta: number): void;
   cycleRepeat(): void;
   toggleShuffle(): void;
+  /**
+   * What comes after the line asked for by hand, in an order that flows (src/lib/flowOrder.ts: close in
+   * key and tempo, the energy rising and easing off), by what the computer measured. Shuffle goes off.
+   * Answers whether it could: false with nothing measured, or while a device is followed.
+   */
+  flowUpcoming(): boolean;
   /** Right after the playing song and everything asked for before it: first come, first played. Answers how many are in that line now. */
   addToQueue(tracks: Track[]): number;
   /** A song of a list and the rest of that list behind what was asked for before, what was coming behind them. Answers how many songs that is. */
@@ -489,6 +496,26 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     }
     queueChanged();
     save(true);
+  },
+
+  flowUpcoming() {
+    const { queue, index, remote } = get();
+    const current = queue[index];
+    if (remote || !current) return false;
+    // What was asked to come next stays next; the rest flows.
+    const end = lineAt(queue, index);
+    const line = queue.slice(index + 1, end);
+    const rest = queue.slice(end);
+    if (rest.length < 3 || !rest.some((t) => sharedSoundOf(t))) return false;
+    const flowing = flowOrder(
+      rest.map((t) => ({ item: t, facts: sharedSoundOf(t), artist: t.artist })),
+      { arc: true }
+    );
+    set({ shuffle: false, unshuffled: null, queue: [...queue.slice(0, index + 1), ...line, ...flowing] });
+    void output.replaceUpcoming([...line, ...flowing].map(toItem));
+    queueChanged();
+    save(true);
+    return true;
   },
 
   addToQueue(tracks) {

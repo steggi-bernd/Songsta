@@ -12,10 +12,8 @@ import { TrackCard } from "../components/Cards";
 import { ShelfScroller } from "../components/primitives";
 import { useLibraryIndex, type LibAlbum } from "../lib/catalogIndex";
 import { albumKeyOf, splitCredits } from "../lib/libraryTracks";
-import { allMixes, momentMix } from "../lib/mixes";
-import { useMomentScores } from "../lib/moments";
-import { energyOf, useSound } from "../stores/sound";
-import { songKey, useCatalog, useFreshPlayCounts } from "../stores/catalog";
+import { useLibraryMixes } from "../components/MixGallery";
+import { useCatalog, useFreshPlayCounts } from "../stores/catalog";
 import { useLibrary } from "../stores/library";
 import { usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
@@ -78,14 +76,8 @@ export function LibraryHomeView() {
   }, [history, byId]);
 
   const recentlyAdded = useMemo(() => [...albums].sort((a, b) => b.addedAt - a.addedAt).slice(0, 14), [albums]);
-  // The time-of-day mix leads: it's the one that changes with the hour.
-  const moment = useMomentScores();
-  const sound = useSound((s) => s.facts);
-  const mixes = useMemo(() => {
-    const now = momentMix(tracks, moment.scores, songKey, moment.at || Date.now());
-    const rest = allMixes(tracks, playCounts, (t) => energyOf(t, sound));
-    return now ? [now, ...rest] : rest;
-  }, [tracks, playCounts, moment.scores, moment.at, sound]);
+  // The time-of-day mix leads: it's the one that changes with the hour (shared with Your Library's gallery).
+  const mixes = useLibraryMixes();
 
   const topArtists = useMemo(() => {
     const plays = new Map<string, number>();

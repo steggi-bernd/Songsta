@@ -1,6 +1,7 @@
 /** Everything that can be chosen: the music on this phone, the server, how it plays and feels, downloads, sync. */
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { BarChart3, AudioLines, Check, ChevronLeft, ChevronRight, CircleAlert, CircleArrowDown, CirclePlay, FileDown, FileUp, FolderPlus, Hand, Info, Link2, LogOut, MicVocal, MonitorSmartphone, Palette, RefreshCw, Server, SlidersHorizontal, Trash2, X, type LucideIcon } from "lucide-react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { BarChart3, AudioLines, Check, ChevronLeft, ChevronRight, CircleAlert, CircleArrowDown, CirclePlay, CloudOff, FileDown, FileUp, FolderPlus, Hand, Info, Link2, LogOut, MicVocal, MonitorSmartphone, Palette, RefreshCw, Server, ShieldCheck, SlidersHorizontal, Trash2, X, type LucideIcon } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { APP_VERSION, installPhoneUpdate, lookNow, openReleasePage, updatePhone, useNewerVersion, usePhoneUpdate } from "../newVersion";
@@ -11,7 +12,7 @@ import type { Leveling, QualityMode } from "../quality";
 import { NameDialog } from "../components/PlaylistSheets";
 import { PullDownToClose } from "../components/PullDownToClose";
 import { Chip } from "../components/ui";
-import { currentLanguage, plural, SYNC_UPDATE_COMMAND, type SyncStatus } from "../shared";
+import { currentLanguage, NET_SERVICES, plural, SYNC_UPDATE_COMMAND, type SyncStatus } from "../shared";
 import { backupSummary, type BackupProblem, type PhoneBackup } from "../backup";
 import { exportBackup, pickBackup, restoreBackup } from "../phoneBackup";
 import { useConnection } from "../stores/connection";
@@ -24,7 +25,9 @@ import { showDialog, toast } from "../stores/popups";
 import { useSession } from "../stores/session";
 import { ACCENTS, useSettings, type Accent, feel } from "../stores/settings";
 import { LANGUAGES, type LanguageChoice } from "../shared";
-import { searchSyncAgain, syncAddress, useSync } from "../sync";
+import { removeSharedListens, searchSyncAgain, syncAddress, useSync } from "../sync";
+import { useListens } from "../stores/listens";
+import { usePlayed } from "../stores/played";
 import { colors, PAGE_END } from "../theme";
 import { T } from "../shared";
 
@@ -93,15 +96,16 @@ function UpdateRows({ newer }: { newer: string | null }) {
   );
 }
 
-function SwitchRow({ title, line, value, onChange }: { title: string; line?: string; value: boolean; onChange: (on: boolean) => void }) {
+function SwitchRow({ title, line, value, onChange, disabled }: { title: string; line?: string; value: boolean; onChange: (on: boolean) => void; disabled?: boolean }) {
   return (
-    <View style={styles.switchRow}>
+    <View style={[styles.switchRow, disabled && styles.switchRowOff]}>
       <View style={styles.switchText}>
         <Text style={styles.rowTitle}>{title}</Text>
         {!!line && <Text style={styles.rowSub}>{line}</Text>}
       </View>
       <Switch
         accessibilityLabel={title}
+        disabled={disabled}
         value={value}
         onValueChange={(on) => {
           feel("tick");
@@ -188,7 +192,7 @@ function importData(): void {
   );
 }
 
-type SettingsSection = "music" | "playback" | "sound" | "gestures" | "lyrics" | "appearance" | "downloads" | "sync" | "app";
+type SettingsSection = "music" | "playback" | "sound" | "gestures" | "lyrics" | "appearance" | "downloads" | "sync" | "privacy" | "app";
 
 /** The categories, in the order of the list. Downloads and sync only with a server. */
 const SECTIONS: { key: SettingsSection; title: string; Icon: LucideIcon; server?: boolean }[] = [
@@ -200,8 +204,35 @@ const SECTIONS: { key: SettingsSection; title: string; Icon: LucideIcon; server?
   { key: "gestures", title: T("Gestures"), Icon: Hand },
   { key: "downloads", title: T("Downloads"), Icon: CircleArrowDown, server: true },
   { key: "sync", title: T("Sync and devices"), Icon: MonitorSmartphone, server: true },
+  { key: "privacy", title: T("Network & privacy"), Icon: ShieldCheck },
   { key: "app", title: T("This app"), Icon: Info },
 ];
+
+/** The overview's groups, and each category's colour (Replay leads you to the story, not to a page of settings). */
+type OverviewKey = SettingsSection | "replay";
+const OVERVIEW_GROUPS: { title: string; keys: OverviewKey[] }[] = [
+  { title: T("Listening"), keys: ["playback", "sound", "lyrics", "gestures"] },
+  { title: T("Music"), keys: ["music", "downloads", "replay"] },
+  { title: T("Connections"), keys: ["sync", "privacy"] },
+  { title: T("Look and app"), keys: ["appearance", "app"] },
+];
+const tinted = (r: number, g: number, b: number): { ink: string; bg: string } => ({ ink: `rgb(${r},${g},${b})`, bg: `rgba(${r},${g},${b},0.16)` });
+const TINTS: Record<OverviewKey, { ink: string; bg: string }> = {
+  playback: tinted(196, 181, 253),
+  sound: tinted(94, 234, 212),
+  lyrics: tinted(251, 191, 36),
+  gestures: tinted(148, 163, 184),
+  music: tinted(125, 211, 252),
+  downloads: tinted(74, 222, 128),
+  replay: tinted(244, 114, 182),
+  sync: tinted(165, 180, 252),
+  privacy: tinted(251, 146, 60),
+  appearance: tinted(253, 164, 175),
+  app: tinted(212, 212, 216),
+};
+
+/** The services on the internet the phone asks (src/lib/netServices.ts). */
+const PHONE_SERVICES = NET_SERVICES.filter((s) => s.phone);
 
 export function SettingsScreen() {
   const nav = useNavigation<any>();
@@ -224,6 +255,7 @@ export function SettingsScreen() {
   // Never found for this server: it was looked for once, and "Search again" looks now.
   const syncNotFound = useSync((s) => s.status === "unreachable" && !s.linked);
   const customAddress = useSync((s) => s.customAddress);
+  const syncLinked = useSync((s) => s.linked);
   const setCustomAddress = useSync((s) => s.setCustomAddress);
   const kept = useDownloads((s) => s.kept);
   const waitingForWifi = useDownloads((s) => Object.values(s.loading).filter((song) => song.wantsWifi).length);
@@ -261,40 +293,64 @@ export function SettingsScreen() {
     gestures: [settings.swipeFeel === "rubber" ? T("Rubber band") : T("Taut"), settings.haptics ? T("Vibration") : ""].filter(Boolean).join(" · "),
     downloads: keptSongs.length ? `${plural(keptSongs.length, T("song"), T("songs"))} · ${sizeLine(keptBytes)}` : T("Nothing downloaded yet"),
     sync: syncNotFound ? T("No sync service found") : SYNC_LINE[syncStatus],
+    privacy: settings.netOwnOnly
+      ? T("Only my own server")
+      : T("{on} of {count} services on the internet on", { on: PHONE_SERVICES.filter((s) => !settings.netOff.includes(s.id)).length, count: PHONE_SERVICES.length }),
     app: newer ? T("Songsta {version} is out", { version: newer }) : T("Songsta {APP_VERSION}", { APP_VERSION }),
   };
 
+  // The overview as the grouped mockup the user picked to mix in (2026-11-16): a card with the app,
+  // the server and the sync on top, then the categories in groups under a heading in the middle,
+  // each with an icon of its own colour; the rows and their lines as before.
   const overview = (
     <>
-    <Pressable onPress={() => nav.push("Replay")} android_ripple={{ color: "rgba(255,255,255,0.06)" }} style={[styles.group, styles.overview, styles.overviewRow]}>
-      <View style={[styles.overviewIcon, { backgroundColor: colors.accent }]}>
-        <BarChart3 size={20} color={colors.onAccent} />
-      </View>
-      <View style={styles.switchText}>
-        <Text style={styles.rowTitle}>{T("Replay")}</Text>
-        <Text numberOfLines={1} style={styles.rowSub}>{T("What this phone played, counted")}</Text>
-      </View>
-      <ChevronRight size={18} color={colors.dim} />
-    </Pressable>
-    <View style={[styles.group, styles.overview]}>
-      {SECTIONS.filter((x) => !x.server || session).map((x, i) => (
-        <View key={x.key}>
-          {i > 0 && <View style={styles.overviewDivider} />}
-          <Pressable onPress={() => nav.push("Settings", { section: x.key })} android_ripple={{ color: "rgba(255,255,255,0.06)" }} style={styles.overviewRow}>
-            <View style={styles.overviewIcon}>
-              <x.Icon size={20} color={colors.ink} />
-            </View>
-            <View style={styles.switchText}>
-              <Text style={styles.rowTitle}>{x.title}</Text>
-              <Text numberOfLines={1} style={[styles.rowSub, x.key === "app" && !!newer && { color: colors.accent }]}>
-                {summary[x.key]}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={colors.dim} />
-          </Pressable>
+      <View style={styles.appCard}>
+        <LinearGradient colors={["rgba(167,139,250,0.26)", colors.panel]} start={{ x: 0, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
+        <View style={styles.appMark}>
+          <Text style={styles.appMarkText}>S</Text>
         </View>
-      ))}
-    </View>
+        <Text style={styles.appName}>{T("Songsta {APP_VERSION}", { APP_VERSION })}</Text>
+        <Text numberOfLines={2} style={styles.appLine}>
+          {[session ? session.userName : null, plural(count, T("song"), T("songs")), session ? (syncNotFound ? T("No sync service found") : SYNC_LINE[syncStatus]) : null].filter(Boolean).join(" · ")}
+        </Text>
+      </View>
+      {OVERVIEW_GROUPS.map((g) => {
+        const keys = g.keys.filter((k) => k === "replay" || !SECTIONS.find((x) => x.key === k)?.server || session);
+        if (!keys.length) return null;
+        return (
+          <View key={g.title}>
+            <Text style={styles.groupTitle}>{g.title}</Text>
+            <View style={styles.group}>
+              {keys.map((k, i) => {
+                const s = k === "replay" ? null : SECTIONS.find((x) => x.key === k);
+                const Icon = s ? s.Icon : BarChart3;
+                const tint = TINTS[k];
+                return (
+                  <View key={k}>
+                    {i > 0 && <View style={styles.overviewDivider} />}
+                    <Pressable
+                      onPress={() => (k === "replay" ? nav.push("Replay") : nav.push("Settings", { section: k }))}
+                      android_ripple={{ color: "rgba(255,255,255,0.06)" }}
+                      style={styles.overviewRow}
+                    >
+                      <View style={[styles.overviewIcon, { backgroundColor: tint.bg }]}>
+                        <Icon size={19} color={tint.ink} />
+                      </View>
+                      <View style={styles.switchText}>
+                        <Text style={styles.rowTitle}>{s ? s.title : T("Replay")}</Text>
+                        <Text numberOfLines={1} style={[styles.rowSub, k === "app" && !!newer && { color: colors.accent }]}>
+                          {k === "replay" ? T("Your listening, told as a story") : summary[k]}
+                        </Text>
+                      </View>
+                      <ChevronRight size={18} color={colors.dim} />
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
     </>
   );
 
@@ -322,6 +378,45 @@ export function SettingsScreen() {
     showDialog(T("Restart the app?"), T("The new colour shows after a restart. The music stops for a moment."), [
       { text: T("Later"), style: "cancel" },
       { text: T("Restart"), onPress: () => void Player.restartApp() },
+    ]);
+  };
+
+  /** Every play kept on this phone goes: Replay, its history, Recently played. The server's counts and the sync service's history stay. */
+  const deletePlays = (): void => {
+    showDialog(T("Delete your plays?"), T("Replay, the listening history and Recently played on this phone start from nothing. Play counts on your server and what your sync service has stay. This can't be undone."), [
+      { text: T("Cancel"), style: "cancel" },
+      {
+        text: T("Delete"),
+        style: "destructive",
+        onPress: () => {
+          useListens.getState().clearAll();
+          usePlayed.getState().forget();
+          toast(T("Plays deleted"));
+        },
+      },
+    ]);
+  };
+  const removeFromService = (): void => {
+    showDialog(T("Take this phone's plays off your sync service?"), T("They leave the history your devices share. Your other devices keep the ones they already have, and this phone keeps its own history. New plays go there again while the listening history is shared."), [
+      { text: T("Cancel"), style: "cancel" },
+      {
+        text: T("Take them off"),
+        style: "destructive",
+        onPress: () => {
+          void removeSharedListens().then((result) =>
+            toast(
+              result === "removed"
+                ? T("This phone's plays are off your sync service")
+                : result === "old-service"
+                  ? T("Your sync service can't do that yet: it needs its update")
+                  : result === "not-linked"
+                    ? T("No sync service is linked")
+                    : T("Your sync service didn't answer. Try again later."),
+              result !== "removed"
+            )
+          );
+        },
+      },
     ]);
   };
 
@@ -727,6 +822,68 @@ export function SettingsScreen() {
           </View>
           </>
     ),
+    privacy: (
+          <>
+          <Text style={styles.section}>{T("CONNECTIONS")}</Text>
+          <View style={styles.group}>
+            <SwitchRow
+              title={T("Only my own server")}
+              line={T("Every service on the internet off at once: no facts or lyrics from outside. Your server, the sync service and the devices at home always work.")}
+              value={settings.netOwnOnly}
+              onChange={(netOwnOnly) => change({ netOwnOnly })}
+            />
+            {PHONE_SERVICES.map((s) => (
+              <View key={s.id}>
+                <View style={styles.divider} />
+                <SwitchRow
+                  title={s.name}
+                  line={`${T(s.purpose)} · ${T("Sends: {what}", { what: T(s.sends) })}`}
+                  value={!settings.netOwnOnly && !settings.netOff.includes(s.id)}
+                  disabled={settings.netOwnOnly}
+                  onChange={(on) => !settings.netOwnOnly && change({ netOff: on ? settings.netOff.filter((x) => x !== s.id) : [...new Set([...settings.netOff, s.id])] })}
+                />
+              </View>
+            ))}
+          </View>
+          <Text style={styles.sectionNote}>{T("Each switch holds back every request to that service: nothing of it leaves the phone while it's off.")}</Text>
+          <Text style={styles.section}>{T("KEPT ON THIS PHONE")}</Text>
+          <View style={styles.group}>
+            <SwitchRow title={T("Keep my plays")} line={T("For Replay on this phone")} value={settings.recordListening} onChange={(recordListening) => change({ recordListening })} />
+            <View style={styles.divider} />
+            <Pressable onPress={deletePlays} style={styles.action}>
+              <Trash2 size={20} color="#FF9D9D" />
+              <Text style={[styles.actionText, { color: "#FF9D9D" }]}>{T("Delete my plays")}</Text>
+            </Pressable>
+          </View>
+          {session && (
+            <>
+              <Text style={styles.section}>{T("SHARED WITH YOUR OWN SERVERS")}</Text>
+              <View style={styles.group}>
+                <SwitchRow
+                  title={T("Listening history")}
+                  line={settings.recordListening ? T("Every play goes to your sync service, so Replay counts all your devices") : T("Off while your plays aren't kept on this phone")}
+                  value={settings.shareListens && settings.recordListening}
+                  disabled={!settings.recordListening}
+                  onChange={(shareListens) => change({ shareListens })}
+                />
+                <View style={styles.divider} />
+                <SwitchRow title={T("Library order, groups and album edits")} line={T("Through your sync service, to your other devices")} value={settings.shareLibrary} onChange={(shareLibrary) => change({ shareLibrary })} />
+                <View style={styles.divider} />
+                <SwitchRow title={T("Count plays on the server")} line={T("Songs you hear here count on Jellyfin too")} value={settings.serverPlays} onChange={(serverPlays) => change({ serverPlays })} />
+                {syncLinked && (
+                  <>
+                    <View style={styles.divider} />
+                    <Pressable onPress={removeFromService} style={styles.action}>
+                      <CloudOff size={20} color={colors.ink} />
+                      <Text style={styles.actionText}>{T("Take this phone's plays off the sync service")}</Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
+            </>
+          )}
+          </>
+    ),
     app: (
           <>
           <View style={styles.group}>
@@ -831,12 +988,14 @@ const styles = StyleSheet.create({
   back: { width: 44, height: 44, marginLeft: -10, alignItems: "center", justifyContent: "center" },
   title: { color: colors.ink, fontSize: 30, fontWeight: "800", letterSpacing: -0.8, marginTop: 4 },
   section: { color: colors.dim, fontSize: 11, fontWeight: "600", letterSpacing: 1.5, marginTop: 26, marginBottom: 8 },
+  sectionNote: { color: colors.dim, fontSize: 12.5, lineHeight: 18, marginTop: 8, paddingHorizontal: 2 },
   group: { borderRadius: 12, backgroundColor: colors.panel, overflow: "hidden" },
   row: { padding: 14, gap: 3 },
   rowTitle: { color: colors.ink, fontSize: 15, fontWeight: "600" },
   rowSub: { color: colors.dim, fontSize: 13 },
   chips: { flexDirection: "row", gap: 8, marginVertical: 8 },
   switchRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 14, paddingVertical: 8 },
+  switchRowOff: { opacity: 0.45 },
   switchText: { flex: 1, minWidth: 0, gap: 3 },
   divider: { height: 1, backgroundColor: colors.hairline, marginLeft: 14 },
   notice: { flexDirection: "row", gap: 12, padding: 14 },
@@ -848,6 +1007,12 @@ const styles = StyleSheet.create({
   swatches: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginVertical: 10 },
   swatch: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   overview: { marginTop: 18 },
+  appCard: { alignItems: "center", gap: 6, marginTop: 14, padding: 18, borderRadius: 20, overflow: "hidden", backgroundColor: colors.panel },
+  appMark: { width: 54, height: 54, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" },
+  appMarkText: { color: colors.ink, fontSize: 30, fontWeight: "900", fontStyle: "italic", letterSpacing: -1.5 },
+  appName: { color: colors.ink, fontSize: 17, fontWeight: "800" },
+  appLine: { color: colors.dim, fontSize: 12.5, textAlign: "center" },
+  groupTitle: { color: colors.dim, fontSize: 11, fontWeight: "800", letterSpacing: 1.6, textTransform: "uppercase", textAlign: "center", marginTop: 20, marginBottom: 8 },
   overviewRow: { flexDirection: "row", alignItems: "center", gap: 14, minHeight: 64, paddingHorizontal: 14, paddingVertical: 10 },
   overviewIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
   overviewDivider: { height: 1, backgroundColor: colors.hairline, marginLeft: 64 },

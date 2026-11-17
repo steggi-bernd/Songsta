@@ -34,20 +34,22 @@ async function loadCoalescedStorage() {
     localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
     require: (name) => require(name),
   });
-  const { coalescedStorage, lazyJSONStorage, storage } = module.exports;
+  const { lazyJSONStorage, storage } = module.exports;
   return {
-    coalescedStorage, lazyJSONStorage, plainStorage: storage, writes,
+    lazyJSONStorage, plainStorage: storage, writes,
     firePagehide: () => { for (const fn of windowStub.pagehide ?? []) fn(); },
     cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
   };
 }
 
+// The stores persist through lazyJSONStorage: its writes go through the coalescer tested here.
 test("coalesced storage: a 4Hz burst writes to disk at most once per 2s window, last value wins", async () => {
   const h = await loadCoalescedStorage();
   try {
+    const lazy = h.lazyJSONStorage();
     // Simulate 8 seconds of 4Hz library updates (download progress storm).
     for (let i = 0; i < 32; i++) {
-      await h.coalescedStorage.setItem("library", JSON.stringify({ rev: i }));
+      lazy.setItem("library", { state: { rev: i }, version: 0 });
       await new Promise((r) => setTimeout(r, 250));
     }
     // The uncoalesced adapter would have written 32 times; coalesced must be
@@ -56,26 +58,27 @@ test("coalesced storage: a 4Hz burst writes to disk at most once per 2s window, 
     // The last value must land once the window closes.
     await new Promise((r) => setTimeout(r, 2100));
     const last = h.writes.at(-1);
-    assert.equal(last.data.rev, 31, "the newest value must be the one persisted");
+    assert.equal(last.data.state.rev, 31, "the newest value must be the one persisted");
   } finally { h.cleanup(); }
 });
 
 test("coalesced storage: pending writes flush on pagehide and removals are immediate", async () => {
   const h = await loadCoalescedStorage();
   try {
-    await h.coalescedStorage.setItem("player", JSON.stringify({ position: 42 }));
+    const lazy = h.lazyJSONStorage();
+    lazy.setItem("player", { state: { position: 42 }, version: 0 });
     assert.equal(h.writes.length, 1, "first write lands immediately (idle before it)");
-    await h.coalescedStorage.setItem("player", JSON.stringify({ position: 99 }));
-    await h.coalescedStorage.setItem("library", JSON.stringify({ downloads: 1 }));
+    lazy.setItem("player", { state: { position: 99 }, version: 0 });
+    lazy.setItem("library", { state: { downloads: 1 }, version: 0 });
     assert.equal(h.writes.length, 1, "burst inside the window must NOT hit disk yet");
     h.firePagehide();
     assert.equal(h.writes.length, 3, "pagehide must flush every pending store");
     assert.equal(
-      JSON.stringify(h.writes.slice(1).map((w) => w.data)),
+      JSON.stringify(h.writes.slice(1).map((w) => w.data.state)),
       JSON.stringify([{ position: 99 }, { downloads: 1 }]),
       "pagehide must flush the newest pending values"
     );
-    await h.coalescedStorage.removeItem("library");
+    await lazy.removeItem("library");
     assert.ok(h.writes.at(-1).data == null, "removal must write null immediately, not be coalesced");
   } finally { h.cleanup(); }
 });

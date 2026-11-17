@@ -8,12 +8,16 @@ import { CollectionHeader } from "../components/LibraryCards";
 import { useSmartEditor } from "../components/SmartPlaylistEditor";
 import { TrackList } from "../components/TrackList";
 import { EmptyState } from "../components/primitives";
-import { describeRules, evaluateSmartPlaylist } from "../lib/smartPlaylists";
-import { useCatalog, useFreshPlayCounts } from "../stores/catalog";
+import { describeRules, evaluateSmartPlaylist, readsPlays } from "../lib/smartPlaylists";
+import { useCatalog, useFreshPlayCounts, type PlayCounts } from "../stores/catalog";
 import { useLibrary } from "../stores/library";
+import { soundOf, useSound } from "../stores/sound";
+import { skipsOf } from "../stores/skips";
 import { useSmartPlaylists } from "../stores/smartPlaylists";
 import { useUI } from "../stores/ui";
 import { T } from "../lib/i18n";
+
+const NO_COUNTS: PlayCounts = {};
 
 export function SmartPlaylistView({ id }: { id: string }) {
   const sp = useSmartPlaylists((s) => s.playlists.find((p) => p.id === id) ?? null);
@@ -23,7 +27,11 @@ export function SmartPlaylistView({ id }: { id: string }) {
   const liked = useLibrary((s) => s.liked);
   useFreshPlayCounts();
   const likedIds = useMemo(() => new Set(liked.map((t) => t.id)), [liked]);
-  const songs = useMemo(() => (sp ? evaluateSmartPlaylist(sp, tracks, counts, likedIds) : []), [sp, tracks, counts, likedIds]);
+  // Rules on how songs sound, and the flowing order, read the sound analysis.
+  const facts = useSound((s) => s.facts);
+  // A play counted changes only the lists that read play counts: the others aren't worked out again.
+  const plays = sp && readsPlays(sp) ? counts : NO_COUNTS;
+  const songs = useMemo(() => (sp ? evaluateSmartPlaylist(sp, tracks, plays, likedIds, (t) => soundOf(t, facts), (t) => skipsOf(t.id)) : []), [sp, tracks, plays, likedIds, facts]);
 
   if (!sp) return <EmptyState icon={Sparkles} title={T("Smart playlist not found")} body={T("It may have been deleted.")} />;
   if (!loaded) return null;

@@ -2,7 +2,7 @@
 import { Image } from "expo-image";
 import { CircleArrowDown, EllipsisVertical, Heart, Music2, Search, Split, VolumeX, X } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
-import { PixelRatio, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageStyle, type StyleProp, type ViewStyle } from "react-native";
+import { Animated, Easing, PixelRatio, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageStyle, type StyleProp, type ViewStyle } from "react-native";
 import { withoutServer } from "../addresses";
 import type { Track } from "../shared";
 import { readJson, writeJson } from "../storage";
@@ -248,6 +248,36 @@ export function LikeButton({ track, size = 20 }: { track: Track; size?: number }
   );
 }
 
+/**
+ * Songsta's own sign of loading, instead of the system's spinner (the user found that out of place on
+ * the start page, 2026-11-16): five bars rising and falling in turn, in the accent, like a level meter.
+ */
+export function LoadingBars({ color = colors.accent, height = 30 }: { color?: string; height?: number }) {
+  const bars = useRef([0, 1, 2, 3, 4].map(() => new Animated.Value(0.3))).current;
+  useEffect(() => {
+    // Every bar's round lasts as long (its delay before plus after), so the wave stays in step.
+    const loops = bars.map((v, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 110),
+          Animated.timing(v, { toValue: 1, duration: 380, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(v, { toValue: 0.3, duration: 380, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.delay((4 - i) * 110),
+        ])
+      )
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [bars]);
+  return (
+    <View accessibilityRole="progressbar" accessibilityLabel={T("Loading")} style={[styles.loadingBars, { height }]}>
+      {bars.map((v, i) => (
+        <Animated.View key={i} style={{ width: 5, height, borderRadius: 3, backgroundColor: color, transform: [{ scaleY: v }] }} />
+      ))}
+    </View>
+  );
+}
+
 /** Playing: three little bars, the desktop's mark for the song on air. */
 export function EqBars({ color = colors.accent }: { color?: string }) {
   return (
@@ -367,6 +397,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, minWidth: 0, color: colors.ink, fontSize: 15, fontWeight: "500", padding: 0 },
   searchClear: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   eq: { flexDirection: "row", alignItems: "flex-end", gap: 2, height: 14 },
+  loadingBars: { flexDirection: "row", alignItems: "center", gap: 5 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, height: 62, paddingLeft: 16, paddingRight: 2 },
   rowPlain: { height: 60 },
   rowMissing: { opacity: 0.45 },

@@ -4,10 +4,14 @@
  * "Rediscover" (never played yet) and one for this time of day and week
  * ("Sunday Evening", from the listening history). Each mix is shuffled with a
  * seed of its id + today's date, so it stays put through the day and changes
- * daily.
+ * daily. Where the songs are measured (the sound analysis), the day's pick plays
+ * in an order that flows (lib/flowOrder.ts): close in key and tempo, the energy
+ * rising and easing off, an artist not twice in a row.
  */
+import type { SoundFacts } from "../../electron/sound-analysis";
 import type { Track } from "../types";
 import { decadeOf, genresOf, type PlayCounts } from "./catalogBuild";
+import { flowOrder } from "./flowOrder";
 import { T } from "./i18n";
 
 export interface Mix {
@@ -37,16 +41,21 @@ function seededShuffle<T>(items: T[], seedText: string): T[] {
   return out;
 }
 
-const today = (): string => new Date().toISOString().slice(0, 10);
+/** Today, as the clock on the wall says it: the mixes change at midnight here, not at midnight in London. */
+const today = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+};
 
 function make(id: string, title: string, subtitle: string, pool: Track[]): Mix {
   return { id, title, subtitle, tracks: seededShuffle(pool, `${id}|${today()}`).slice(0, MIX_SIZE) };
 }
 
-export function genreMixes(tracks: Track[], limit = 8): Mix[] {
+/** `genres`: a song's genres as the library shows them (lib/albumGenres.ts genresOfTrack), so a genre's mix holds its page's songs; its own tags without. */
+export function genreMixes(tracks: Track[], limit = 8, genres: (t: Track) => string[] = genresOf): Mix[] {
   const byGenre = new Map<string, { name: string; tracks: Track[] }>();
   for (const t of tracks) {
-    for (const g of genresOf(t)) {
+    for (const g of genres(t)) {
       const key = g.toLowerCase();
       const cur = byGenre.get(key) ?? { name: g, tracks: [] };
       cur.tracks.push(t);
@@ -65,7 +74,9 @@ export function decadeMixes(tracks: Track[]): Mix[] {
   for (const t of tracks) {
     const d = decadeOf(t.year);
     if (!d) continue;
-    byDecade.set(d, [...(byDecade.get(d) ?? []), t]);
+    const list = byDecade.get(d);
+    if (list) list.push(t);
+    else byDecade.set(d, [t]);
   }
   return [...byDecade.entries()]
     .filter(([, list]) => list.length >= MIN_TRACKS)
@@ -144,23 +155,55 @@ export function moodMixes(tracks: Track[], energyOf: (t: Track) => number | unde
 
 const noEnergy = (): undefined => undefined;
 
+type SoundOf = (t: Track) => SoundFacts | undefined;
+
+/** What the mixes may know about the songs beyond the library itself. */
+export interface MixSense {
+  /** a song's energy (the mood mixes) */
+  energyOf?: (t: Track) => number | undefined;
+  /** what the analysis measured (the order that flows) */
+  sound?: SoundOf;
+  /** how much a song was skipped lately: such songs come later */
+  skips?: (t: Track) => number;
+  /** a song's genres as the library shows them; its own tags without */
+  genres?: (t: Track) => string[];
+}
+
+/**
+ * A mix in an order that flows, where its songs are measured; as drawn where none are. Songs skipped
+ * lately come later. On Repeat stays as it is: it's a ranking, your most played first.
+ */
+export function inFlow<M extends Mix | null>(mix: M, sound?: SoundOf, skips?: (t: Track) => number): M {
+  if (!mix || mix.id === "onrepeat" || !sound || !mix.tracks.some((t) => sound(t))) return mix;
+  return { ...mix, tracks: flowOrder(mix.tracks.map((t) => ({ item: t, facts: sound(t), artist: t.artist, skips: skips?.(t) })), { arc: true }) } as M;
+}
+
 /** Every mix for the home page, personal ones first. */
-export function allMixes(tracks: Track[], counts: PlayCounts, energyOf: (t: Track) => number | undefined = noEnergy): Mix[] {
+export function allMixes(tracks: Track[], counts: PlayCounts, sense: MixSense = {}): Mix[] {
   return [
     onRepeatMix(tracks, counts),
     rediscoverMix(tracks, counts),
-    ...moodMixes(tracks, energyOf),
-    ...genreMixes(tracks),
+    ...moodMixes(tracks, sense.energyOf ?? noEnergy),
+    ...genreMixes(tracks, 8, sense.genres),
     ...decadeMixes(tracks),
-  ].filter((m): m is Mix => !!m);
+  ]
+    .filter((m): m is Mix => !!m)
+    .map((m) => inFlow(m, sense.sound, sense.skips));
 }
 
 /** Rebuild one mix by id (the mix page). */
-export function mixById(id: string, tracks: Track[], counts: PlayCounts, energyOf: (t: Track) => number | undefined = noEnergy): Mix | null {
-  if (id === "onrepeat") return onRepeatMix(tracks, counts);
-  if (id === "rediscover") return rediscoverMix(tracks, counts);
-  if (id.startsWith("mood:")) return moodMixes(tracks, energyOf).find((m) => m.id === id) ?? null;
-  if (id.startsWith("genre:")) return genreMixes(tracks, Infinity).find((m) => m.id === id) ?? null;
-  if (id.startsWith("decade:")) return decadeMixes(tracks).find((m) => m.id === id) ?? null;
-  return null;
+export function mixById(id: string, tracks: Track[], counts: PlayCounts, sense: MixSense = {}): Mix | null {
+  const mix =
+    id === "onrepeat"
+      ? onRepeatMix(tracks, counts)
+      : id === "rediscover"
+        ? rediscoverMix(tracks, counts)
+        : id.startsWith("mood:")
+          ? (moodMixes(tracks, sense.energyOf ?? noEnergy).find((m) => m.id === id) ?? null)
+          : id.startsWith("genre:")
+            ? (genreMixes(tracks, Infinity, sense.genres).find((m) => m.id === id) ?? null)
+            : id.startsWith("decade:")
+              ? (decadeMixes(tracks).find((m) => m.id === id) ?? null)
+              : null;
+  return inFlow(mix, sense.sound, sense.skips);
 }

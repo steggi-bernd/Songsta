@@ -19,6 +19,7 @@ export type ViewName =
   | "mix"
   | "smart"
   | "replay"
+  | "soundslike"
   | "check"
   | "loose"
   | "spotify"

@@ -20,8 +20,8 @@ import { QueueScreen } from "./screens/QueueScreen";
 import { SearchScreen } from "./screens/SearchScreen";
 import { ReplayScreen } from "./screens/ReplayScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
+import { SoundsLikeScreen } from "./screens/SoundsLikeScreen";
 import { colors } from "./theme";
-import { T } from "./shared";
 
 const Root = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -46,6 +46,7 @@ function tabStack(name: string, First: ComponentType) {
         <Pages.Screen name="Settings" component={SettingsScreen} options={pullDownPage} />
         <Pages.Screen name="Equalizer" component={EqualizerScreen} />
         <Pages.Screen name="Replay" component={ReplayScreen} options={pullDownPage} />
+        <Pages.Screen name="SoundsLike" component={SoundsLikeScreen} options={pullDownPage} />
       </Pages.Navigator>
     );
   };

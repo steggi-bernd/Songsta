@@ -18,9 +18,16 @@
 import type { AlbumEdits, SongEdit } from "./albumEdits";
 import { readExploreGroups, readGroups, type ExploreGroups, type Group } from "./libraryGroups";
 import { safeCover } from "./playlistSync";
+import { mergeKeysDocs, mergeSoundsDocs, readKeysDoc, readSoundsDoc, type KeysDoc, type SoundsDoc } from "./soundShare";
 
-export type LibraryDocName = "order" | "groups" | "albumedits" | "albumpictures";
-export const LIBRARY_DOCS: readonly LibraryDocName[] = ["order", "groups", "albumedits", "albumpictures"];
+/** "sounds" and "keys": tempo, key and energy, and keys set by hand, shared the same way (lib/soundShare.ts). */
+export type LibraryDocName = "order" | "groups" | "albumedits" | "albumpictures" | "sounds" | "keys";
+export const LIBRARY_DOCS: readonly LibraryDocName[] = ["order", "groups", "albumedits", "albumpictures", "sounds", "keys"];
+/**
+ * The documents a service must keep for this app not to call it too old (lib/syncService.ts). The
+ * sound documents came later: a service without them answers 404, and they stay on each device.
+ */
+export const REQUIRED_LIBRARY_DOCS: readonly LibraryDocName[] = ["order", "groups", "albumedits", "albumpictures"];
 
 /** A part as it was set at one moment; without `v` it was taken away then. */
 export interface Stamped<T> {
@@ -311,6 +318,8 @@ export const LIBRARY_DOC_KINDS: Record<LibraryDocName, { read(raw: unknown): obj
   groups: { read: readGroupsDoc, merge: (a, b) => mergeGroupsDocs(a as GroupsDoc, b as GroupsDoc) },
   albumedits: { read: readAlbumEditsDoc, merge: (a, b) => mergeAlbumEditsDocs(a as AlbumEditsDoc, b as AlbumEditsDoc) },
   albumpictures: { read: readAlbumPicturesDoc, merge: (a, b) => mergeAlbumPicturesDocs(a as AlbumPicturesDoc, b as AlbumPicturesDoc) },
+  sounds: { read: readSoundsDoc, merge: (a, b) => mergeSoundsDocs(a as SoundsDoc, b as SoundsDoc) },
+  keys: { read: readKeysDoc, merge: (a, b) => mergeKeysDocs(a as KeysDoc, b as KeysDoc) },
 };
 
 /* ------------------------------------------------------------------ a device's own state */

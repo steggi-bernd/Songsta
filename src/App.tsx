@@ -38,7 +38,12 @@ import { watchCatalog } from "./stores/catalog";
 import { watchAlbumCopies } from "./lib/albumCopies";
 import { watchRecoveredPlaylists } from "./lib/playlistRecovery";
 import { watchListDates } from "./lib/listDates";
+import { watchAlbumsSeen } from "./lib/catalogIndex";
+import { watchSkips } from "./stores/skips";
+import { watchAlbumGenres } from "./lib/albumGenres";
 import { watchSound } from "./stores/sound";
+import { watchServerSound } from "./lib/serverSound";
+import { watchPrivacy } from "./lib/netPolicy";
 import { watchRecentlyPlayed } from "./lib/recentlyPlayed";
 import { watchAvailability } from "./stores/availability";
 import { JellyfinView } from "./views/JellyfinView";
@@ -59,6 +64,7 @@ import { LibraryCheckView } from "./views/LibraryCheckView";
 import { GenreView } from "./views/GenreView";
 import { PlaylistView } from "./views/PlaylistView";
 import { ReplayView } from "./views/ReplayView";
+import { SoundsLikeView } from "./views/SoundsLikeView";
 import { SetupPages } from "./components/SetupPages";
 import { SettingsView } from "./views/SettingsView";
 
@@ -305,6 +311,8 @@ function CurrentView(): ReactNode {
       return <JellyfinView />;
     case "replay":
       return <ReplayView />;
+    case "soundslike":
+      return <SoundsLikeView key={view.param ?? "now"} id={view.param} />;
     case "spotify":
       return <SpotifyImportView key={view.param ?? "liked"} param={view.param} />;
     case "settings":
@@ -346,6 +354,9 @@ export default function App() {
   useEffect(() => watchAlbumCopies(), []);
   useEffect(() => watchRecoveredPlaylists(), []);
   useEffect(() => watchListDates(), []);
+  useEffect(() => watchAlbumsSeen(), []);
+  useEffect(() => watchSkips(), []);
+  useEffect(() => watchAlbumGenres(), []);
 
   // Which folders and servers can play right now (lists grey out the rest).
   useEffect(() => watchAvailability(), []);
@@ -393,12 +404,16 @@ export default function App() {
 
   // Tempo, key and energy from the sound analysis — measured in main, following its setting.
   useEffect(() => watchSound(), []);
+  useEffect(() => watchServerSound(), []);
   // When each album, playlist and Liked Songs last played — the library panel's order.
   useEffect(() => watchRecentlyPlayed(), []);
-  const soundAnalysis = useSettings((s) => s.soundAnalysis);
+  // Nothing is measured until the media analysis was started by hand once; after that it follows its switch.
+  const soundAnalysis = useSettings((s) => s.soundAnalysis && s.soundAnalysisStarted);
   useEffect(() => {
     void window.bytune?.setSoundAnalysis(soundAnalysis);
   }, [soundAnalysis]);
+  // What may go out and what's kept (Settings → Network & privacy), told to the main process.
+  useEffect(() => watchPrivacy(), []);
 
   // Folder watching follows its setting (main watches by default).
   const watchFolders = useSettings((s) => s.watchFolders);

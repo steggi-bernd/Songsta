@@ -100,6 +100,12 @@ function readConfig(): Config | null {
   return raw && typeof raw.server === "string" && raw.auth ? raw : null;
 }
 
+/** The server's address: your own server, always reachable (net-gate.ts). */
+export function serverAddresses(): string[] {
+  const cfg = readConfig();
+  return cfg?.server ? [cfg.server] : [];
+}
+
 function credentials(cfg: Config): { salt: string; token: string } | null {
   const [salt, token] = openSecret(cfg.auth).split(":");
   return salt && token ? { salt, token } : null;
@@ -398,6 +404,56 @@ export async function fetchStream(songId: string, range: string | undefined): Pr
   const headers: Record<string, string> = {};
   if (range) headers.Range = range;
   return fetch(`${s.cfg.server}/rest/stream.view?${query(s.auth.user, s.auth.salt, s.auth.token, params)}`, { headers });
+}
+
+/**
+ * A short stretch of a song for the sound analysis: mono-ish MP3 at a low rate, about `seconds` of
+ * it, from `startSeconds` where the server can start there (Navidrome's timeOffset), else from the top.
+ */
+export async function fetchExcerpt(songId: string, startSeconds: number, seconds: number): Promise<Uint8Array | null> {
+  const s = session();
+  if (!s || !SONG_ID.test(songId)) return null;
+  const params = { id: songId, format: "mp3", maxBitRate: "64", timeOffset: String(Math.max(0, Math.round(startSeconds))) };
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), 60_000);
+  try {
+    const res = await fetch(`${s.cfg.server}/rest/stream.view?${query(s.auth.user, s.auth.salt, s.auth.token, params)}`, { signal: stop.signal });
+    const type = res.headers.get("content-type") ?? "";
+    if (/json|xml/.test(type)) {
+      stop.abort();
+      return null;
+    }
+    return await firstBytes(res, seconds * 8000, stop);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Reads a reply until it holds `max` bytes, then lets the rest go. */
+async function firstBytes(res: Response, max: number, stop: AbortController): Promise<Uint8Array | null> {
+  if (!res.ok || !res.body) return null;
+  const reader = res.body.getReader();
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (size < max) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value);
+      size += value.length;
+    }
+  } finally {
+    stop.abort();
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return size > 0 ? out : null;
 }
 
 /** Lyrics the server has: OpenSubsonic synced lyrics first, then classic plain lyrics. */

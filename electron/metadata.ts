@@ -195,6 +195,52 @@ async function releaseFromItunes(artist: string, album: string): Promise<Release
 }
 
 /** The album a local file belongs to, with a cover when any database has one. */
+export interface AlbumGenres {
+  /** MusicBrainz's genres for the album, with how many votes each */
+  mb: { name: string; count: number }[];
+  /** the genres Wikidata states for it, in English */
+  wikidata: string[];
+}
+
+/**
+ * An album's genres from the open databases (electron/album-genres.ts): its MusicBrainz release group
+ * by name and artist, that group's voted genres, and through its link to Wikidata the genres stated
+ * there. Null when MusicBrainz doesn't know the album.
+ */
+export async function lookupAlbumGenres(artist: string, album: string): Promise<AlbumGenres | null> {
+  // "Unknown Album" by "Unknown Artist" isn't an album to look up.
+  if (isPlaceholder(artist) || isPlaceholder(album)) return null;
+  const q = `releasegroup:${phrase(album)} AND artist:${phrase(leadArtist(artist))}`;
+  const res = await mb(`release-group?query=${encodeURIComponent(q)}&limit=5`);
+  const groups: any[] = Array.isArray(res?.["release-groups"]) ? res["release-groups"] : [];
+  const pick = groups.find((g) => (g.score ?? 0) >= 85 && sameName(g.title ?? "", album));
+  if (!pick?.id) return null;
+  const full = await mb(`release-group/${pick.id}?inc=genres+url-rels`);
+  const genres: { name: string; count: number }[] = (Array.isArray(full?.genres) ? full.genres : [])
+    .filter((g: any) => typeof g?.name === "string" && g.name.trim())
+    .map((g: any) => ({ name: String(g.name).slice(0, 80), count: Math.max(0, Number(g.count) || 0) }))
+    .slice(0, 12);
+  const link = (Array.isArray(full?.relations) ? full.relations : []).find((r: any) => r?.type === "wikidata")?.url?.resource;
+  const qid = /\/(Q\d+)$/.exec(String(link ?? ""))?.[1];
+  let wikidata: string[] = [];
+  if (qid) {
+    try {
+      const entity = await wikidataEntity(qid, getJson);
+      const ids: string[] = (Array.isArray(entity?.claims?.P136) ? entity.claims.P136 : [])
+        .map((c: any) => c?.mainsnak?.datavalue?.value?.id)
+        .filter((id: unknown): id is string => typeof id === "string" && /^Q\d+$/.test(id))
+        .slice(0, 8);
+      if (ids.length) {
+        const labels = (await getJson(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${ids.join("|")}&props=labels&languages=en&format=json`)) as any;
+        wikidata = ids.map((id) => labels?.entities?.[id]?.labels?.en?.value).filter((v: unknown): v is string => typeof v === "string" && !!v.trim());
+      }
+    } catch {
+      /* Wikidata away: MusicBrainz's genres alone */
+    }
+  }
+  return { mb: genres, wikidata };
+}
+
 export function lookupRelease(artist: string, album: string): Promise<ReleaseMeta | null> {
   if (isPlaceholder(artist) || isPlaceholder(album)) return Promise.resolve(null);
   const key = `rel:${norm(leadArtist(artist))}|${norm(album)}`;

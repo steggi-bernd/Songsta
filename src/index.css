@@ -453,6 +453,10 @@ main .page-scrollbar__thumb:active {
 .shelf-row {
   padding-inline: calc(var(--page-pad) - 8px);
 }
+/* Where Explore's A–Z rail lands: a little air above the first entry of a letter. */
+[data-az] {
+  scroll-margin-top: 16px;
+}
 
 /* Side lists: the scrollbar's room on both sides, so what they hold stays
    centred whether the list scrolls or not. */
@@ -722,124 +726,45 @@ input[type="range"].slider.mp-slider:active::-webkit-slider-thumb {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
-/* ---------- beacon toasts ----------
-   Drop-down notification capsules. A darker, rounder, heavier glass than
-   .glass-strong so they float over any surface; the JSX adds a kind-coloured
-   ambience glow behind them. */
-.toast-beacon {
-  background:
-    linear-gradient(165deg, rgba(54, 54, 58, 0.98), rgba(20, 20, 22, 0.98));
+/* ---------- notes ----------
+   The notes as on the phone (Toasts.tsx, mockup "Hinweise A"): a calm dark card over the page, just
+   above the player. It rises a little as it comes and sinks as it goes; nothing glows or shakes. */
+.note-card {
+  background: #2c2c30;
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+/* The cross on the card's corner, shown while the pointer is on the card. */
+.note-close {
+  background: #3a3a40;
   border: 0.5px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(30px) saturate(160%);
-  -webkit-backdrop-filter: blur(30px) saturate(160%);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.35),
-    0 24px 56px -12px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
 }
-
-/* Arrival: falls from under the top bar with a blur that resolves and a
-   one-keyframe overshoot so the landing reads as a spring, not a slide. */
-@keyframes toast-drop {
-  0% {
-    opacity: 0;
-    transform: translateY(-28px) scale(0.9);
-    filter: blur(6px);
-  }
-  55% {
-    opacity: 1;
-    filter: blur(0);
-  }
-  74% {
-    transform: translateY(3px) scale(1.012);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-.toast-drop {
-  animation: toast-drop 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
-/* Departure: lifted back up, defocusing as it goes. */
-@keyframes toast-lift {
-  to {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.93);
-    filter: blur(5px);
-  }
-}
-.toast-lift {
-  animation: toast-lift 0.34s cubic-bezier(0.55, 0, 0.85, 0.5) forwards;
-}
-
-/* Icon badge springs in just after the capsule lands. */
-@keyframes toast-icon-pop {
+@keyframes note-in {
   from {
-    transform: scale(0);
     opacity: 0;
+    translate: 0 12px;
   }
   to {
-    transform: scale(1);
     opacity: 1;
+    translate: 0 0;
   }
 }
-.toast-icon {
-  animation: toast-icon-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.14s backwards;
+.note-in {
+  animation: note-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
-
-/* One-shot light sweep across the capsule on arrival. */
-@keyframes toast-sheen {
-  0% {
-    transform: translateX(-140%) skewX(-16deg);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(320%) skewX(-16deg);
-    opacity: 0;
-  }
-}
-.toast-sheen {
-  animation: toast-sheen 0.9s cubic-bezier(0.3, 0, 0.2, 1) 0.18s both;
-}
-
-/* Errors give the capsule a short head-shake once it has landed. */
-@keyframes toast-shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-5px);
-  }
-  40% {
-    transform: translateX(4px);
-  }
-  60% {
-    transform: translateX(-3px);
-  }
-  80% {
-    transform: translateX(2px);
-  }
-}
-.toast-shake {
-  animation: toast-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.3s backwards;
-}
-
-/* Lifetime ring around the icon badge: depletes linearly over the toast's
-   duration; hover pauses it in sync with the JS timer. The offset must match
-   RING_C in Toasts.tsx (r = 16.75 on a 36px viewBox). */
-@keyframes toast-ring {
-  from {
-    stroke-dashoffset: 0px;
-  }
+@keyframes note-out {
   to {
-    stroke-dashoffset: 105.24px;
+    opacity: 0;
+    translate: 0 8px;
   }
+}
+.note-out {
+  animation: note-out 0.26s ease forwards;
+}
+html.reduce-motion .note-in,
+html.reduce-motion .note-out {
+  animation-duration: 1ms;
 }
 
 /* ---------- misc animations ---------- */
@@ -927,7 +852,6 @@ html.reduce-motion *::after {
 html.reduce-blur .glass,
 html.reduce-blur .glass-strong,
 html.reduce-blur .glass-pill,
-html.reduce-blur .toast-beacon,
 html.reduce-blur .player-glass,
 html.reduce-blur .chrome-glass {
   backdrop-filter: none;
@@ -935,8 +859,7 @@ html.reduce-blur .chrome-glass {
 }
 html.reduce-blur .glass,
 html.reduce-blur .glass-strong,
-html.reduce-blur .glass-pill,
-html.reduce-blur .toast-beacon {
+html.reduce-blur .glass-pill {
   background: #121212;
 }
 html.reduce-blur .player-glass,
@@ -1201,6 +1124,68 @@ html.noglass .chrome-glass {
   animation: fs-viz-dance var(--dur, 2.6s) ease-in-out var(--delay, 0s) infinite;
 }
 
+/* The full-screen visualizer (NowPlayingVisualizer.tsx): rays on arms round the cover. An arm
+   stands at the ring (--ray-r out from the middle, turned by --a); its ray reaches out from the
+   arm's foot, at rest as far as --lo, on each beat (--beat, from the song's tempo) as far as its
+   --hi allows the song's --energy, one after another round the ring (--d). Sizes in cqi of the stage. */
+@keyframes viz-pulse {
+  0%,
+  100% {
+    transform: scaleY(var(--lo));
+  }
+  42% {
+    transform: scaleY(calc(var(--lo) + (var(--hi) - var(--lo)) * var(--energy, 0.6)));
+  }
+}
+@keyframes viz-breathe {
+  0%,
+  100% {
+    scale: 1;
+  }
+  40% {
+    scale: 1.02;
+  }
+}
+.viz-stage {
+  --ray-r: 25.5cqi;
+  --ray-len: 22cqi;
+  --ray-w: max(3px, 0.62cqi);
+}
+.viz-arm {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  width: var(--ray-w);
+  height: var(--ray-len);
+  margin-left: calc(var(--ray-w) / -2);
+  transform-origin: 50% 100%;
+  transform: rotate(var(--a)) translateY(calc(var(--ray-r) * -1));
+}
+.viz-ray {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  transform-origin: 50% 100%;
+  transform: scaleY(var(--lo));
+  background: linear-gradient(to top, rgb(var(--viz-a) / 0.95), rgb(var(--viz-b) / 0.5));
+  transition: transform 900ms var(--ease-enter);
+}
+.viz-on .viz-ray {
+  animation: viz-pulse var(--beat, 0.66s) cubic-bezier(0.3, 0, 0.3, 1) var(--d, 0s) infinite;
+}
+.viz-on .viz-cover {
+  animation: viz-breathe var(--beat, 0.66s) ease-in-out infinite;
+}
+/* Listening (useLiveSpectrum): every frame sets the sizes itself, so nothing eases them on top. */
+.viz-live .viz-ray {
+  transition: none;
+}
+html.reduce-motion .viz-ray,
+html.reduce-motion .viz-cover {
+  animation: none !important;
+}
+
 /* ---------- reduced motion ----------
    Mirrors the in-app "Reduce animation" kill-switch for the OS-level
    preference, so users who request reduced motion system-wide get it
@@ -1234,4 +1219,110 @@ html.platform-mac body {
    left standing next to each other aren't the ones the lines were drawn between. */
 .settings-searching .settings-divider {
   display: none;
+}
+
+/* A group a row elsewhere in Settings led to (lib/settingsJump.ts): its card is ringed a moment. */
+[data-settings-group].settings-flash > div:last-of-type {
+  animation: settings-flash 1.8s ease-out;
+}
+@keyframes settings-flash {
+  0%,
+  35% {
+    box-shadow: 0 0 0 2px rgb(var(--accent));
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgb(var(--accent) / 0);
+  }
+}
+.reduce-motion [data-settings-group].settings-flash > div:last-of-type {
+  animation: none;
+  box-shadow: 0 0 0 2px rgb(var(--accent));
+}
+
+/* The Camelot wheel (components/CamelotWheel.tsx): it swirls in, the lit key breathes, the middle fades
+   to the key pointed at, the ring while correcting runs round. Still with reduced motion. */
+.camelot-slice-in {
+  animation: camelot-in 560ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  transform-box: view-box;
+  transform-origin: 180px 180px;
+}
+@keyframes camelot-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(-14deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The lit key, without an outline: a soft brightening that comes and goes. */
+.camelot-glow {
+  animation: camelot-glow 2.2s ease-in-out infinite;
+}
+@keyframes camelot-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+.camelot-pulse {
+  animation: camelot-pulse 1.9s ease-in-out infinite;
+}
+@keyframes camelot-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+.camelot-center-in {
+  animation: camelot-center 280ms ease-out both;
+  transform-box: view-box;
+  transform-origin: 180px 180px;
+}
+@keyframes camelot-center {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.camelot-dash {
+  animation: camelot-dash 7s linear infinite;
+}
+@keyframes camelot-dash {
+  to {
+    stroke-dashoffset: -130;
+  }
+}
+.camelot-slice:focus {
+  outline: none;
+}
+.camelot-slice:focus-visible path {
+  stroke: rgb(var(--accent));
+  stroke-width: 3.5;
+}
+.reduce-motion .camelot-slice-in,
+.reduce-motion .camelot-pulse,
+.reduce-motion .camelot-glow,
+.reduce-motion .camelot-center-in,
+.reduce-motion .camelot-dash {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .camelot-slice-in,
+  .camelot-pulse,
+  .camelot-center-in,
+  .camelot-dash {
+    animation: none;
+  }
 }

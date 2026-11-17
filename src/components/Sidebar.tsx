@@ -9,7 +9,7 @@
  * settings gear).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpDown, Check, ChevronDown, ChevronRight, Disc3, Folder, FolderMinus, FolderPlus, Heart, ListEnd, ListMusic, ListPlus, Music2, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Play, Plus, Shuffle, Sparkles, Ungroup, User, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, ChevronDown, ChevronRight, Disc3, Folder, Library, FolderMinus, FolderPlus, Heart, ListEnd, ListMusic, ListPlus, Music2, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Play, Plus, Shuffle, Sparkles, Ungroup, User, Trash2 } from "lucide-react";
 import { newestFirst, useLibraryIndex, type LibAlbum } from "../lib/catalogIndex";
 import { arrangeGroups, groupOf, newGroupId, newGroupName, withGroupNamed, withItemIn, withItemOut, withNewGroup, withoutGroup, type Group, type GroupPlace } from "../lib/libraryGroups";
 import { albumListKey, playlistListKey } from "../lib/keptLists";
@@ -153,6 +153,8 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   /** Spotify's filter chips: one category at a time, a second click shows everything again. */
   const [filter, setFilter] = useState<LibFilter | null>(null);
   const onLibraryPage = useUI((st) => st.view.name === "library" && !st.view.param);
+  // Off in Settings → Look and language, for a panel as close to Spotify's as it gets.
+  const libraryField = useSettings((s) => s.libraryField);
   const sortedAlbums = useMemo(() => {
     const list = [...albums];
     if (libraryOrder === "alpha") return list.sort((a, b) => a.title.localeCompare(b.title));
@@ -945,20 +947,44 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
         )}
       </div>
 
+      {/* Your Library: a field of its own, not one of the chips. It opens the Your Library page, and shows
+          the library's own sign (the one the panel's header wore up to 1.6, easier to tell apart than a
+          set of covers) and its counts. Folded, the sign stays on the rail. Can be switched off. */}
+      {libraryField && (
+      <div className={collapsed ? "px-[9px] pb-1.5" : "px-[9px] pb-2.5"}>
+        <button
+          onClick={() => navigate({ name: "library" })}
+          aria-current={onLibraryPage ? "page" : undefined}
+          title={collapsed ? T("Your Library") : undefined}
+          aria-label={collapsed ? T("Your Library") : undefined}
+          className={`group w-full flex items-center gap-3 rounded-xl text-left transition-colors ${collapsed ? "justify-center p-1.5" : "p-2 pr-3"} ${
+            onLibraryPage ? "bg-accent/[0.16] shadow-[inset_0_0_0_1px_rgb(var(--accent)/0.45)]" : "bg-ink-hi/[0.05] hover:bg-ink-hi/[0.09]"
+          }`}
+        >
+          <span
+            className={`w-12 h-12 shrink-0 grid place-items-center rounded-md transition-colors ${
+              onLibraryPage ? "bg-accent text-[#0b0b0d]" : "bg-gradient-to-br from-accent/[0.32] to-accent/[0.1] text-accent group-hover:from-accent/[0.42]"
+            }`}
+          >
+            <Library className="w-6 h-6" strokeWidth={2.2} />
+          </span>
+          {!collapsed && (
+            <span className="min-w-0 flex-1">
+              <span className={`block text-[15px] font-bold truncate ${onLibraryPage ? "text-accent" : "text-ink-hi"}`}>{T("Your Library")}</span>
+              <span className="block text-[12.5px] text-ink-hi/55 truncate mt-0.5">
+                {[plural(albums.length, T("album"), T("albums")), playlists.length ? plural(playlists.length, T("playlist"), T("playlists")) : ""].filter(Boolean).join(" · ")}
+              </span>
+            </span>
+          )}
+          {!collapsed && <ChevronRight className={`w-4 h-4 shrink-0 transition-colors ${onLibraryPage ? "text-accent" : "text-ink-hi/35 group-hover:text-ink-hi/70"}`} />}
+        </button>
+      </div>
+      )}
+
       {/* Filter chips, Spotify's: one category at a time (a second click shows
           everything again); the sort button orders the albums. */}
       {!collapsed && (
         <div className="flex items-center gap-2 px-4 pb-2 whitespace-nowrap">
-          {/* The panel's name is a tab of its own: it opens the Your Library page. */}
-          <button
-            onClick={() => navigate({ name: "library" })}
-            aria-current={onLibraryPage ? "page" : undefined}
-            className={`h-8 px-3 shrink-0 rounded-full text-[13px] font-semibold transition-colors ${
-              onLibraryPage ? "bg-accent text-black" : "bg-ink-hi/[0.07] text-ink-hi hover:bg-ink-hi/[0.12]"
-            }`}
-          >
-            {T("Your Library")}
-          </button>
           {(Object.keys(FILTER_LABEL) as LibFilter[]).map((k) => (
             <button
               key={k}

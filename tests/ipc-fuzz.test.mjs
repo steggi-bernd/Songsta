@@ -5,9 +5,21 @@ import * as path from "node:path";
 import vm from "node:vm";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { transform } from "esbuild";
+import { buildSync, transform } from "esbuild";
 
 const require = createRequire(import.meta.url);
+
+/** A module the main process shares with the renderer (src/lib), bundled as the build does. */
+const sharedModules = new Map();
+function sharedModule(name) {
+  if (!sharedModules.has(name)) {
+    const { outputFiles } = buildSync({ entryPoints: [path.join(fileURLToPath(new URL("../electron/", import.meta.url)), `${name}.ts`)], bundle: true, platform: "node", format: "cjs", write: false });
+    const module = { exports: {} };
+    vm.runInNewContext(outputFiles[0].text, { module, exports: module.exports, console, URL });
+    sharedModules.set(name, module.exports);
+  }
+  return sharedModules.get(name);
+}
 
 /**
  * Phase 10 IPC fuzz: every registered channel receives the hostile-input
@@ -95,6 +107,11 @@ async function loadIpcHandlers() {
         readData: () => null, writeData: async () => {}, writeDataSync() {},
         drainWrites: async () => {}, resetAppData: async () => {}, migrateLegacyData() {},
       };
+      if (name === "./album-genres") return { albumGenresKnown: () => ({}), askAlbumGenres: () => 0, stopAlbumGenres() {}, onAlbumGenres() {} };
+      if (name === "./net-gate") return { installNetGate() {}, gatePages() {}, netActivity: () => ({ log: [], services: {}, own: { count: 0, last: 0 }, since: 0 }), privacy: () => ({ ownOnly: false, off: [], recordListening: true }), setPrivacy: () => ({}), trustEntered() {}, ownServersChanged() {} };
+      if (name === "./data-location") return { askMove: () => "Choose a whole folder", cancelMove() {}, clearCachesAtStart() {}, dataPlace: () => ({}), forgetLeftover: () => false, networkCaches: () => [] };
+      if (name === "./data-place") return { sizeOf: async () => 0 };
+      if (name.startsWith("../src/")) return sharedModule(name);
       if (name.startsWith("./")) return {};
       return require(name);
     },

@@ -4,9 +4,11 @@
  * Somebody who already has music in here from before never sees it.
  */
 import { useEffect, useState } from "react";
-import { Check, ChevronLeft, FolderOpen, Loader2, Server, Speaker, type LucideIcon } from "lucide-react";
+import { AudioLines, Check, ChevronLeft, FolderOpen, Loader2, Server, ShieldCheck, Speaker, type LucideIcon } from "lucide-react";
 import brandLogo from "../assets/brand/songsta-logo.svg";
-import { T } from "../lib/i18n";
+import { fmtDuration } from "../lib/format";
+import { T, textLocale } from "../lib/i18n";
+import { useAnalysis } from "./MediaAnalysis";
 import { isMac } from "../lib/platform";
 import { useLibrary } from "../stores/library";
 import { useSettings } from "../stores/settings";
@@ -15,7 +17,67 @@ import { ConnectCard as JellyfinConnect } from "../views/JellyfinView";
 import { ConnectCard as NavidromeConnect } from "../views/SubsonicView";
 import { CaptionButtons } from "./TopBar";
 
-type Page = "welcome" | "music" | "devices";
+type Page = "welcome" | "music" | "privacy" | "analysis" | "devices";
+
+/** What may go out to the internet, chosen on the first start (Settings → Network & privacy has the rest). */
+type NetChoice = "all" | "own" | "pick";
+
+/** One of the three choices: the same size, the chosen one ringed. */
+function Choice({ title, line, chosen, onClick }: { title: string; line: string; chosen: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={chosen}
+      className={`flex w-full items-start gap-4 rounded-2xl p-5 text-left transition-colors ${chosen ? "bg-ink-hi/[0.1] ring-2 ring-accent" : "bg-ink-hi/[0.06] hover:bg-ink-hi/[0.1]"}`}
+    >
+      <span className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full ${chosen ? "bg-accent text-on-primary" : "bg-ink-hi/[0.1]"}`}>{chosen && <Check className="h-4 w-4" strokeWidth={3} />}</span>
+      <span className="min-w-0">
+        <span className="block text-[16px] font-bold text-ink-hi">{title}</span>
+        <span className="mt-1 block text-[13px] leading-snug text-ink-dim">{line}</span>
+      </span>
+    </button>
+  );
+}
+
+function PrivacyPage({ choice, onChoice, onNext }: { choice: NetChoice; onChoice: (c: NetChoice) => void; onNext: () => void }) {
+  return (
+    <>
+      <span className="grid h-14 w-14 place-items-center rounded-full bg-ink-hi/[0.08] text-ink-hi">
+        <ShieldCheck className="h-7 w-7" />
+      </span>
+      <h1 className="mt-5 font-display text-[34px] font-extrabold tracking-[-0.03em] text-ink-hi">{T("What may Songsta ask the internet?")}</h1>
+      <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">{T("Your music, your servers and your devices at home never need it. Covers your files lack, artist facts and lyrics come from open services on the internet: only song, album and artist names go there.")}</p>
+      <div className="mt-6 flex flex-col gap-3">
+        <Choice chosen={choice === "all"} onClick={() => onChoice("all")} title={T("Everything that helps")} line={T("Covers, facts, lyrics and animated covers from the services listed in Settings. Each one can be switched off there.")} />
+        <Choice chosen={choice === "own"} onClick={() => onChoice("own")} title={T("Only my own servers")} line={T("Nothing goes to the internet: what your files and servers have is what you see.")} />
+        <Choice chosen={choice === "pick"} onClick={() => onChoice("pick")} title={T("Let me choose")} line={T("Settings → Network & privacy opens when you're done here, with every service and what goes to it.")} />
+      </div>
+      <div className="mt-8 flex items-center gap-2">
+        <Button onClick={onNext}>{T("Continue")}</Button>
+      </div>
+    </>
+  );
+}
+
+function AnalysisPage({ onStart, onLater }: { onStart: () => void; onLater: () => void }) {
+  const a = useAnalysis();
+  return (
+    <>
+      <span className="grid h-14 w-14 place-items-center rounded-full bg-ink-hi/[0.08] text-ink-hi">
+        <AudioLines className="h-7 w-7" />
+      </span>
+      <h1 className="mt-5 font-display text-[34px] font-extrabold tracking-[-0.03em] text-ink-hi">{T("Measure your music once?")}</h1>
+      <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">{T("Tempo, key and energy of every song make Klingt wie, mixes that flow and smooth transitions work. The first time takes a while for a big library; it runs in the background, and you can pause it in Settings → Library.")}</p>
+      {a.total > 0 && (
+        <p className="mt-4 text-[15px] font-semibold text-ink-hi">{T("{count} songs, about {time} the first time.", { count: a.total.toLocaleString(textLocale()), time: fmtDuration(a.left) })}</p>
+      )}
+      <div className="mt-8 flex items-center gap-2">
+        <Button onClick={onStart}>{T("Start now")}</Button>
+        <Quiet onClick={onLater}>{T("Later")}</Quiet>
+      </div>
+    </>
+  );
+}
 
 function useSetupNeeded(): boolean {
   const done = useSettings((s) => s.setupDone);
@@ -165,6 +227,7 @@ export function SetupPages() {
   const [asksFirewall, setAsksFirewall] = useState(false);
   const [busy, setBusy] = useState(false);
   const [chosen, setChosen] = useState<Chosen>({ songs: null, connected: false });
+  const [net, setNet] = useState<NetChoice>("all");
 
   useEffect(() => {
     const bridge = window.bytune;
@@ -173,8 +236,26 @@ export function SetupPages() {
   }, [needed]);
 
   if (!needed) return null;
-  const finish = (): void => useSettings.getState().setSetupDone(true);
-  const afterMusic = (): void => (asksFirewall ? setPage("devices") : finish());
+  const finish = (): void => {
+    useSettings.getState().setSetupDone(true);
+    // "Let me choose": the page with every service opens.
+    if (net === "pick") useUI.getState().navigate({ name: "settings", param: "privacy" });
+  };
+  const hasMusic = chosen.songs !== null || chosen.connected;
+  const afterMusic = (): void => setPage("privacy");
+  const afterPrivacy = (): void => {
+    const s = useSettings.getState();
+    s.setNetOwnOnly(net === "own");
+    if (net === "all") s.setServicesOn(s.netOff, true);
+    if (hasMusic) setPage("analysis");
+    else if (asksFirewall) setPage("devices");
+    else finish();
+  };
+  const afterAnalysis = (start: boolean): void => {
+    if (start) useSettings.getState().startSoundAnalysis();
+    if (asksFirewall) setPage("devices");
+    else finish();
+  };
   const allow = async (): Promise<void> => {
     setBusy(true);
     await window.bytune?.firewallAllow().catch(() => false);
@@ -188,7 +269,11 @@ export function SetupPages() {
       <div className="app-drag flex h-14 shrink-0 justify-end">{!isMac && <CaptionButtons />}</div>
       <div key={page} className="mx-auto flex w-full max-w-[640px] flex-1 flex-col justify-center px-8 pb-16 animate-rise-in">
         {page !== "welcome" && (
-          <button onClick={() => setPage(page === "devices" ? "music" : "welcome")} aria-label={T("Back")} className="mb-4 grid h-9 w-9 -translate-x-2 place-items-center rounded-full text-ink-dim transition-colors hover:text-ink-hi">
+          <button
+            onClick={() => setPage(page === "devices" ? (hasMusic ? "analysis" : "privacy") : page === "analysis" ? "privacy" : page === "privacy" ? "music" : "welcome")}
+            aria-label={T("Back")}
+            className="mb-4 grid h-9 w-9 -translate-x-2 place-items-center rounded-full text-ink-dim transition-colors hover:text-ink-hi"
+          >
             <ChevronLeft className="h-6 w-6" />
           </button>
         )}
@@ -202,7 +287,9 @@ export function SetupPages() {
             </div>
           </div>
         )}
-        {page === "music" && <MusicPage chosen={chosen} onChosen={(change) => setChosen({ ...chosen, ...change })} onNext={afterMusic} onLater={finish} />}
+        {page === "music" && <MusicPage chosen={chosen} onChosen={(change) => setChosen({ ...chosen, ...change })} onNext={afterMusic} onLater={afterMusic} />}
+        {page === "privacy" && <PrivacyPage choice={net} onChoice={setNet} onNext={afterPrivacy} />}
+        {page === "analysis" && <AnalysisPage onStart={() => afterAnalysis(true)} onLater={() => afterAnalysis(false)} />}
         {page === "devices" && (
           <>
             <span className="grid h-14 w-14 place-items-center rounded-full bg-ink-hi/[0.08] text-ink-hi">

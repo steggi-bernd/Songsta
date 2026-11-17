@@ -91,6 +91,16 @@ export interface Settings {
   pairHinted: string[];
   /** the version that ran last, for the note after an update */
   lastVersion: string;
+  /** internet services switched off (src/lib/netServices.ts ids); none: all on (Network & privacy) */
+  netOff: string[];
+  /** only your own server and devices: every internet service off at once */
+  netOwnOnly: boolean;
+  /** plays are kept for Replay */
+  recordListening: boolean;
+  /** the listening history goes to your sync service and comes from your other devices */
+  shareListens: boolean;
+  /** the library's order, groups and album edits go through your sync service */
+  shareLibrary: boolean;
 }
 
 const DEFAULTS: Settings = {
@@ -126,6 +136,11 @@ const DEFAULTS: Settings = {
   playAhead: {},
   pairHinted: [],
   lastVersion: "",
+  netOff: [],
+  netOwnOnly: false,
+  recordListening: true,
+  shareListens: true,
+  shareLibrary: true,
 };
 
 interface SettingsState extends Settings {

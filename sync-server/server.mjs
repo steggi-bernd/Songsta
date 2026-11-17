@@ -18,9 +18,15 @@
  *   PUT  /v1/devices/:id          { doc }: what this device says about itself
  *   POST /v1/devices/:id/commands { command }: a word for that device, kept for a minute
  *   GET  /v1/devices/:id/commands { commands }: that device's words, handed over once
+ *   POST /v1/listens              { device: { id, name, kind }, listens } → { added, count }: plays a device counted
+ *   GET  /v1/listens?since&limit  { count, listens, devices, more }: everybody's plays after the first `since`
+ *   DELETE /v1/listens?device     { removed, count }: one device's plays taken out (the rest numbered again)
+ *
+ * The listens are the one thing here that isn't a document: a history every device adds to and reads
+ * from (src/lib/listenSync.ts), kept in order, one line each, so Replay counts every play everywhere.
  */
 import { createHash } from "node:crypto";
-import { mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
+import { appendFile, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -44,8 +50,16 @@ const DOCS = {
   groups: { merged: true, keepVersions: 20 },
   albumedits: { merged: true, keepVersions: 20 },
   albumpictures: { merged: true, keepVersions: 5 },
+  // Tempo, key and energy each device measured, and keys set by hand (src/lib/soundShare.ts).
+  sounds: { merged: true, keepVersions: 2 },
+  keys: { merged: true, keepVersions: 10 },
 };
 const DEVICES_FILE = "devices.json";
+const LISTENS_FILE = "listens.jsonl";
+const LISTEN_DEVICES_FILE = "listen-devices.json";
+const MAX_LISTENS_PER_POST = 1000;
+const MAX_LISTENS_PER_PAGE = 2000;
+const EARLIEST_LISTEN = Date.UTC(2000, 0, 1);
 /** A device not heard of for this long is forgotten. */
 const DEVICE_KEPT_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_DEVICE_BYTES = 64 * 1024;
@@ -65,6 +79,23 @@ class HttpError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+const text = (v, max) => (typeof v === "string" ? v.slice(0, max).trim() : "");
+
+/** A listen as it's kept, or null (the same rules as the apps' src/lib/listenSync.ts). */
+function readListen(raw, device) {
+  if (!raw || typeof raw !== "object") return null;
+  const at = typeof raw.at === "number" && Number.isFinite(raw.at) ? Math.round(raw.at) : NaN;
+  const id = text(raw.id, 200);
+  const title = text(raw.title, 300);
+  if (!(at >= EARLIEST_LISTEN && at <= Date.now() + 86_400_000) || !id || !title) return null;
+  const listen = { device, at, id, title, artist: text(raw.artist, 300), ms: typeof raw.ms === "number" && Number.isFinite(raw.ms) ? Math.max(0, Math.min(6 * 3600_000, Math.round(raw.ms))) : 0 };
+  const album = text(raw.album, 300);
+  if (album) listen.album = album;
+  const thumb = text(raw.thumb, 1000);
+  if (/^https?:\/\//i.test(thumb)) listen.thumb = thumb;
+  return listen;
 }
 
 function send(res, status, body) {
@@ -97,12 +128,12 @@ function readBody(req) {
   });
 }
 
-/** Whole or not at all: a crash in the middle leaves the last good file. */
-async function writeAtomic(file, value) {
+/** Whole or not at all: a crash in the middle leaves the last good file. `raw` writes the text as it is. */
+async function writeAtomic(file, value, raw = false) {
   const temp = `${file}.tmp`;
   const handle = await open(temp, "w");
   try {
-    await handle.writeFile(JSON.stringify(value));
+    await handle.writeFile(raw ? value : JSON.stringify(value));
     await handle.sync();
   } finally {
     await handle.close();
@@ -195,7 +226,28 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         } catch (err) {
           if (err.code !== "ENOENT") console.error(`[sync] unreadable devices of ${userId}:`, err.message);
         }
-        return { dir, docs, seq, devices, devicesRev, inbox: new Map(), waiters: new Set(), writing: Promise.resolve() };
+        // The shared listening history, kept in memory too: a few megabytes even for years of listening.
+        const listens = { items: [], keys: new Set(), devices: {} };
+        try {
+          for (const line of (await readFile(path.join(dir, LISTENS_FILE), "utf8")).split("\n")) {
+            if (!line) continue;
+            try {
+              const l = JSON.parse(line);
+              listens.items.push(l);
+              listens.keys.add(`${l.device}|${l.at}|${l.id}`);
+            } catch {
+              /* a line cut short by a crash: the rest stands */
+            }
+          }
+        } catch (err) {
+          if (err.code !== "ENOENT") console.error(`[sync] unreadable listens of ${userId}:`, err.message);
+        }
+        try {
+          listens.devices = JSON.parse(await readFile(path.join(dir, LISTEN_DEVICES_FILE), "utf8")) ?? {};
+        } catch (err) {
+          if (err.code !== "ENOENT") console.error(`[sync] unreadable listen devices of ${userId}:`, err.message);
+        }
+        return { dir, docs, seq, devices, devicesRev, listens, inbox: new Map(), waiters: new Set(), writing: Promise.resolve() };
       })();
       users.set(userId, user);
     }
@@ -253,6 +305,65 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     return run;
   }
 
+  /**
+   * Plays a device counted, added to the history in the order they come; one already there (the same
+   * device, moment and song: sent again after a lost answer) is left out. Each gets its place, from 1.
+   */
+  function appendListens(user, device, raw) {
+    const run = user.writing.then(async () => {
+      const log = user.listens;
+      const added = [];
+      for (const r of raw) {
+        const listen = readListen(r, device.id);
+        if (!listen) continue;
+        const key = `${listen.device}|${listen.at}|${listen.id}`;
+        if (log.keys.has(key)) continue;
+        log.keys.add(key);
+        added.push({ n: log.items.length + added.length + 1, ...listen });
+      }
+      const known = log.devices[device.id];
+      if (!known || known.name !== device.name || known.kind !== device.kind) {
+        log.devices[device.id] = { name: device.name, ...(device.kind ? { kind: device.kind } : {}) };
+        await writeAtomic(path.join(user.dir, LISTEN_DEVICES_FILE), log.devices);
+      }
+      if (!added.length) return 0;
+      await appendFile(path.join(user.dir, LISTENS_FILE), `${added.map((l) => JSON.stringify(l)).join("\n")}\n`, "utf8");
+      log.items.push(...added);
+      user.seq += 1;
+      for (const wake of [...user.waiters]) wake();
+      return added.length;
+    });
+    user.writing = run.catch(() => undefined);
+    return run;
+  }
+
+  /**
+   * A device's plays taken out of the history (its "Remove from the sync service"): the rest keep their
+   * order and get their places again from 1. The history is shorter then, so every device reads it from
+   * the start once and sends its own plays again; the ones taken out don't come back, the device that
+   * sent them keeps them to itself.
+   */
+  function removeListens(user, deviceId) {
+    const run = user.writing.then(async () => {
+      const log = user.listens;
+      const kept = log.items.filter((l) => l.device !== deviceId);
+      const removed = log.items.length - kept.length;
+      if (!removed) return 0;
+      log.items = kept.map((l, i) => ({ ...l, n: i + 1 }));
+      log.keys = new Set(log.items.map((l) => `${l.device}|${l.at}|${l.id}`));
+      await writeAtomic(path.join(user.dir, LISTENS_FILE), log.items.length ? `${log.items.map((l) => JSON.stringify(l)).join("\n")}\n` : "", true);
+      if (log.devices[deviceId]) {
+        delete log.devices[deviceId];
+        await writeAtomic(path.join(user.dir, LISTEN_DEVICES_FILE), log.devices);
+      }
+      user.seq += 1;
+      for (const wake of [...user.waiters]) wake();
+      return removed;
+    });
+    user.writing = run.catch(() => undefined);
+    return run;
+  }
+
   const waitingCommands = (user, id) => {
     const now = Date.now();
     const list = (user.inbox.get(id) ?? []).filter((c) => now - c.at <= COMMAND_KEPT_MS);
@@ -275,6 +386,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     revs: {
       ...Object.fromEntries(Object.keys(DOCS).map((name) => [name, user.docs[name]?.rev ?? 0])),
       devices: user.devicesRev,
+      listens: user.listens.items.length,
     },
     inbox: device ? waitingCommands(user, device).length : 0,
   });
@@ -300,12 +412,12 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     // Behind a proxy or tunnel it shares Jellyfin's name, under this path.
     const pathname = url.pathname.replace(/^\/songsta-sync(?=\/)/, "");
     if (req.method === "GET" && pathname === "/health") {
-      return send(res, 200, { ok: true, service: "songsta-sync", api: 1, version: VERSION, docs: Object.keys(DOCS) });
+      return send(res, 200, { ok: true, service: "songsta-sync", api: 1, version: VERSION, docs: Object.keys(DOCS), features: ["listens", "listens-remove"] });
     }
 
     const docMatch = /^\/v1\/docs\/([a-z]+)$/.exec(pathname);
     const deviceMatch = new RegExp(`^/v1/devices(?:/(${DEVICE_ID})(/commands)?)?$`).exec(pathname);
-    if (pathname !== "/v1/changes" && !docMatch && !deviceMatch) throw new HttpError(404, "Not found");
+    if (pathname !== "/v1/changes" && pathname !== "/v1/listens" && !docMatch && !deviceMatch) throw new HttpError(404, "Not found");
     if (docMatch && !Object.hasOwn(DOCS, docMatch[1])) throw new HttpError(404, "No such document");
 
     const user = await userState(await authenticate(req));
@@ -316,6 +428,30 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
       const wait = Math.min(MAX_WAIT_SEC, Math.max(0, Number(url.searchParams.get("wait")) || 0));
       const device = new RegExp(`^${DEVICE_ID}$`).test(url.searchParams.get("device") ?? "") ? url.searchParams.get("device") : null;
       return changes(res, user, Number.isSafeInteger(since) ? since : -1, wait, device);
+    }
+
+    if (pathname === "/v1/listens") {
+      if (req.method === "GET") {
+        const all = user.listens.items;
+        const since = Math.min(all.length, Math.max(0, Math.floor(Number(url.searchParams.get("since")) || 0)));
+        const limit = Math.min(MAX_LISTENS_PER_PAGE, Math.max(1, Math.floor(Number(url.searchParams.get("limit")) || MAX_LISTENS_PER_PAGE)));
+        const page = all.slice(since, since + limit);
+        return send(res, 200, { count: all.length, listens: page, devices: user.listens.devices, more: since + page.length < all.length });
+      }
+      if (req.method === "DELETE") {
+        const device = url.searchParams.get("device") ?? "";
+        if (!new RegExp(`^${DEVICE_ID}$`).test(device)) throw new HttpError(400, "Whose plays?");
+        const removed = await removeListens(user, device);
+        return send(res, 200, { ok: true, removed, count: user.listens.items.length });
+      }
+      if (req.method !== "POST") throw new HttpError(405, "Method not allowed");
+      const body = await readBody(req);
+      const device = body?.device;
+      if (!device || typeof device !== "object" || !new RegExp(`^${DEVICE_ID}$`).test(String(device.id ?? ""))) throw new HttpError(400, "Listens come from a device");
+      if (!Array.isArray(body.listens) || body.listens.length > MAX_LISTENS_PER_POST) throw new HttpError(400, `Up to ${MAX_LISTENS_PER_POST} listens at a time`);
+      const from = { id: String(device.id), name: text(device.name, 80) || "?", kind: device.kind === "phone" || device.kind === "computer" ? device.kind : undefined };
+      const added = await appendListens(user, from, body.listens);
+      return send(res, 200, { ok: true, added, count: user.listens.items.length });
     }
 
     if (deviceMatch) {

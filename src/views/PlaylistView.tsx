@@ -5,23 +5,56 @@
  * then the playlist's own numbered track rows.
  */
 import { useCallback } from "react";
-import { FileDown, ListMusic, ListPlus } from "lucide-react";
+import { AudioWaveform, FileDown, ListMusic, ListPlus } from "lucide-react";
 import { exportM3uPlaylist } from "../lib/playlistFiles";
-import { PlaylistHero } from "../components/PlaylistHero";
+import { HERO_PILL, PlaylistHero } from "../components/PlaylistHero";
 import { TrackList } from "../components/TrackList";
+import { useCollectionPlayback } from "../components/LibraryCards";
 import { EmptyState } from "../components/primitives";
 import { playlistHeaderItems, playlistMenuItems } from "../lib/trackActions";
 import type { TrackSource } from "../lib/dnd";
 import { useListDates } from "../lib/listDates";
-import { fmtTime, plural } from "../lib/format";
+import { fmtMinutes, plural } from "../lib/format";
 import { useArtworkPalette } from "../lib/palette";
 import { useStillMissing } from "../lib/playlistRecovery";
 import { upgradeArtwork } from "../lib/artwork";
+import { readListSort } from "../lib/trackColumns";
 import { useLibrary } from "../stores/library";
 import { usePlayer } from "../stores/player";
+import { useSettings } from "../stores/settings";
+import { soundOf, useSound } from "../stores/sound";
 import { useUI } from "../stores/ui";
 import type { Track } from "../types";
 import { T } from "../lib/i18n";
+
+/**
+ * While the playlist plays (the queue is its songs): which song of how many, a thin band of how far
+ * in, and how long it still runs.
+ */
+function ListProgress({ tracks }: { tracks: Track[] }) {
+  const { active } = useCollectionPlayback(tracks, true);
+  const queue = usePlayer((s) => s.queue);
+  const index = usePlayer((s) => s.index);
+  const position = usePlayer((s) => s.position);
+  if (!active || index < 0 || !queue.length) return null;
+  const current = queue[index]?.duration || 0;
+  const before = queue.slice(0, index).reduce((n, t) => n + (t.duration || 0), 0);
+  const after = queue.slice(index + 1).reduce((n, t) => n + (t.duration || 0), 0);
+  const left = after + Math.max(0, current - position);
+  const all = before + current + after;
+  const share = all > 0 ? Math.min(1, (before + Math.min(position, current)) / all) : 0;
+  return (
+    <div className="flex items-center gap-3 mb-3 text-[12.5px] font-semibold text-accent tabular-nums" role="status">
+      <span className="shrink-0">{T("Song {n} of {total}", { n: index + 1, total: queue.length })}</span>
+      <span className="flex-1 h-[3px] rounded-full bg-ink-hi/[0.12] overflow-hidden">
+        <span className="block h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${share * 100}%` }} />
+      </span>
+      <span className="shrink-0">{T("{time} left", { time: fmtMinutes(left) })}</span>
+    </div>
+  );
+}
+
+const NO_TRACKS: Track[] = [];
 
 export function PlaylistView({ playlistId }: { playlistId: string }) {
   const playlist = useLibrary((s) => s.playlists.find((p) => p.id === playlistId) ?? null);
@@ -37,6 +70,13 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
   // that same artwork.
   const coverThumb = playlist?.cover ?? playlist?.artistThumb ?? playlist?.tracks[0]?.thumb ?? null;
   useArtworkPalette(coverThumb);
+  const { active, playing } = useCollectionPlayback(playlist?.tracks ?? NO_TRACKS);
+  // "Sort flowing" orders the list (and so what plays) so each song leads into the next — for songs the analysis measured.
+  // The raw saved order (a stable reference), read into a sort outside the selector: a fresh object from
+  // the selector every time would re-render without end.
+  const savedSort = useSettings((s) => s.listSorts?.[playlistId]);
+  const sortNow = readListSort(savedSort);
+  const measured = useSound((s) => (playlist?.tracks ?? NO_TRACKS).some((t) => (soundOf(t, s.facts)?.bpm ?? 0) > 0));
 
   // Dropping songs onto this page is handled panel-wide in App (usePanelDrop).
 
@@ -53,16 +93,20 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
 
   const tracks = playlist.tracks;
   const totalSec = tracks.reduce((acc, t) => acc + t.duration, 0);
-  // Spotify's model: a fresh playlist reads "PLAYLIST" — the "0 tracks"
-  // count only appears once there's something to count.
-  const meta = [
-    T("Playlist"),
-    tracks.length ? plural(tracks.length, T("song"), T("songs")) : "",
-    totalSec > 0 ? T("about {time}", { time: fmtTime(totalSec) }) : "",
-  ]
-    .filter(Boolean)
-    .join(" • ")
-    .toUpperCase();
+  // Spotify's model: a fresh playlist has no count — it only appears once there's something to count.
+  const meta = [tracks.length ? plural(tracks.length, T("song"), T("songs")) : T("No songs yet"), totalSec > 0 ? fmtMinutes(totalSec) : ""].filter(Boolean).join(" · ");
+  const flowing = sortNow?.key === "flow";
+  // Four albums of its own make a mosaic where the playlist has no picture chosen (one cover each, as on its card).
+  const mosaicCovers: string[] = [];
+  const seenAlbums = new Set<string>();
+  for (const t of tracks) {
+    const album = (t.album || t.title).toLowerCase();
+    if (!t.thumb || seenAlbums.has(album)) continue;
+    seenAlbums.add(album);
+    mosaicCovers.push(t.thumb);
+    if (mosaicCovers.length === 4) break;
+  }
+  const mosaic = !playlist.cover && !playlist.artistThumb && mosaicCovers.length === 4;
 
   const play = (shuffle: boolean): void => {
     if (!tracks.length) return;
@@ -127,14 +171,38 @@ export function PlaylistView({ playlistId }: { playlistId: string }) {
             </div>
           )
         }
+        cover={
+          mosaic ? (
+            <span className="grid grid-cols-2 w-full h-full">
+              {mosaicCovers.map((c) => (
+                <img key={c} src={upgradeArtwork(c)} alt="" className="w-full h-full object-cover" />
+              ))}
+            </span>
+          ) : undefined
+        }
         title={playlist.name}
         meta={meta}
+        playing={playing}
         onShuffle={() => play(true)}
-        onPlay={() => play(false)}
+        onPlay={() => (active ? usePlayer.getState().toggle() : play(false))}
         onMore={openHeaderMenu}
+        actions={
+          measured && tracks.length > 2 ? (
+            <button
+              onClick={() => useSettings.getState().setListSort(playlist.id, flowing ? null : { key: "flow", desc: false })}
+              aria-pressed={flowing}
+              title={flowing ? T("Back to your own order") : T("Order the songs so each leads into the next: close in key and tempo, the energy rising and easing off")}
+              className={`${HERO_PILL} ${flowing ? "bg-accent/25 text-accent border-accent/40" : "bg-black/30 text-white hover:bg-black/50"}`}
+            >
+              <AudioWaveform className="w-4 h-4" />
+              {T("Sort flowing")}
+            </button>
+          ) : undefined
+        }
       />
 
       <div className="page-pad pb-12 pt-2">
+        {tracks.length > 0 && <ListProgress tracks={tracks} />}
         {stillMissing > 0 && (
           <div className="mb-3 flex items-center gap-3 rounded-xl bg-ink-hi/[0.05] px-4 py-2.5 text-[13px] text-ink-dim">
             <span className="min-w-0 flex-1">

@@ -33,6 +33,8 @@ interface LibraryOrderState {
   touch(id: string, at?: number): void;
   /** the history's played times, under any kept since */
   seed(played: Record<string, number>): void;
+  /** your plays deleted (Settings → Network & privacy): when anything played is forgotten too */
+  forgetPlayed(): void;
   togglePin(id: string): void;
   setPinOrder(ids: string[]): void;
 }
@@ -63,6 +65,9 @@ export const useLibraryOrder = create<LibraryOrderState>()(
       },
       seed(played) {
         set({ played: newest({ ...played, ...get().played }), seeded: true });
+      },
+      forgetPlayed() {
+        set({ played: {}, seeded: true });
       },
       togglePin(id) {
         const { pins, pinOrder } = get();

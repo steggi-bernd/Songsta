@@ -13,7 +13,7 @@ import { TrackList } from "../components/TrackList";
 import { useArtistPicture } from "../lib/artistAbout";
 import { bannerCandidates } from "../lib/artistBanner";
 import { artistTracks, useLibraryIndex, useLikedAmong } from "../lib/catalogIndex";
-import { fmtTime, plural } from "../lib/format";
+import { fmtMinutes, plural } from "../lib/format";
 import { parseRoute } from "../lib/libraryTracks";
 import { exportM3uPlaylist } from "../lib/playlistFiles";
 import { useArtistImages } from "../lib/songInfo";
@@ -37,9 +37,7 @@ export function ArtistLikedView({ param }: { param: string }) {
 
   const title = T("Liked songs by {name}", { name });
   const totalSec = liked.reduce((sum, t) => sum + t.duration, 0);
-  const meta = [T("Playlist"), liked.length ? plural(liked.length, T("song"), T("songs")) : "", totalSec > 0 ? `about ${fmtTime(totalSec)}` : ""]
-    .filter(Boolean)
-    .join(" • ");
+  const meta = [liked.length ? plural(liked.length, T("song"), T("songs")) : T("No songs yet"), totalSec > 0 ? fmtMinutes(totalSec) : ""].filter(Boolean).join(" · ");
 
   const openMenu = (x: number, y: number): void => {
     openContextMenu(x, y, [

@@ -6,11 +6,16 @@
  * record in the search field, where ByTune always had its browse button.
  * Each tab has groups of its own, apart from the library panel's: what's in
  * one stands folded in it until it's opened (components/ExploreGroups.tsx).
+ * The page stands centred: head, tabs and tools in the middle, the tiles in
+ * a raster that fills the width evenly. While a list runs alphabetically an
+ * A–Z rail jumps through it; albums sorted by release turn into a timeline.
  */
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, DiscAlbum, LayoutGrid, List, Play, Search, Shuffle, User, X } from "lucide-react";
 import { AlbumTile, ArtistTile, CoverCollage, GenreTile, playCollection, useArtistPhoto, useSeen } from "../components/LibraryCards";
 import { DropLine, GroupButton, GroupCard, GroupCover, useExploreGroups, type ExploreGroupsUi } from "../components/ExploreGroups";
+import { AzRail, azFirsts } from "../components/AzRail";
+import { YearTimeline } from "../components/YearTimeline";
 import { albumListKey } from "../lib/keptLists";
 import { arrangeGroups, artistGroupKey, genreGroupKey, type Arranged, type Group } from "../lib/libraryGroups";
 import type { Track } from "../types";
@@ -82,6 +87,7 @@ function Table<T>({
   open,
   play,
   groups,
+  az,
 }: {
   label: string;
   /** the rows, with the groups standing among them (lib/libraryGroups.ts arrangeGroups) */
@@ -94,6 +100,8 @@ function Table<T>({
   open: (row: T) => void;
   play: (row: T) => void;
   groups: TabGroups<T>;
+  /** the first row of each letter, for the A–Z rail */
+  az?: Map<string, string> | null;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(1200);
@@ -171,6 +179,7 @@ function Table<T>({
       <div
         key={`${inGroup ?? ""}:${key}`}
         role="row"
+        data-az={az?.get(key)}
         onClick={() => open(r)}
         {...groups.ui.itemProps(key, inGroup)}
         // Thousands of rows: only those on screen are laid out and painted.
@@ -212,19 +221,22 @@ function Table<T>({
 
 /* ------------------------------------------------------------ the tiles */
 
+/** Columns that stretch to fill the row, so the raster stands centred with even edges. */
+const RASTER = { gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))" } as const;
+
 /** The tiles, with the groups standing among them; an open group shows what's in it right under it, across the page. */
-function Tiles<T>({ entries, tile, groups }: { entries: Arranged<T>[]; tile: (row: T) => ReactNode; groups: TabGroups<T> }) {
+function Tiles<T>({ entries, tile, groups, az }: { entries: Arranged<T>[]; tile: (row: T) => ReactNode; groups: TabGroups<T>; az?: Map<string, string> | null }) {
   const cell = (r: T, inGroup?: string) => {
     const key = groups.keyOf(r);
     return (
-      <div key={`${inGroup ?? ""}:${key}`} {...groups.ui.itemProps(key, inGroup)} className={`relative rounded-xl ${groups.ui.look(key)}`}>
+      <div key={`${inGroup ?? ""}:${key}`} data-az={az?.get(key)} {...groups.ui.itemProps(key, inGroup)} className={`relative min-w-0 rounded-xl ${groups.ui.look(key)}`}>
         <DropLine at={groups.ui.lineAt(key)} across />
         {tile(r)}
       </div>
     );
   };
   return (
-    <div className="flex flex-wrap gap-y-2 -mx-2">
+    <div className="grid gap-y-2 -mx-2" style={RASTER}>
       {entries.map((e) => {
         if ("entry" in e) return cell(e.entry);
         const { group, members } = e;
@@ -241,8 +253,10 @@ function Tiles<T>({ entries, tile, groups }: { entries: Arranged<T>[]; tile: (ro
               round={groups.round}
             />
             {isOpen && (
-              <div className="basis-full px-2">
-                <div className="flex flex-wrap gap-y-2 rounded-2xl bg-ink-hi/[0.035] py-1">{members.map((m) => cell(m, group.id))}</div>
+              <div className="col-span-full px-2">
+                <div className="grid gap-y-2 rounded-2xl bg-ink-hi/[0.035] py-1" style={RASTER}>
+                  {members.map((m) => cell(m, group.id))}
+                </div>
               </div>
             )}
           </Fragment>
@@ -412,27 +426,46 @@ export function ExploreView() {
   const genreGroups = groupsOf(genreKeyOf, (r) => r.genre.tracks.find((t) => t.thumb)?.thumb ?? "");
 
   const counts = { albums: albums.length, artists: artists.length, genres: genres.length };
+  // The tab as the interface names it ("Alben"), for the filter's placeholder and the empty answer.
+  const tabName = TABS.find((t) => t.key === tab)?.label ?? tab;
   const shown = { albums: shownAlbums.length, artists: shownArtists.length, genres: shownGenres.length }[tab];
   const sortLabel = tabColumns.find((c) => c.key === sort.by)?.label ?? tabColumns[0].label;
+  // Albums sorted by release show as a timeline in the tiles.
+  const timeline = tab === "albums" && layout === "grid" && sort.by === "released";
+  // While a list runs alphabetically the A–Z rail jumps through it. What a folded group hides has nothing to jump to.
+  const folded = new Set(q ? [] : ui.groups.filter((g) => !ui.isOpen(g.id)).flatMap((g) => g.items));
+  const az = (() => {
+    if (timeline) return null;
+    if (tab === "albums") {
+      const rows = shownAlbums.filter((r) => !folded.has(albumKeyOf(r)));
+      if (sort.by === "title") return azFirsts(rows, albumKeyOf, (r) => r.album.title);
+      if (sort.by === "artist") return azFirsts(rows, albumKeyOf, (r) => r.album.artist);
+      return null;
+    }
+    if (sort.by !== "name") return null;
+    if (tab === "artists") return azFirsts(shownArtists.filter((r) => !folded.has(artistKeyOf(r))), artistKeyOf, (r) => r.artist.name);
+    return azFirsts(shownGenres.filter((r) => !folded.has(genreKeyOf(r))), genreKeyOf, (r) => r.genre.name);
+  })();
+  const railLetters = az && shown >= 20 ? new Set(az.values()) : null;
 
   return (
     <div className="space-y-6">
-      <header className="pt-2">
+      <header className="pt-2 text-center">
         <h1 className="font-display text-[44px] font-extrabold tracking-[-0.04em] text-ink-hi leading-none">{T("Explore")}</h1>
         <p className="text-[14px] text-ink-dim mt-3">
           {T("{count} · {count2} · {count3} in your library", { count: plural(albums.length, T("album"), T("albums")), count2: plural(artists.length, T("artist"), T("artists")), count3: plural(genres.length, T("genre"), T("genres")) })}</p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Pills options={TABS.map((t) => ({ ...t, count: counts[t.key] }))} value={tab} onChange={setTab} />
-        <div className="ml-auto flex items-center gap-2">
+      <div className="flex flex-col items-center gap-3">
+        <Pills options={TABS.map((t) => ({ ...t, count: counts[t.key] }))} value={tab} onChange={setTab} wrap />
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <label className="relative flex items-center">
             <Search className="absolute left-3 w-4 h-4 text-ink-hi/45 pointer-events-none" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={T("Filter {tab}", { tab })}
-              aria-label={T("Filter {tab}", { tab })}
+              placeholder={T("Filter {tab}", { tab: tabName })}
+              aria-label={T("Filter {tab}", { tab: tabName })}
               className="h-9 w-56 pl-9 pr-8 rounded-full bg-ink-hi/[0.06] text-[13.5px] text-ink-hi placeholder:text-ink-hi/40 outline-none focus:bg-ink-hi/[0.09] transition-colors"
             />
             {query && (
@@ -483,55 +516,70 @@ export function ExploreView() {
       </div>
 
       {shown === 0 ? (
-        <EmptyState icon={Search} title={T("No {tab} match “{trim}”", { tab, trim: query.trim() })} body={T("Try another word.")} />
-      ) : layout === "grid" ? (
-        tab === "albums" ? (
-          <Tiles entries={arrangeGroups(ui.groups, shownAlbums, albumKeyOf)} groups={albumGroups} tile={(r) => <AlbumTile album={r.album} />} />
-        ) : tab === "artists" ? (
-          <Tiles
-            entries={arrangeGroups(ui.groups, shownArtists, artistKeyOf)}
-            groups={artistGroups}
-            tile={(r) => <ArtistTile name={r.artist.name} route={r.artist.route} subtitle={plural(r.artist.trackCount, T("song"), T("songs"))} fallbackThumb={r.artist.thumb} />}
-          />
-        ) : (
-          <Tiles entries={arrangeGroups(ui.groups, shownGenres, genreKeyOf)} groups={genreGroups} tile={(r) => <GenreTile genre={r.genre} />} />
-        )
-      ) : tab === "albums" ? (
-        <Table
-          label={T("Albums")}
-          entries={arrangeGroups(ui.groups, shownAlbums, albumKeyOf)}
-          columns={albumColumns}
-          sort={sorts.albums}
-          onSort={sortBy}
-          lead={(r) => <Artwork src={r.album.thumb} rounded="rounded-md" className="w-10 h-10" iconClassName="w-4 h-4" />}
-          open={(r) => navigate({ name: "album", param: r.album.route })}
-          play={(r) => playCollection(r.album.tracks)}
-          groups={albumGroups}
-        />
-      ) : tab === "artists" ? (
-        <Table
-          label={T("Artists")}
-          entries={arrangeGroups(ui.groups, shownArtists, artistKeyOf)}
-          columns={artistColumns}
-          sort={sorts.artists}
-          onSort={sortBy}
-          lead={(r) => <ArtistPhoto artist={r.artist} />}
-          open={(r) => navigate({ name: "artist", param: r.artist.route })}
-          play={(r) => playCollection(artistTracks(tracks, r.artist.name))}
-          groups={artistGroups}
-        />
+        <EmptyState icon={Search} title={T("No {tab} match “{trim}”", { tab: tabName, trim: query.trim() })} body={T("Try another word.")} />
+      ) : timeline ? (
+        <YearTimeline rows={shownAlbums} desc={sorts.albums.desc} />
       ) : (
-        <Table
-          label={T("Genres")}
-          entries={arrangeGroups(ui.groups, shownGenres, genreKeyOf)}
-          columns={genreColumns}
-          sort={sorts.genres}
-          onSort={sortBy}
-          lead={(r) => <CoverCollage tracks={r.genre.tracks} className="w-10 h-10 rounded-md" />}
-          open={(r) => navigate({ name: "genre", param: r.genre.route })}
-          play={(r) => playCollection(r.genre.tracks, true)}
-          groups={genreGroups}
-        />
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            {layout === "grid" ? (
+              tab === "albums" ? (
+                <Tiles az={az} entries={arrangeGroups(ui.groups, shownAlbums, albumKeyOf)} groups={albumGroups} tile={(r) => <AlbumTile fluid album={r.album} />} />
+              ) : tab === "artists" ? (
+                <Tiles
+                  az={az}
+                  entries={arrangeGroups(ui.groups, shownArtists, artistKeyOf)}
+                  groups={artistGroups}
+                  tile={(r) => (
+                    <ArtistTile fluid name={r.artist.name} route={r.artist.route} subtitle={plural(r.artist.trackCount, T("song"), T("songs"))} fallbackThumb={r.artist.thumb} />
+                  )}
+                />
+              ) : (
+                <Tiles az={az} entries={arrangeGroups(ui.groups, shownGenres, genreKeyOf)} groups={genreGroups} tile={(r) => <GenreTile fluid genre={r.genre} />} />
+              )
+            ) : tab === "albums" ? (
+              <Table
+                label={T("Albums")}
+                az={az}
+                entries={arrangeGroups(ui.groups, shownAlbums, albumKeyOf)}
+                columns={albumColumns}
+                sort={sorts.albums}
+                onSort={sortBy}
+                lead={(r) => <Artwork src={r.album.thumb} rounded="rounded-md" className="w-10 h-10" iconClassName="w-4 h-4" />}
+                open={(r) => navigate({ name: "album", param: r.album.route })}
+                play={(r) => playCollection(r.album.tracks)}
+                groups={albumGroups}
+              />
+            ) : tab === "artists" ? (
+              <Table
+                label={T("Artists")}
+                az={az}
+                entries={arrangeGroups(ui.groups, shownArtists, artistKeyOf)}
+                columns={artistColumns}
+                sort={sorts.artists}
+                onSort={sortBy}
+                lead={(r) => <ArtistPhoto artist={r.artist} />}
+                open={(r) => navigate({ name: "artist", param: r.artist.route })}
+                play={(r) => playCollection(artistTracks(tracks, r.artist.name))}
+                groups={artistGroups}
+              />
+            ) : (
+              <Table
+                label={T("Genres")}
+                az={az}
+                entries={arrangeGroups(ui.groups, shownGenres, genreKeyOf)}
+                columns={genreColumns}
+                sort={sorts.genres}
+                onSort={sortBy}
+                lead={(r) => <CoverCollage tracks={r.genre.tracks} className="w-10 h-10 rounded-md" />}
+                open={(r) => navigate({ name: "genre", param: r.genre.route })}
+                play={(r) => playCollection(r.genre.tracks, true)}
+                groups={genreGroups}
+              />
+            )}
+          </div>
+          {railLetters && <AzRail letters={railLetters} />}
+        </div>
       )}
     </div>
   );

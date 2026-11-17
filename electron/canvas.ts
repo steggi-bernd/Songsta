@@ -57,7 +57,29 @@ export function canvasUrlOk(url: string): boolean {
   }
 }
 
-let communityEntries: { song: string; artist: string; album: string; url: string }[] = [];
+interface CommunityEntry {
+  song: string;
+  artist: string;
+  album: string;
+  url: string;
+}
+
+/**
+ * The index's rows, from either of its forms: a bare list, or `{ items: [...] }` as it answers now
+ * (read as a bare list only, the index had gone quiet). Exported for regression tests.
+ */
+export function manifestEntries(json: unknown): CommunityEntry[] {
+  const items = (json as { items?: unknown } | null)?.items;
+  const list: unknown[] = Array.isArray(json) ? json : Array.isArray(items) ? items : [];
+  return list
+    .map((o) => {
+      const row = (o ?? {}) as Record<string, unknown>;
+      return { song: String(row.song ?? ""), artist: String(row.artist ?? ""), album: String(row.album ?? ""), url: String(row.url ?? "") };
+    })
+    .filter((e) => e.song && e.artist && canvasUrlOk(e.url));
+}
+
+let communityEntries: CommunityEntry[] = [];
 let communityFetchedAt = 0;
 
 async function communityManifest(): Promise<typeof communityEntries> {
@@ -66,15 +88,7 @@ async function communityManifest(): Promise<typeof communityEntries> {
   try {
     const res = await fetch(COMMUNITY_MANIFEST, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(8000) });
     if (res.ok) {
-      const arr = (await res.json()) as any[];
-      communityEntries = (Array.isArray(arr) ? arr : [])
-        .map((o) => ({
-          song: String(o?.song ?? ""),
-          artist: String(o?.artist ?? ""),
-          album: String(o?.album ?? ""),
-          url: String(o?.url ?? ""),
-        }))
-        .filter((e) => e.song && e.artist && canvasUrlOk(e.url));
+      communityEntries = manifestEntries(await res.json());
       communityFetchedAt = now;
     } else {
       communityFetchedAt = now; // serve what we have rather than dropping canvas

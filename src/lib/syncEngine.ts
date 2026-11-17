@@ -21,8 +21,12 @@
  *    the album edits and their pictures, fetched and merged like the playlists,
  *    each on its own. A service from before them doesn't list them: then they
  *    stay on each device as before.
+ *  - the listening history (lib/listenSync.ts): each device sends the plays it counted and takes the
+ *    others' in, so Replay counts every play on every device. A service from before it has none:
+ *    then each device counts its own.
  */
 import { LIBRARY_DOC_KINDS, LIBRARY_DOCS, sameLibraryDoc, type LibraryDocName } from "./librarySync";
+import { LISTEN_BATCH, LISTEN_PAGE, readListenPage, type ListenDevice, type SharedListen, type WireListen } from "./listenSync";
 import { mergePlaylistDocs, sameDoc, sameLikes, toPlaylistDoc, type PlaylistDoc, type WireTrack } from "./playlistSync";
 import type { QueueBranch } from "./queueSections";
 import { readServiceInfo, type SyncServiceInfo } from "./syncService";
@@ -143,6 +147,22 @@ export interface LibraryDocHost {
   merged?(rev: number): void;
 }
 
+/** One device's side of the shared listening history (lib/listenSync.ts). */
+export interface ListenHost {
+  /** who this device is in the history */
+  device(): ListenDevice;
+  /** This device's plays the service doesn't have yet, oldest first, at most `max`. */
+  pending(max: number): Promise<WireListen[]>;
+  /** The service has them, up to and with this one. */
+  sent(last: WireListen): void | Promise<void>;
+  /** How far this device has read the shared history (the service's count), kept across starts. */
+  readUpTo(): number;
+  /** The other devices' plays from there on, and how far that reads. With startOver (another service, or one that started over): read it from the start and send this device's plays again. */
+  take(listens: SharedListen[], devices: Record<string, ListenDevice>, upTo: number, startOver?: boolean): void | Promise<void>;
+  /** The service keeps no shared history (one from before 1.8): each device's Replay stays its own. */
+  missing?(): void;
+}
+
 export interface SyncHost {
   deviceId: string;
   request: SyncRequest;
@@ -177,6 +197,8 @@ export interface SyncHost {
   onListening?(): void;
   /** How the library is organised, document by document; one this device doesn't keep isn't synced. */
   library?: Partial<Record<LibraryDocName, LibraryDocHost>>;
+  /** The shared listening history; a device without it counts only its own plays. */
+  listens?: ListenHost;
   /**
    * What the service says about itself (lib/syncService.ts), once per start and only once it has
    * answered: a device that isn't linked to one asks nothing. Null when it says nothing usable.
@@ -205,6 +227,8 @@ const LIKES_AFTER_CHANGE_MS = 3000;
 const MUTED_AFTER_CHANGE_MS = 800;
 const PRESENCE_AFTER_CHANGE_MS = 300;
 const LIBRARY_AFTER_CHANGE_MS = 1500;
+/** A play counted here goes out after this long, together with any that follow. */
+const LISTENS_AFTER_CHANGE_MS = 10_000;
 /** A device that says nothing for longer than this and a bit counts as gone: see DEVICE_ONLINE_MS. */
 /** No word from the service for this long: nobody counts as around, and a device being followed can't be steered anyway. */
 const NOBODY_HEARD_AFTER_MS = 30_000;
@@ -257,6 +281,12 @@ export function createSyncEngine(host: SyncHost) {
   const libraryTimers = new Map<LibraryDocName, ReturnType<typeof setTimeout>>();
   /** not on this service (one from before them): asked again only at the next start */
   const libraryMissing = new Set<LibraryDocName>();
+  /** the service's count of listens, as last read; -1 before the first look */
+  let listensKnown = -1;
+  let listensMissing = false;
+  let listensBusy = false;
+  let listensAgain = false;
+  let listensTimer: ReturnType<typeof setTimeout> | null = null;
 
   const setStatus = (next: SyncStatus): void => {
     if (next === status) return;
@@ -402,6 +432,67 @@ export function createSyncEngine(host: SyncHost) {
         if (code === undefined || code === 401 || code === 403 || code >= 500) throw err;
       }
     }
+  }
+
+  /**
+   * The shared listening history (lib/listenSync.ts): what was played here goes out first, so it's in
+   * the history the others read; then the others' plays come in, a page at a time.
+   */
+  async function syncListens(): Promise<void> {
+    const side = host.listens;
+    if (!side || listensMissing) return;
+    if (listensBusy) {
+      listensAgain = true;
+      return;
+    }
+    listensBusy = true;
+    const gone = (): void => {
+      listensMissing = true;
+      side.missing?.();
+    };
+    try {
+      for (let round = 0; round < 200; round++) {
+        const batch = await side.pending(LISTEN_BATCH);
+        if (!batch.length) break;
+        const put = await call("POST", "/v1/listens", { device: { id: host.deviceId, ...side.device() }, listens: batch }, REQUEST_TIMEOUT_MS);
+        if (put.status === 404) return gone();
+        if (put.status !== 200) throw refused(put);
+        await side.sent(batch[batch.length - 1]);
+        if (batch.length < LISTEN_BATCH) break;
+      }
+      for (let round = 0; round < 500; round++) {
+        const from = side.readUpTo();
+        const got = await call("GET", `/v1/listens?since=${from}&limit=${LISTEN_PAGE}`, undefined, REQUEST_TIMEOUT_MS);
+        if (got.status === 404) return gone();
+        if (got.status !== 200) throw refused(got);
+        const page = readListenPage(got.body);
+        if (!page) return;
+        // A service holding less than was read from it is another one, or started over: read it from the start.
+        if (page.count < from) {
+          await side.take([], page.devices, 0, true);
+          continue;
+        }
+        // The service hands out the stretch right after "since": that far it's read, even where a line was unusable.
+        const upTo = from + (got.body.listens as unknown[]).length;
+        await side.take(page.listens.filter((l) => l.device !== host.deviceId), page.devices, upTo);
+        listensKnown = page.count;
+        if (!page.more || upTo === from) break;
+      }
+    } finally {
+      listensBusy = false;
+      if (listensAgain && running) {
+        listensAgain = false;
+        listensSoon(0);
+      }
+    }
+  }
+
+  function listensSoon(delay = LISTENS_AFTER_CHANGE_MS): void {
+    if (listensTimer) clearTimeout(listensTimer);
+    listensTimer = setTimeout(() => {
+      listensTimer = null;
+      if (running && status === "connected") void syncListens().catch(() => undefined);
+    }, delay);
   }
 
   async function pushPlayback(evenIfSent = false): Promise<void> {
@@ -622,6 +713,24 @@ export function createSyncEngine(host: SyncHost) {
         }
         if (revs.muted !== undefined && (!synced || revs.muted !== known.muted)) await pullMuted();
         await syncLibrary(revs, !synced);
+        // The shared listening history; a service from before it doesn't count listens.
+        if (host.listens) {
+          if (revs.listens === undefined) {
+            if (!listensMissing) {
+              listensMissing = true;
+              host.listens.missing?.();
+            }
+          } else if (!synced || revs.listens !== listensKnown) {
+            // An extra, and the round's last step: whatever goes wrong with it is tried again with the next
+            // news, and never holds up the rest. Only a login the service refused counts for everything.
+            try {
+              await syncListens();
+            } catch (err) {
+              const code = (err as { status?: number }).status;
+              if (code === 401 || code === 403) throw err;
+            }
+          }
+        }
         // Linked: the service answered. Once per start, what it says about itself.
         if (!synced) void checkService(mine);
         synced = true;
@@ -657,6 +766,8 @@ export function createSyncEngine(host: SyncHost) {
       known.devices = -1;
       for (const name of LIBRARY_DOCS) delete libraryKnown[name];
       libraryMissing.clear();
+      listensKnown = -1;
+      listensMissing = false;
       setStatus("connecting");
       void run(session);
     },
@@ -680,12 +791,25 @@ export function createSyncEngine(host: SyncHost) {
       playlistsTimer = playbackTimer = likesTimer = mutedTimer = presenceTimer = null;
       for (const timer of libraryTimers.values()) clearTimeout(timer);
       libraryTimers.clear();
+      if (listensTimer) clearTimeout(listensTimer);
+      listensTimer = null;
       wakeSleep?.();
       setStatus("off");
     },
 
     /** Something changed in the playlists here. */
     playlistsChanged: playlistsSoon,
+
+    /** A play was counted here: it goes out to the shared listening history in a moment, with any that follow. */
+    listensChanged(): void {
+      if (!enabled || !host.listens) return;
+      listensSoon();
+    },
+
+    /** The shared listening history, read now (Replay was opened). */
+    listensNow(): Promise<void> {
+      return running && status === "connected" && host.listens ? syncListens().catch(() => undefined) : Promise.resolve();
+    },
 
     /** Something changed here in how the library is organised: that document goes out in a moment. */
     libraryChanged(name: LibraryDocName): void {

@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, useMemo } from "react";
 import { useLibraryIndex } from "../lib/catalogIndex";
+import { Divider, ROW_INSET, SettingsGroup, SettingsRow, Switch, TEXT_INSET } from "../components/SettingsChrome";
 import {
   Activity,
   AppWindow,
   AudioLines,
+  Tags,
   BarChart3,
   Check,
-  ChevronRight,
   Circle,
   CircleAlert,
   CircleCheck,
@@ -53,6 +54,7 @@ import {
   Database,
   Info,
   Search,
+  ShieldCheck,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -65,6 +67,11 @@ import { installUpdate, lookNow, openReleasePage, startUpdate, useAppUpdate, use
 import { isLinux, isMac, isWindows } from "../lib/platform";
 import { ParametricEqEditor } from "../components/ParametricEqEditor";
 import { useUI, type MenuItem } from "../stores/ui";
+import { useAlbumGenres } from "../lib/albumGenres";
+import { serviceOn } from "../lib/netPolicy";
+import { SETTINGS_JUMP, type SettingsJump } from "../lib/settingsJump";
+import { MediaAnalysis } from "../components/MediaAnalysis";
+import { PrivacyBlock } from "./PrivacySettings";
 import { EQ_BANDS, listOutputDevices } from "../lib/audio";
 import type { OutputDeviceChoice } from "../lib/audio-output";
 import type { DiscordStatus } from "../../electron/discord";
@@ -72,91 +79,11 @@ import type { StartupState } from "../../electron/startup";
 import { discordAppId, SONGSTA_DISCORD_APP_ID } from "../lib/discordPresence";
 import type { JellyfinStatus } from "../../electron/jellyfin";
 import type { SubsonicStatus } from "../../electron/subsonic";
-import type { SoundStatus } from "../../electron/sound-library";
 import { refreshHomeSync, searchSyncAgain, useHomeSync } from "../lib/homeSync";
 import { syncFavorites } from "../lib/serverSync";
 import type { SyncStatus } from "../lib/syncEngine";
 import { SYNC_UPDATE_COMMAND } from "../lib/syncService";
-import { LANGUAGES, storedLanguageChoice, storeLanguageChoice, T, type LanguageChoice } from "../lib/i18n";
-
-/* ============================================================ settings chrome
-   Settings are inset cards of rows: an uppercase group header, a
-   rounded card, glyph + title + optional subtitle on the left, a value/switch
-   or chevron on the right, and hairline dividers inset to the text column. */
-
-const GROUP_INSET = "px-0"; // page padding comes from the view container
-const ROW_INSET = "px-4";
-const TEXT_INSET = "pl-[52px]"; // icon (22) + gap (14) + row inset (16)
-
-function SettingsGroup({
-  header,
-  footer,
-  children,
-}: {
-  header?: string;
-  footer?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="animate-slide-up" data-settings-group={header ?? ""}>
-      {header && (
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-dim px-1 pt-7 pb-2">
-          {header}
-        </h2>
-      )}
-      {!header && <div className="pt-7" />}
-      <div className={`rounded-[calc(14px*var(--radius-scale))] bg-panel overflow-hidden ${GROUP_INSET}`}>{children}</div>
-      {footer && <p className="text-[12.5px] text-ink-dim px-1 pt-2 leading-relaxed">{footer}</p>}
-    </section>
-  );
-}
-
-function Divider() {
-  return <div className={`settings-divider h-px bg-ink-hi/[0.08] ${TEXT_INSET}`} />;
-}
-
-function Switch({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!disabled) onChange(!checked);
-      }}
-      className={`relative shrink-0 w-[42px] h-[26px] rounded-full transition-colors duration-200 disabled:opacity-40 ${
-        checked ? "bg-accent" : "bg-ink-hi/[0.16]"
-      }`}
-    >
-      <span
-        className={`absolute top-[3px] w-[20px] h-[20px] rounded-full transition-all duration-200 ${
-          checked ? "left-[19px] bg-on-primary" : "left-[3px] bg-white"
-        }`}
-      />
-    </button>
-  );
-}
-
-function Chevron() {
-  return <ChevronRight className="w-5 h-5 text-ink-dim/70 shrink-0" />;
-}
-
-function Badge({ children }: { children: ReactNode }) {
-  return (
-    <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-ink-hi/90 rounded-[5px] bg-ink-hi/[0.16] px-1.5 py-0.5">
-      {children}
-    </span>
-  );
-}
+import { LANGUAGES, storedLanguageChoice, storeLanguageChoice, T, textLocale, type LanguageChoice } from "../lib/i18n";
 
 /** How this system installs FFmpeg, for the hint when it's missing. */
 const FFMPEG_INSTALL = isLinux ? "sudo apt install ffmpeg" : isMac ? "brew install ffmpeg" : "winget install ffmpeg";
@@ -185,51 +112,26 @@ function FfmpegRow() {
   );
 }
 
-/**
- * Sound analysis (electron/sound-library.ts): tempo, key and energy of every
- * local song, measured once in the background — its switch and how far it
- * got, asked again every few seconds while Settings is open.
- */
-function SoundAnalysisRow() {
-  const on = useSettings((s) => s.soundAnalysis);
-  const setOn = useSettings((s) => s.setSoundAnalysis);
-  const [status, setStatus] = useState<SoundStatus | null>(null);
-  useEffect(() => {
-    let live = true;
-    const read = (): void => {
-      void window.bytune
-        ?.soundStatus()
-        .then((st) => {
-          if (live) setStatus(st);
-        })
-        .catch(() => undefined);
-    };
-    read();
-    const timer = window.setInterval(read, 3000);
-    return () => {
-      live = false;
-      window.clearInterval(timer);
-    };
-  }, []);
-  const n = (v: number): string => v.toLocaleString("en-US");
-  const progress = !status
-    ? ""
-    : !status.ffmpeg
-      ? "needs FFmpeg"
-      : !on
-        ? ""
-        : status.total === 0
-          ? T("no local songs yet")
-          : status.done >= status.total
-            ? T("all {count} songs measured", { count: n(status.total) })
-            : T("{done} of {total} songs measured", { done: n(status.done), total: n(status.total) });
+/** Album genres from MusicBrainz and Wikidata (lib/albumGenres.ts): its switch and how many albums they knew. */
+function AlbumGenresRow() {
+  const on = useSettings((s) => s.albumGenresOnline);
+  const setOn = useSettings((s) => s.setAlbumGenresOnline);
+  const voted = useAlbumGenres((s) => s.voted.size);
+  // MusicBrainz switched off in Network & privacy: nobody is asked, and the row says why.
+  const musicBrainz = useSettings((s) => serviceOn("musicbrainz", s));
   return (
     <SettingsRow
-      icon={AudioLines}
-      title={T("Sound analysis")}
-      subtitle={T("Tempo, key and energy of each song, measured once in the background{value}", { value: progress ? ` — ${progress}` : "" })}
-      trailing={<Switch checked={on} onChange={setOn} />}
-      onClick={() => setOn(!on)}
+      icon={Tags}
+      title={T("Smarter album genres")}
+      subtitle={
+        !musicBrainz
+          ? T("Needs MusicBrainz, which is switched off in Network & privacy")
+          : on && voted
+            ? T("Genres from the tags, MusicBrainz and Wikidata, weighed together — {count} albums so far", { count: voted.toLocaleString(textLocale()) })
+            : T("Genres from the tags, MusicBrainz and Wikidata, weighed together. Sends album names and artists to those open databases.")
+      }
+      trailing={<Switch checked={on && musicBrainz} disabled={!musicBrainz} onChange={setOn} />}
+      onClick={musicBrainz ? () => setOn(!on) : undefined}
     />
   );
 }
@@ -335,7 +237,7 @@ function DiscordGroup() {
                 icon={ExternalLink}
                 title={T("Create an application")}
                 subtitle={T("Discord Developer Portal → New Application → name it → copy its Application ID (free)")}
-                onClick={() => window.open(DISCORD_PORTAL, "_blank")}
+                onClick={() => window.open(DISCORD_PORTAL, "_blank", "noopener,noreferrer")}
               />
             </>
           )}
@@ -567,60 +469,6 @@ function ServerSyncGroup() {
         </>
       )}
     </SettingsGroup>
-  );
-}
-
-function SettingsRow({
-  icon: Icon,
-  title,
-  subtitle,
-  value,
-  badge,
-  disabled,
-  onClick,
-  onPointerDown,
-  trailing,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  subtitle?: string;
-  value?: string;
-  badge?: string;
-  disabled?: boolean;
-  /** receives the event so rows can anchor a dropdown to themselves */
-  onClick?: (e: React.MouseEvent) => void;
-  /** dropdown rows stop the press here — the open menu survives until the
-      click, letting the same row toggle it closed (playbar "+" pattern) */
-  onPointerDown?: (e: React.PointerEvent) => void;
-  trailing?: ReactNode;
-}) {
-  const interactive = onClick && !disabled;
-  return (
-    <div
-      data-search={`${title} ${subtitle ?? ""}`.toLowerCase()}
-      onPointerDown={onPointerDown}
-      onClick={interactive ? (e) => onClick(e) : undefined}
-      className={`flex items-center min-h-[52px] py-3 ${ROW_INSET} ${
-        interactive ? "cursor-pointer hover:bg-ink-hi/[0.04] active:bg-ink-hi/[0.07] transition-colors" : ""
-      } ${disabled ? "opacity-45" : ""}`}
-    >
-      <Icon className="w-[22px] h-[22px] shrink-0 text-ink-hi" />
-      <div className="flex-1 min-w-0 ml-[14px]">
-        <div className="flex items-center">
-          <span className="text-[14px] text-ink-hi truncate">{title}</span>
-          {badge && <Badge>{badge}</Badge>}
-        </div>
-        {subtitle && <div className="text-[12.5px] text-ink-dim mt-0.5 leading-snug">{subtitle}</div>}
-      </div>
-      <div className="flex items-center gap-1 shrink-0 ml-3">
-        {trailing ?? (
-          <>
-            {value && <span className="text-[14px] text-ink-dim">{value}</span>}
-            {onClick && <Chevron />}
-          </>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -1054,7 +902,7 @@ function UpdateGroup() {
 
 /* ============================================================ the page's layout */
 
-type SettingsCategory = "playback" | "sound" | "lyrics" | "display" | "library" | "connections" | "startup" | "data" | "about";
+type SettingsCategory = "playback" | "sound" | "lyrics" | "display" | "library" | "connections" | "privacy" | "startup" | "data" | "about";
 
 const CATEGORIES: { key: SettingsCategory; label: string; blurb: string; icon: LucideIcon }[] = [
   { key: "playback", label: T("Playback"), blurb: T("How songs follow each other, and what plays when the list ends"), icon: CirclePlay },
@@ -1063,12 +911,13 @@ const CATEGORIES: { key: SettingsCategory; label: string; blurb: string; icon: L
   { key: "display", label: T("Display"), blurb: T("Language, colours, and how the app moves"), icon: Palette },
   { key: "library", label: T("Library"), blurb: T("Your folders, your servers, and what fills the gaps"), icon: Library },
   { key: "connections", label: T("Sync & devices"), blurb: T("Your other devices, receivers and TVs, and Discord"), icon: MonitorSmartphone },
+  { key: "privacy", label: T("Network & privacy"), blurb: T("What may go out to the internet, what's kept here, and where"), icon: ShieldCheck },
   { key: "startup", label: T("Startup & updates"), blurb: T("When Songsta opens, and how it stays up to date"), icon: Rocket },
   { key: "data", label: T("Your data"), blurb: T("Your listening, backups, and a fresh start"), icon: Database },
   { key: "about", label: T("About"), blurb: T("The version, and where Songsta comes from"), icon: Info },
 ];
 /** Each category's icon has a colour of its own in the list. */
-const CATEGORY_TINTS = ["#a78bfa", "#5eead4", "#f0abfc", "#fbbf24", "#7dd3fc", "#4ade80", "#fb7185", "#d4d4d8", "#a1a1aa"];
+const CATEGORY_TINTS = ["#a78bfa", "#5eead4", "#f0abfc", "#fbbf24", "#7dd3fc", "#4ade80", "#60a5fa", "#fb7185", "#d4d4d8", "#a1a1aa"];
 
 /** Behind a category's name: a narrow, darkened strip of the library's own covers. Nothing without enough of them. */
 function CoverStrip() {
@@ -1110,6 +959,31 @@ function SettingsLayout({ blocks }: { blocks: Record<SettingsCategory, ReactNode
   useEffect(() => {
     lastCategory = active;
   }, [active]);
+  // A row elsewhere in Settings leads here (lib/settingsJump.ts): the category, then its group in view, marked a moment.
+  useEffect(() => {
+    const onJump = (e: Event): void => {
+      const { category, group } = (e as CustomEvent<SettingsJump>).detail ?? { category: "" };
+      if (!isCategory(category)) return;
+      setQuery("");
+      setActive(category);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const target = group ? [...(content.current?.querySelectorAll<HTMLElement>("[data-settings-group]") ?? [])].find((g) => g.dataset.settingsGroup === group) : null;
+          if (!target) {
+            document.getElementById("view-scroll")?.scrollTo({ top: 0 });
+            return;
+          }
+          target.scrollIntoView({ block: "start", behavior: useSettings.getState().reduceAnimation ? "auto" : "smooth" });
+          target.classList.remove("settings-flash");
+          void target.offsetWidth;
+          target.classList.add("settings-flash");
+          window.setTimeout(() => target.classList.remove("settings-flash"), 1800);
+        })
+      );
+    };
+    window.addEventListener(SETTINGS_JUMP, onJump);
+    return () => window.removeEventListener(SETTINGS_JUMP, onJump);
+  }, []);
   useLayoutEffect(() => {
     const el = root.current;
     if (!el) return;
@@ -1542,6 +1416,14 @@ export function SettingsView() {
         />
         <Divider />
         <SettingsRow
+          icon={Library}
+          title={T("“Your Library” in the side panel")}
+          subtitle={T("The field that opens the Your Library page. Off, the panel is as Spotify's")}
+          trailing={<Switch checked={s.libraryField} onChange={s.setLibraryField} />}
+          onClick={() => s.setLibraryField(!s.libraryField)}
+        />
+        <Divider />
+        <SettingsRow
           icon={AppWindow}
           title={T("Reduce animation")}
           subtitle={T("Cut crossfades and motion through the app")}
@@ -1650,7 +1532,7 @@ export function SettingsView() {
         <Divider />
         <FfmpegRow />
         <Divider />
-        <SoundAnalysisRow />
+        <AlbumGenresRow />
         <Divider />
         <SettingsRow
           icon={ListChecks}
@@ -1658,6 +1540,11 @@ export function SettingsView() {
           subtitle={T("Artists written different ways, albums in parts, songs you have twice, missing covers")}
           onClick={() => useUI.getState().navigate({ name: "check" })}
         />
+      </SettingsGroup>
+
+      {/* Started by hand the first time: the whole library is measured once (components/MediaAnalysis.tsx). */}
+      <SettingsGroup header={T("Media analysis")}>
+        <MediaAnalysis bare />
       </SettingsGroup>
 
       <SettingsGroup header={T("Local music")}>
@@ -1708,6 +1595,7 @@ export function SettingsView() {
         <DiscordGroup />
       </>
     ),
+    privacy: <PrivacyBlock />,
     startup: (
       <>
         <StartupGroup />
@@ -1801,7 +1689,7 @@ export function SettingsView() {
           icon={ExternalLink}
           title={T("Songsta on GitHub")}
           subtitle={T("Releases, the source code and a place to report problems")}
-          onClick={() => void window.open("https://github.com/steggi-bernd/Songsta", "_blank")}
+          onClick={() => void window.open("https://github.com/steggi-bernd/Songsta", "_blank", "noopener,noreferrer")}
         />
       </SettingsGroup>
     ),

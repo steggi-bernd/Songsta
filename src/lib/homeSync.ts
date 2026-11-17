@@ -24,6 +24,8 @@ import { followClock, handOverToCast, takeBackFromCast } from "./audio";
 import { useCast } from "./cast";
 import { syncFavorites } from "./serverSync";
 import { libraryDocHosts, librarySyncReady, onLibrarySyncReady, watchLibraryDocs } from "./libraryDocs";
+import { computerListenHost, keepOwnPlaysHere, useListenCursors } from "./listenShare";
+import { sharesListens } from "./listenSync";
 import { createSyncEngine, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "./syncEngine";
 import { problemKey, serviceProblem, type SyncServiceInfo, type SyncServiceProblem } from "./syncService";
 import { T } from "./i18n";
@@ -158,6 +160,16 @@ function markLinked(serverKey: string | null): void {
 let searchNow: () => void = () => undefined;
 export const searchSyncAgain = (): void => searchNow();
 
+/** What came of taking this computer's plays off the sync service. */
+export type RemoveListensResult = "removed" | "old-service" | "not-linked" | "failed";
+let removeNow: () => Promise<RemoveListensResult> = () => Promise.resolve("not-linked");
+/**
+ * This computer's plays taken off the sync service's shared history (Settings → Network & privacy): the
+ * other devices keep what they already took in, this computer keeps its own history and doesn't send
+ * those plays again (lib/listenShare.ts keepOwnPlaysHere).
+ */
+export const removeSharedListens = (): Promise<RemoveListensResult> => removeNow();
+
 /** What the linked service said about itself: a service too old for this app is said once, and in Settings. */
 function hearService(info: SyncServiceInfo | null): void {
   const problem = serviceProblem(info);
@@ -201,6 +213,12 @@ function applyPlaylists(doc: PlaylistDoc): void {
     folders: doc.folders as LibraryFolder[],
     deletionSync: withSyncedDeletions(library.deletionSync, doc.deletionSync),
   });
+}
+
+/** The engine's "read the shared listening history now", while one runs (Replay opened). */
+let listensNowHook: (() => Promise<void>) | null = null;
+export function readListensNow(): Promise<void> {
+  return listensNowHook?.() ?? Promise.resolve();
 }
 
 export function watchHomeSync(): () => void {
@@ -687,6 +705,7 @@ export function watchHomeSync(): () => void {
       useCatalog.getState().loaded &&
       useLibrary.persist.hasHydrated() &&
       usePlayer.persist.hasHydrated() &&
+      useListenCursors.persist.hasHydrated() &&
       librarySyncReady();
     if (!wanted) {
       engine?.stop();
@@ -699,6 +718,8 @@ export function watchHomeSync(): () => void {
       if (moved) engine.retryNow();
       return;
     }
+    const libraryHosts = libraryDocHosts();
+    const listenHost = computerListenHost(() => serverKey, () => device.name);
     engine = createSyncEngine({
       deviceId: info.deviceId,
       request: (method, path, body, timeoutMs) => bridge!.homeSyncRequest(method, path, body, timeoutMs),
@@ -729,7 +750,15 @@ export function watchHomeSync(): () => void {
         applying = false;
       },
       onStatus: (status) => useHomeSync.setState({ status }),
-      library: libraryDocHosts(),
+      // How the library is organised, and the listening history all devices share (lib/listenShare.ts):
+      // each only while it's shared (Settings → Network & privacy), the history only while plays are kept
+      // here at all, since the other devices' come into it. The engine asks for them each time.
+      get library() {
+        return useSettings.getState().shareLibrary ? libraryHosts : undefined;
+      },
+      get listens() {
+        return sharesListens(useSettings.getState()) ? listenHost : undefined;
+      },
       onService: hearService,
     });
     otherDevices.send = (id, command) => engine?.sendCommand(id, command) ?? Promise.resolve(false);
@@ -776,6 +805,19 @@ export function watchHomeSync(): () => void {
     void engine?.checkPlayback();
   };
   searchNow = () => engine?.searchAgain();
+  removeNow = async () => {
+    if (!serverKey || !linked() || !device.id) return "not-linked";
+    try {
+      const res = await bridge.homeSyncRequest("DELETE", `/v1/listens?device=${encodeURIComponent(device.id)}`, undefined, 20_000);
+      // A service from before this can't take anything out.
+      if (res.status === 404 || res.status === 405) return "old-service";
+      if (res.status !== 200) return "failed";
+      await keepOwnPlaysHere(serverKey);
+      return "removed";
+    } catch {
+      return "failed";
+    }
+  };
   // Away from home and back: the address moved, and the service is looked for at the new one.
   const offReach = bridge.onJellyfinReach?.(() => refreshQuietly()) ?? (() => undefined);
 
@@ -818,6 +860,12 @@ export function watchHomeSync(): () => void {
   });
   const offSettings = useSettings.subscribe((s, prev) => {
     if (s.syncPlaylists !== prev.syncPlaylists) refreshQuietly();
+    // Shared again (or not any more): a fresh start says everything once, as at the app's start.
+    if (s.shareLibrary !== prev.shareLibrary || s.shareListens !== prev.shareListens || s.recordListening !== prev.recordListening) {
+      engine?.stop();
+      engine = null;
+      refreshQuietly();
+    }
   });
   const offHydrations = [
     useLibrary.persist.onFinishHydration(refreshQuietly),
@@ -828,7 +876,13 @@ export function watchHomeSync(): () => void {
     onLibrarySyncReady(refreshQuietly),
     // How the library is organised: pins, sort, groups, album edits and pictures (lib/libraryDocs.ts).
     watchLibraryDocs((name) => engine?.libraryChanged(name)),
+    useListenCursors.persist.onFinishHydration(refreshQuietly),
+    // A song over: a play may have been counted, and it goes out to the shared history in a moment.
+    usePlayer.subscribe((s, prev) => {
+      if (s.queue[s.index]?.id !== prev.queue[prev.index]?.id || s.playing !== prev.playing) engine?.listensChanged();
+    }),
   ];
+  listensNowHook = () => engine?.listensNow() ?? Promise.resolve();
   // Looked at again, or the network back (a computer woken up): a wait that died meanwhile is dropped at once.
   const onFocus = (): void => {
     engine?.lookNow(LISTENING_FINE_MS);
@@ -856,6 +910,7 @@ export function watchHomeSync(): () => void {
     offCatalog();
     offSettings();
     for (const off of offHydrations) off();
+    listensNowHook = null;
     window.removeEventListener("bytune:remote-library-updated", refreshQuietly);
     window.removeEventListener("focus", onFocus);
     window.removeEventListener("online", onFocus);

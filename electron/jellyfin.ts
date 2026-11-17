@@ -87,6 +87,12 @@ interface Config {
   syncUserName?: string | null;
 }
 
+/** The server's addresses, at home and away: your own server, always reachable (net-gate.ts). */
+export function serverAddresses(): string[] {
+  const cfg = readConfig();
+  return cfg ? [cfg.server, cfg.home ?? "", cfg.away ?? ""].filter(Boolean) : [];
+}
+
 function readConfig(): Config | null {
   const raw = persist.readData(CONFIG_STORE) as Config | null;
   return raw && typeof raw.server === "string" && raw.token ? raw : null;
@@ -510,6 +516,62 @@ export async function fetchStream(itemId: string, range: string | undefined): Pr
   const headers: Record<string, string> = { Authorization: authHeader(token, cfg.deviceId) };
   if (range) headers.Range = range;
   return fetch(`${cfg.server}${streamPath(itemId, cfg.deviceId)}`, { headers });
+}
+
+/**
+ * A short stretch of a song for the sound analysis (sound-library.ts): from `startSeconds` on, made
+ * mono MP3 at a low rate by the server, about `seconds` of it. A few hundred kilobytes, whatever the
+ * file is; the token stays in this process.
+ */
+/**
+ * A stretch of a song as low-rate MP3 (src/lib/serverSound.ts measures it). No answer: null; the
+ * server's refusal: its HTTP status, so a song it can't make a stretch of (a file it can't read) can
+ * be told from a server that's away.
+ */
+export async function fetchExcerpt(itemId: string, startSeconds: number, seconds: number): Promise<Uint8Array | number | null> {
+  const cfg = readConfig();
+  const token = openSecret(cfg?.token);
+  if (!cfg || !token || !/^[a-f0-9-]{32,36}$/i.test(itemId)) return null;
+  const params = new URLSearchParams({ mediaSourceId: itemId, deviceId: cfg.deviceId, audioCodec: "mp3", audioBitRate: "64000", audioChannels: "1", static: "false", startTimeTicks: String(Math.max(0, Math.round(startSeconds)) * 10_000_000) });
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), 60_000);
+  try {
+    const res = await fetch(`${cfg.server}/Audio/${itemId}/stream.mp3?${params}`, { headers: { Authorization: authHeader(token, cfg.deviceId) }, signal: stop.signal });
+    if (!res.ok) {
+      stop.abort();
+      return res.status;
+    }
+    return await firstBytes(res, seconds * 8000, stop);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Reads a reply until it holds `max` bytes, then lets the rest go. */
+async function firstBytes(res: Response, max: number, stop: AbortController): Promise<Uint8Array | null> {
+  if (!res.ok || !res.body) return null;
+  const reader = res.body.getReader();
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (size < max) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value);
+      size += value.length;
+    }
+  } finally {
+    stop.abort();
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return size > 0 ? out : null;
 }
 
 /** As far as their addresses can tell. */

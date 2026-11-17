@@ -14,6 +14,7 @@ const stubs = {
   "stores/playlists": `import { create } from "zustand"; export const usePlaylists = create(() => ({ playlists: [], restore: () => Promise.resolve() })); export const playlistTracks = (p) => p.tracks;`,
   storage: `export const readJson = async () => null; export const writeJson = (name, value) => { (globalThis.__saved ??= []).push([name, value]); };`,
   shared: `export { seedPlayed } from "${libraryOrder}";`,
+  "stores/settings": `export const useSettings = { getState: () => ({ recordListening: globalThis.__recordListening !== false }) };`,
 };
 const out = await build({
   stdin: { contents: `export { usePlayed, watchPlayed } from "./played"; export { usePlayer } from "./player"; export { useLibrary } from "./library"; export { usePlaylists } from "./playlists";`, resolveDir: stores, loader: "ts" },
@@ -76,6 +77,22 @@ test("songs from anywhere else, a search say, count for nothing", () => {
   const before = { ...usePlayed.getState().at };
   play([x9, c1], 0, null);
   assert.deepEqual(usePlayed.getState().at, before);
+});
+
+test("with Keep my plays off nothing becomes recent; back on, it counts again", () => {
+  usePlayer.setState({ playWhenReady: false, source: null });
+  const before = { ...usePlayed.getState().at };
+  globalThis.__recordListening = false;
+  try {
+    play([b1, c1], 0, "playlist:R");
+    assert.deepEqual(usePlayed.getState().at, before);
+  } finally {
+    globalThis.__recordListening = undefined;
+  }
+  usePlayer.setState({ playWhenReady: false });
+  play([b1, c1], 1, "playlist:R");
+  assert.ok(usePlayed.getState().at["playlist:R"] > 0);
+  usePlayer.setState({ playWhenReady: false, source: null });
 });
 
 test("another device's music shown here is that device's to count", () => {

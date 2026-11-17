@@ -53,8 +53,10 @@ function playOrToggle(active: boolean, play: () => void): () => void {
   return () => (active ? usePlayer.getState().toggle() : play());
 }
 
-const CARD =
-  "group w-[184px] shrink-0 text-left cursor-pointer active:scale-[0.98] rounded-xl p-2 transition-colors duration-200 hover:bg-ink-hi/[0.08]";
+const CARD_LOOK = "group text-left cursor-pointer active:scale-[0.98] rounded-xl p-2 transition-colors duration-200 hover:bg-ink-hi/[0.08]";
+/** a shelf's card keeps its width; a fluid one fills its grid cell (Explore's centred raster) */
+const CARD = `${CARD_LOOK} w-[184px] shrink-0`;
+const CARD_FLUID = `${CARD_LOOK} w-full min-w-0`;
 const CARD_TITLE = "text-[15px] font-semibold text-ink-hi truncate leading-snug";
 const CARD_SUB = "text-[13px] text-ink-dim truncate mt-0.5";
 
@@ -77,6 +79,7 @@ function Tile({
   playing,
   art,
   rootRef,
+  fluid,
 }: {
   thumb: string;
   round?: boolean;
@@ -89,6 +92,8 @@ function Tile({
   /** custom artwork (mix collage) instead of a single cover */
   art?: ReactNode;
   rootRef?: RefObject<HTMLDivElement>;
+  /** fills its grid cell instead of keeping a shelf card's width */
+  fluid?: boolean;
 }) {
   const shape = round ? "rounded-full" : "rounded-xl";
   return (
@@ -99,7 +104,7 @@ function Tile({
       onClick={onOpen}
       onKeyDown={activateOnKey(onOpen)}
       {...tintHoverHandlers(thumb)}
-      className={`${CARD} select-none`}
+      className={`${fluid ? CARD_FLUID : CARD} select-none`}
     >
       <div className={`relative overflow-hidden ${shape}`}>
         {art ?? (
@@ -122,11 +127,12 @@ function Tile({
   );
 }
 
-export function AlbumTile({ album, subtitle }: { album: LibAlbum; subtitle?: string }) {
+export function AlbumTile({ album, subtitle, fluid }: { album: LibAlbum; subtitle?: string; fluid?: boolean }) {
   const navigate = useUI((s) => s.navigate);
   const { active, playing } = useCollectionPlayback(album.tracks);
   return (
     <Tile
+      fluid={fluid}
       thumb={album.thumb}
       title={album.title}
       subtitle={subtitle ?? `${album.year ? `${album.year} · ` : ""}${album.artist}`}
@@ -185,19 +191,32 @@ export function useArtistPhoto(name: string, fallback = ""): string {
   return photo;
 }
 
-export function ArtistTile({ name, route, subtitle, fallbackThumb }: { name: string; route: string; subtitle: string; fallbackThumb: string }) {
+export function ArtistTile({
+  name,
+  route,
+  subtitle,
+  fallbackThumb,
+  fluid,
+}: {
+  name: string;
+  route: string;
+  subtitle: string;
+  fallbackThumb: string;
+  fluid?: boolean;
+}) {
   const navigate = useUI((s) => s.navigate);
   const [ref, seen] = useSeen<HTMLDivElement>();
   const photo = useArtistPhoto(seen ? name : "", fallbackThumb);
-  return <Tile rootRef={ref} round thumb={photo} title={name} subtitle={subtitle} onOpen={() => navigate({ name: "artist", param: route })} />;
+  return <Tile rootRef={ref} round fluid={fluid} thumb={photo} title={name} subtitle={subtitle} onOpen={() => navigate({ name: "artist", param: route })} />;
 }
 
 /** A genre of the library: a collage of its covers, opening the genre's page (all its songs). */
-export function GenreTile({ genre }: { genre: LibGenre }) {
+export function GenreTile({ genre, fluid }: { genre: LibGenre; fluid?: boolean }) {
   const navigate = useUI((s) => s.navigate);
   const { active, playing } = useCollectionPlayback(genre.tracks);
   return (
     <Tile
+      fluid={fluid}
       thumb={genre.tracks.find((t) => t.thumb)?.thumb ?? ""}
       title={genre.name}
       subtitle={`${genre.tracks.length} ${genre.tracks.length === 1 ? T("song") : T("songs")} · ${genre.artistCount} ${genre.artistCount === 1 ? T("artist") : T("artists")}`}

@@ -15,6 +15,7 @@ import { useLibrarySync } from "./librarySync";
 import { localSongs, setServerSongFiles, useLocalMusic } from "./localMusic";
 import { useSession } from "./session";
 import { useSettings } from "./settings";
+import { sharedEnergyOf, sharedSoundOf, useSoundShare } from "./soundShare";
 import { T } from "../shared";
 
 const FILE = "library.json";
@@ -86,8 +87,8 @@ function derive(data: ServerLibrary) {
     albums,
     artists: buildArtists(tracks, albums),
     genres: buildGenres(tracks),
-    // The sound analysis lives on the desktop: no Calm and Upbeat mixes here yet.
-    mixes: allMixes(tracks, data.counts, () => undefined),
+    // Tempo, key and energy as the computer measured them (stores/soundShare.ts): Calm and Upbeat mixes, and an order that flows.
+    mixes: allMixes(tracks, data.counts, { energyOf: sharedEnergyOf, sound: sharedSoundOf }),
     favorites: new Set(data.favorites),
   };
 }
@@ -311,13 +312,16 @@ export const useLibrary = create<LibraryState>((set, get) => ({
 
   notePlayed(track) {
     const s = session();
-    const { data } = get();
-    const plays = (data.counts[track.id]?.plays ?? 0) + 1;
     const at = Date.now();
-    const next = { ...data, counts: { ...data.counts, [track.id]: { plays, lastAt: at } } };
-    set({ data: next });
-    writeJson(FILE, forFile(next));
-    useListens.getState().note(track, at);
+    // Kept on this phone only while plays are (Settings → Network & privacy); the server hears of it by its own switch.
+    if (useSettings.getState().recordListening) {
+      const { data } = get();
+      const plays = (data.counts[track.id]?.plays ?? 0) + 1;
+      const next = { ...data, counts: { ...data.counts, [track.id]: { plays, lastAt: at } } };
+      set({ data: next });
+      writeJson(FILE, forFile(next));
+      useListens.getState().note(track, at);
+    }
     if (!s || track.localPath || !useSettings.getState().serverPlays) return;
     void markPlayed(s, track, new Date(at)).catch((err) => {
       if (!isNoAnswer(err)) return;
@@ -334,6 +338,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
     // The album edits belong to the account, like its playlists: the next login brings its own.
     useAlbumEdits.getState().clear();
     useLibrarySync.getState().clear();
+    useSoundShare.getState().clear();
     outbox = { likes: {}, plays: [] };
     set({ muted: new Set<string>(), mutedTracks: [], mutedAt: 0 });
     set({ ...derive(withLocal(EMPTY)), likedOrder: [], loaded: false, error: null });
@@ -359,6 +364,13 @@ useAlbumEdits.subscribe((s, prev) => {
 });
 useSettings.subscribe((s, prev) => {
   if (s.filterNonMusic !== prev.filterNonMusic) useLibrary.getState().applyLocal();
+});
+
+// The computer measured more, or a key was set there: the mixes are made again.
+useSoundShare.subscribe((s, prev) => {
+  if (s.sounds === prev.sounds && s.keys === prev.keys) return;
+  const { data, loaded } = useLibrary.getState();
+  if (loaded || data.tracks.length) useLibrary.setState(derive(data));
 });
 
 // Back within reach: what changed in the meantime.

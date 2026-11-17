@@ -1,17 +1,20 @@
 /**
  * What lies under the player, as in the computer's side panel: what comes next,
- * about the song (Genius), about the artist (Wikipedia, MusicBrainz). A card
- * nobody has anything for stays away.
+ * about the song (its tempo and key, the way to Klingt wie, and Genius), about the
+ * artist (Wikipedia, MusicBrainz). A card nobody has anything for stays away; about
+ * the song always shows, for the way to Klingt wie.
  */
 import { useNavigation } from "@react-navigation/native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { AudioWaveform } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useArtistAbout, useSongAbout } from "../about";
-import { leadArtist, OPEN_DATA_AGENT, type Track } from "../shared";
+import { camelotLabel, camelotOf, keyLabel, leadArtist, OPEN_DATA_AGENT, type Track } from "../shared";
 import { useArtistPhoto } from "../stores/library";
 import { usePlayer } from "../stores/player";
+import { sharedSoundOf, useSoundShare } from "../stores/soundShare";
 import { colors } from "../theme";
 import { Cover, picture } from "./ui";
 import { T } from "../shared";
@@ -70,37 +73,61 @@ function Pill({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-export function AboutSongCard({ track, active }: { track: Track; active: boolean }) {
+/**
+ * About the song: its tempo and key as the computer's media analysis measured them (stores/soundShare.ts),
+ * the way to Klingt wie, and from Genius when and on what it came out, its story and its credits.
+ */
+export function AboutSongCard({ track, active, onSoundsLike }: { track: Track; active: boolean; onSoundsLike: () => void }) {
   const songInfo = useSongAbout(track, active);
+  // Read again when the computer's measurements come in.
+  useSoundShare((s) => s.sounds);
+  const sound = sharedSoundOf(track);
+  const camelot = sound && sound.key >= 0 ? camelotOf(sound.key, sound.minor) : null;
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [track.id]);
   const info = songInfo && (songInfo.description || songInfo.credits.length || songInfo.released) ? songInfo : null;
-  if (!info) return null;
-  const when = [info.released, info.album].filter(Boolean).join(" · ");
-  const more = (info.description?.length ?? 0) > STORY_FITS || info.credits.length > CREDITS_SHOWN || info.samples.length > 0 || !!info.recordedAt;
+  const when = info ? [info.released, info.album].filter(Boolean).join(" · ") : "";
+  const more = !!info && ((info.description?.length ?? 0) > STORY_FITS || info.credits.length > CREDITS_SHOWN || info.samples.length > 0 || !!info.recordedAt);
   return (
     <View style={styles.card}>
       <View style={styles.head}>
         <Text style={styles.title}>{T("About the song")}</Text>
-        <Pill label={T("Genius")} onPress={() => void Linking.openURL(info.url)} />
+        {info && <Pill label={T("Genius")} onPress={() => void Linking.openURL(info.url)} />}
       </View>
       {!!when && (
         <Text numberOfLines={1} style={styles.line}>
           {when}
         </Text>
       )}
-      {!!info.description && (
+      <View style={styles.soundRow}>
+        <View>
+          <Text style={styles.factLabel}>{T("Tempo")}</Text>
+          <Text style={styles.soundValue}>{sound?.bpm ? `${Math.round(sound.bpm)} BPM` : "–"}</Text>
+        </View>
+        <View style={styles.soundKey}>
+          <Text style={styles.factLabel}>{T("Key")}</Text>
+          <Text numberOfLines={1} style={styles.soundValue}>
+            {sound && camelot ? `${keyLabel(sound.key, sound.minor)} · ${camelotLabel(camelot)}` : "–"}
+          </Text>
+        </View>
+        <Pressable onPress={onSoundsLike} accessibilityRole="button" hitSlop={6} style={styles.soundsLike}>
+          <AudioWaveform size={15} color={colors.accent} />
+          <Text style={styles.soundsLikeText}>{T("Sounds like")}</Text>
+        </Pressable>
+      </View>
+      {!sound && <Text style={styles.soundNote}>{T("Tempo and key come from your computer's media analysis, through your sync service.")}</Text>}
+      {!!info?.description && (
         <Text numberOfLines={open ? undefined : LINES_SHOWN} style={styles.story}>
           {info.description}
         </Text>
       )}
-      {(open ? info.credits : info.credits.slice(0, CREDITS_SHOWN)).map((c, i) => (
+      {(info ? (open ? info.credits : info.credits.slice(0, CREDITS_SHOWN)) : []).map((c, i) => (
         <Fact key={`${c.label}-${i}`} label={c.label}>
           {c.names.join(", ")}
         </Fact>
       ))}
-      {open && info.samples.length > 0 && <Fact label={T("Samples")}>{info.samples.map((x) => (x.artist ? `${x.title} · ${x.artist}` : x.title)).join("\n")}</Fact>}
-      {open && !!info.recordedAt && <Fact label={T("Recorded at")}>{info.recordedAt}</Fact>}
+      {open && !!info && info.samples.length > 0 && <Fact label={T("Samples")}>{info.samples.map((x) => (x.artist ? `${x.title} · ${x.artist}` : x.title)).join("\n")}</Fact>}
+      {open && !!info?.recordedAt && <Fact label={T("Recorded at")}>{info.recordedAt}</Fact>}
       {more && (
         <Pressable onPress={() => setOpen(!open)} hitSlop={10} style={styles.more}>
           <Text style={styles.link}>{open ? T("Show less") : T("Show more")}</Text>
@@ -182,6 +209,12 @@ const styles = StyleSheet.create({
   factLabel: { color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: "600", letterSpacing: 0.9, textTransform: "uppercase" },
   factValue: { color: "rgba(255,255,255,0.88)", fontSize: 14, marginTop: 3 },
   more: { alignSelf: "flex-start", marginTop: 12 },
+  soundRow: { flexDirection: "row", alignItems: "flex-end", gap: 22, marginTop: 12 },
+  soundKey: { flexShrink: 1 },
+  soundValue: { color: "rgba(255,255,255,0.88)", fontSize: 14, marginTop: 3 },
+  soundsLike: { marginLeft: "auto", flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: "rgba(167,139,250,0.16)" },
+  soundsLikeText: { color: colors.accent, fontSize: 12.5, fontWeight: "800" },
+  soundNote: { color: "rgba(255,255,255,0.5)", fontSize: 12.5, lineHeight: 17, marginTop: 8 },
   photo: { aspectRatio: 3 / 2, backgroundColor: "rgba(255,255,255,0.06)" },
   photoTitle: { position: "absolute", top: 12, left: 16 },
   plainTitle: { paddingHorizontal: 16, paddingTop: 16 },

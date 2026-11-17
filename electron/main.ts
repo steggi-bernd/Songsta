@@ -1,6 +1,8 @@
 /** Songsta desktop — Electron main process. */
 // First of all: the data folder moves before anything else opens a file in it.
 import "./rename-data";
+// Then the folder you chose for it, if you did (Settings → Network & privacy).
+import "./data-location";
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, protocol, screen, session, shell } from "electron";
 import type { NativeImage } from "electron";
 import { fileURLToPath, pathToFileURL } from "url";
@@ -21,10 +23,12 @@ import * as jellyfin from "./jellyfin";
 import * as subsonic from "./subsonic";
 import { indexLibraryLyrics, libraryLyrics, type LyricsRequest } from "./library-lyrics";
 import { saveLyricsIndexSync, searchLyrics } from "./lyrics-index";
-import { analyseLibrarySound, configureSoundAnalysis, saveSoundIndexSync, setSoundAnalysisEnabled, soundFacts, soundStatus } from "./sound-library";
+import { adoptSounds, analyseLibrarySound, configureSoundAnalysis, keepServerSound, measuredServerSongs, retrySkipped, saveSoundIndexSync, setSoundAnalysisEnabled, skippedSongs, skipServerSound, soundFacts, soundStatus } from "./sound-library";
 import * as meta from "./metadata";
 import * as songInfo from "./song-info";
 import * as listens from "./listens";
+import * as albumGenres from "./album-genres";
+import { readListenPage } from "../src/lib/listenSync";
 import { configureAppUpdate, installUpdate, latestKnown, startUpdate, updateState } from "./app-update";
 import { addFirewallRule, firewallMatters, hasFirewallRule } from "./firewall";
 import { backupExport, backupImport } from "./backup";
@@ -38,7 +42,13 @@ import * as transition from "./data-transition";
 import { buildAppMenu, type MenuCommand, type MenuPlaybackState, type MenuWiring } from "./mac-menu";
 import * as startup from "./startup";
 import { onAnotherScreen, placeOn, placeToKeep, readPlace, strayed, type Area, type WindowPlace } from "./window-place";
+import { askMove, cancelMove, clearCachesAtStart, dataPlace, forgetLeftover, networkCaches } from "./data-location";
+import { sizeOf } from "./data-place";
+import { gatePages, installNetGate, netActivity, ownServersChanged, privacy, setPrivacy, trustEntered } from "./net-gate";
 import type { Track } from "../src/types";
+
+// Every request to the internet passes the switches in Settings → Network & privacy; your own servers always go.
+installNetGate(() => [...jellyfin.serverAddresses(), ...subsonic.serverAddresses(), ...homeSync.syncAddresses()]);
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 const isMac = process.platform === "darwin";
@@ -525,7 +535,6 @@ const RENDERER_STORES = new Set([
   "library",
   "player",
   "recent-searches",
-  "artist-about-cache",
   "smart-playlists",
   "spotify-import",
   "album-edits",
@@ -537,6 +546,14 @@ const RENDERER_STORES = new Set([
   "server-sync",
   // when each song joined Liked Songs or a playlist (lib/listDates.ts)
   "list-dates",
+  // songs skipped early (stores/skips.ts)
+  "skips",
+  // when each album came into the library (stores/albumsSeen.ts)
+  "albums-seen",
+  // how far the shared listening history was sent and read (lib/listenShare.ts)
+  "listen-sync",
+  // keys set by hand where the analysis heard another (stores/keyEdits.ts)
+  "key-edits",
 ]);
 /** "jf:<item>" / "ss:<song>" — a song on one of the servers. */
 function serverItem(id: unknown): { kind: "jf" | "ss"; raw: string } {
@@ -572,6 +589,21 @@ function registerIpc(): void {
   // The sound analysis (sound-library.ts): progress for Settings, results for mixes, details and transitions.
   ipc.handle("sound:status", () => soundStatus());
   ipc.handle("sound:facts", () => soundFacts());
+  // Server songs, measured by the renderer from a short stretch the server makes (src/lib/serverSound.ts).
+  ipc.handle("sound:excerpt", async (_e, id: unknown, startSeconds: unknown) => {
+    if (typeof id !== "string") return null;
+    const start = typeof startSeconds === "number" && Number.isFinite(startSeconds) ? Math.min(Math.max(0, startSeconds), 1200) : 30;
+    if (id.startsWith("jf:")) return jellyfin.fetchExcerpt(id.slice(3), start, 90);
+    if (id.startsWith("ss:")) return subsonic.fetchExcerpt(id.slice(3), start, 90);
+    return null;
+  });
+  ipc.handle("sound:keep", (_e, id: unknown, facts: unknown) => keepServerSound(id, facts));
+  ipc.handle("sound:skip", (_e, id: unknown, reason: unknown) => skipServerSound(id, reason));
+  ipc.handle("sound:skipped", () => skippedSongs());
+  ipc.handle("sound:retry", () => retrySkipped());
+  // What another device measured, through the sync service (src/lib/soundShare.ts).
+  ipc.handle("sound:adopt", (_e, entries: unknown) => adoptSounds(entries));
+  ipc.handle("sound:measured", () => measuredServerSongs());
   ipc.handle("sound:enabled", (_e, on: unknown) => setSoundAnalysisEnabled(on !== false));
 
   ipc.handle("library:get", () => locallib.readLocalLibrary());
@@ -669,11 +701,31 @@ function registerIpc(): void {
   ipc.handle("meta:artistPicture", (_e, name: unknown) => meta.lookupArtistPicture(String(name ?? "").slice(0, 200)));
   // Jellyfin server as a second library source.
   ipc.handle("jellyfin:status", () => jellyfin.status());
-  ipc.handle("jellyfin:setAway", (_e, address: unknown) => jellyfin.setAway(address));
-  ipc.handle("jellyfin:connect", (_e, input: { server: string; username?: string; password?: string; apiKey?: string }) =>
-    jellyfin.connect(input ?? { server: "" })
-  );
-  ipc.handle("jellyfin:disconnect", () => jellyfin.disconnect());
+  // An address typed in for your own server goes through even with "only my own servers" on (net-gate.ts),
+  // and your servers' list is read again once it's saved.
+  ipc.handle("jellyfin:setAway", async (_e, address: unknown) => {
+    trustEntered(address);
+    try {
+      return await jellyfin.setAway(address);
+    } finally {
+      ownServersChanged();
+    }
+  });
+  ipc.handle("jellyfin:connect", async (_e, input: { server: string; username?: string; password?: string; apiKey?: string }) => {
+    trustEntered(input?.server);
+    try {
+      return await jellyfin.connect(input ?? { server: "" });
+    } finally {
+      ownServersChanged();
+    }
+  });
+  ipc.handle("jellyfin:disconnect", async () => {
+    try {
+      return await jellyfin.disconnect();
+    } finally {
+      ownServersChanged();
+    }
+  });
   ipc.handle("jellyfin:library", () => jellyfin.readLibrary());
   ipc.handle("jellyfin:refresh", () => jellyfin.refreshLibrary());
   // The relist at start (stores/catalog.ts) only needs to hear whether anything changed; null: the
@@ -686,17 +738,35 @@ function registerIpc(): void {
 
   // Navidrome / Subsonic server as a third library source.
   ipc.handle("subsonic:status", () => subsonic.status());
-  ipc.handle("subsonic:connect", (_e, input: { server: string; username: string; password: string }) =>
-    subsonic.connect(input ?? { server: "", username: "", password: "" })
-  );
-  ipc.handle("subsonic:disconnect", () => subsonic.disconnect());
+  ipc.handle("subsonic:connect", async (_e, input: { server: string; username: string; password: string }) => {
+    trustEntered(input?.server);
+    try {
+      return await subsonic.connect(input ?? { server: "", username: "", password: "" });
+    } finally {
+      ownServersChanged();
+    }
+  });
+  ipc.handle("subsonic:disconnect", async () => {
+    try {
+      return await subsonic.disconnect();
+    } finally {
+      ownServersChanged();
+    }
+  });
   ipc.handle("subsonic:library", () => subsonic.readLibrary());
   ipc.handle("subsonic:refresh", () => subsonic.refreshLibrary());
   ipc.handle("subsonic:relist", () => subsonic.refreshLibrary().then((listed) => listed.changed, () => null));
 
   // The sync service: the page decides what to say (lib/homeSync.ts), the login stays here.
   ipc.handle("homeSync:info", () => homeSync.info());
-  ipc.handle("homeSync:setAddress", (_e, value: unknown) => homeSync.setAddress(String(value ?? "").slice(0, 300)));
+  ipc.handle("homeSync:setAddress", async (_e, value: unknown) => {
+    trustEntered(value);
+    try {
+      return await homeSync.setAddress(String(value ?? "").slice(0, 300));
+    } finally {
+      ownServersChanged();
+    }
+  });
   ipc.handle("homeSync:request", (_e, method: unknown, path: unknown, body: unknown, timeoutMs: unknown) =>
     homeSync.request(method, path, body, timeoutMs)
   );
@@ -745,7 +815,8 @@ function registerIpc(): void {
   ipc.on(
     "playback:event",
     (_e, ev: { type: string; track?: Track; positionSec?: number; playedSec?: number; deltaMs?: number }) => {
-      if (dataResetActive) return;
+      // Plays aren't kept while that's switched off (Settings → Network & privacy).
+      if (dataResetActive || !privacy().recordListening) return;
       // A new listen re-arms the one-play rule (replays count, loops don't).
       if (ev.type === "start" && ev.track?.id) stats.noteTrackStart(ev.track.id);
       if ((ev.type === "progress" || ev.type === "stop" || ev.type === "pause") && ev.track && (ev.deltaMs ?? 0) > 0) {
@@ -782,6 +853,93 @@ function registerIpc(): void {
     listens.readListens(typeof before === "number" ? before : undefined, Number(limit) || 100)
   );
   ipc.handle("listens:moment", () => listens.momentScores());
+  // Album genres from MusicBrainz and Wikidata (album-genres.ts): what's known, and albums to ask about.
+  ipc.handle("genres:known", () => albumGenres.albumGenresKnown());
+  ipc.handle("genres:ask", (_e, albums: unknown) =>
+    albumGenres.askAlbumGenres(
+      (Array.isArray(albums) ? albums : [])
+        .slice(0, 5000)
+        .map((a: any) => ({ key: String(a?.key ?? "").slice(0, 400), title: String(a?.title ?? "").slice(0, 300), artist: String(a?.artist ?? "").slice(0, 300) }))
+    )
+  );
+  ipc.handle("genres:stop", () => albumGenres.stopAlbumGenres());
+  // Settings → Network & privacy: what may go out and what's kept, the connection log, where the data lives.
+  ipc.handle("net:privacy", (_e, policy: unknown) => {
+    setPrivacy(policy);
+    return true;
+  });
+  ipc.handle("net:activity", () => netActivity());
+  ipc.handle("data:place", () => dataPlace());
+  ipc.handle("data:usage", async () => {
+    const folder = app.getPath("userData");
+    const data = path.join(folder, "data");
+    const [listening, history, searches, skips, analysis, caches, total] = await Promise.all([
+      sizeOf(path.join(data, "stats")),
+      Promise.all([sizeOf(path.join(data, "listens.jsonl")), sizeOf(path.join(data, "listening-history.json"))]).then(([a, b]) => a + b),
+      sizeOf(path.join(data, "recent-searches.json")),
+      sizeOf(path.join(data, "skips.json")),
+      sizeOf(path.join(folder, "analysis-cache")),
+      Promise.all(networkCaches(folder).map((p) => sizeOf(p))).then((sizes) => sizes.reduce((a, b) => a + b, 0)),
+      sizeOf(folder),
+    ]);
+    return { listening: listening + history, searches, skips, analysis, caches, total };
+  });
+  // A move and the caches' going happen at the next start, before anything opens a file: Songsta starts again for it.
+  ipc.handle("data:move", (_e, target: unknown) => {
+    const reason = askMove(typeof target === "string" ? target : "");
+    if (reason) return { ok: false, reason };
+    setTimeout(() => {
+      app.relaunch();
+      app.quit();
+    }, 300);
+    return { ok: true };
+  });
+  ipc.handle("data:cancelMove", () => cancelMove());
+  ipc.handle("data:forgetLeftover", () => forgetLeftover());
+  ipc.handle("data:clearCaches", () => {
+    clearCachesAtStart();
+    setTimeout(() => {
+      app.relaunch();
+      app.quit();
+    }, 300);
+    return true;
+  });
+  // Every play kept here goes: the listening history and Replay's counts. The sync service keeps what it has.
+  ipc.handle("data:clearListening", async () => {
+    stats.resetStats();
+    await listens.clearListens();
+    await persist.drainWrites();
+    const data = path.join(app.getPath("userData"), "data");
+    await fs.promises.rm(path.join(data, `${stats.HISTORY_STORE}.json`), { force: true });
+    await fs.promises.rm(path.join(data, "stats"), { recursive: true, force: true });
+    stats.resetStats();
+    return true;
+  });
+  ipc.handle("data:pickFolder", async () => {
+    if (!mainWindow) return null;
+    const res = await dialog.showOpenDialog(mainWindow, { title: "Where Songsta keeps your data", properties: ["openDirectory", "createDirectory"] });
+    return res.canceled || !res.filePaths[0] ? null : res.filePaths[0];
+  });
+  ipc.handle("data:open", () => shell.openPath(app.getPath("userData")));
+  albumGenres.onAlbumGenres(() => mainWindow?.webContents.send("genres:updated"));
+  ipc.handle("listens:together", (_e, ids: unknown, limit: unknown) =>
+    listens.togetherScores(Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string").slice(0, 10) : [], Math.min(100, Number(limit) || 40))
+  );
+  // The shared listening history (src/lib/listenSync.ts): this computer's plays to send, the others' to take in.
+  // The shared listening history only while plays are kept here at all (Settings → Network & privacy).
+  ipc.handle("listens:pending", async (_e, from: unknown, max: unknown) => {
+    const own = await listens.ownListensFrom(Number(from) || 0, Number(max) || 500);
+    if (!privacy().recordListening) return { total: own.total, listens: [] };
+    return { total: own.total, listens: own.listens.map((l) => ({ at: l.at, id: l.id, title: l.title, artist: l.artist, ...(l.album ? { album: l.album } : {}), ms: l.duration * 1000 })) };
+  });
+  ipc.handle("listens:take", async (_e, raw: unknown, devices: unknown) => {
+    if (!privacy().recordListening) return { added: 0 };
+    const page = readListenPage({ count: 0, listens: Array.isArray(raw) ? raw : [], devices: devices && typeof devices === "object" ? devices : {} });
+    if (!page) return { added: 0 };
+    const fresh = await listens.noteRemoteListens(page.listens, page.devices);
+    stats.recordRemotePlays(fresh);
+    return { added: fresh.length };
+  });
   ipc.handle("listens:export", async () => {
     if (!mainWindow) return null;
     const res = await dialog.showSaveDialog(mainWindow, {
@@ -1129,6 +1287,8 @@ if (!gotLock) {
     } else {
       Menu.setApplicationMenu(null);
     }
+    // The pages' requests (pictures, videos) pass the same switches as this process' own.
+    gatePages(session.defaultSession);
     persist.migrateLegacyData();
     watchServerReach();
     pip.bindMainWindowGetter(() => mainWindow);
@@ -1231,7 +1391,7 @@ if (!gotLock) {
     // deterministic if the session approves it — Electron's implicit default
     // made that depend on build flags. Keep Electron's approve-all behavior
     // but pinned explicitly, so the picker works the same everywhere.
-    session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => {
       callback(true);
     });
     session.defaultSession.setPermissionCheckHandler(() => true);

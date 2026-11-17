@@ -10,7 +10,9 @@ import * as persist from "./persist";
 
 const STORE = "home-sync";
 const MAX_TIMEOUT_MS = 60_000;
-const ALLOWED_PATH = /^\/v1\/(docs\/[a-z]+|changes\?since=-?\d+&wait=\d+(&device=[A-Za-z0-9._%:-]+)?|devices(\/[A-Za-z0-9._%:-]+(\/commands)?)?)$/;
+const ALLOWED_PATH = /^\/v1\/(docs\/[a-z]+|changes\?since=-?\d+&wait=\d+(&device=[A-Za-z0-9._%:-]+)?|devices(\/[A-Za-z0-9._%:-]+(\/commands)?)?|listens(\?since=\d+&limit=\d+)?)$/;
+/** A device's plays taken out of the shared history (DELETE only). */
+const REMOVE_PATH = /^\/v1\/listens\?device=[A-Za-z0-9._%:-]+$/;
 /** What the service says about itself: its version and documents, asked once it's linked. */
 const HEALTH_PATH = "/health";
 
@@ -49,6 +51,12 @@ export function info(): HomeSyncInfo {
   };
 }
 
+/** The sync service's addresses: yours, always reachable (net-gate.ts). */
+export function syncAddresses(): string[] {
+  const login = jellyfin.syncLogin();
+  return [customAddress(), login?.server ? defaultSyncAddress(login.server) : null].filter((a): a is string => !!a);
+}
+
 export async function setAddress(value: string): Promise<HomeSyncInfo> {
   const address = value.trim() ? jellyfin.normalizeServer(value) : "";
   await persist.writeData(STORE, { address });
@@ -56,8 +64,10 @@ export async function setAddress(value: string): Promise<HomeSyncInfo> {
 }
 
 export async function request(method: unknown, path: unknown, body: unknown, timeoutMs: unknown): Promise<{ status: number; body: unknown }> {
-  if (method !== "GET" && method !== "PUT" && method !== "POST") throw new Error("Not a request for the sync service");
-  if (typeof path !== "string" || !(ALLOWED_PATH.test(path) || (method === "GET" && path === HEALTH_PATH))) {
+  // The one thing ever deleted there: this computer's plays, on asking (Settings → Network & privacy).
+  const removal = method === "DELETE" && typeof path === "string" && REMOVE_PATH.test(path);
+  if (method !== "GET" && method !== "PUT" && method !== "POST" && !removal) throw new Error("Not a request for the sync service");
+  if (typeof path !== "string" || !(removal || ALLOWED_PATH.test(path) || (method === "GET" && path === HEALTH_PATH))) {
     throw new Error("Not a request for the sync service");
   }
   const login = jellyfin.syncLogin();

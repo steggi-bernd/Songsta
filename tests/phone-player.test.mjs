@@ -18,7 +18,7 @@ const stubs = {
   "stores/session": `export const useSession = { getState: () => ({ session: null }) }; export const here = (x) => x;`,
   "stores/settings": `export const useSettings = { getState: () => ({ autoplay: false, dontRepeat: false, speed: 1, skipEndsRepeatOne: globalThis.__skipEnds !== false }) };`,
   "stores/popups": `export const toast = () => undefined;`,
-  storage: `export const readJson = async () => null; export const writeJson = () => undefined;`,
+  storage: `export const readJson = async () => null; export const writeJson = () => undefined; export const removeJson = () => undefined;`,
   jellyfin: `export const streamUrl = () => "http://test/song";`,
   addresses: `export const withoutServer = (x) => x;`,
   quality: `export const ORIGINAL = { kind: "original" }; export const chooseStream = () => globalThis.__stream ?? ORIGINAL; export const levelGain = () => 0; export const sameChoice = () => true; export const stepDown = () => null;`,

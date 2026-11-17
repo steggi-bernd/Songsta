@@ -11,6 +11,7 @@ import { create } from "zustand";
 import { FIELDS, OP_LABEL, SMART_PRESETS, SORT_LABEL, evaluateSmartPlaylist } from "../lib/smartPlaylists";
 import { useCatalog } from "../stores/catalog";
 import { useLibrary } from "../stores/library";
+import { soundOf, useSound } from "../stores/sound";
 import { useSmartPlaylists, type RuleField, type SmartPlaylist, type SmartRule, type SmartSort } from "../stores/smartPlaylists";
 import { useUI } from "../stores/ui";
 import { T } from "../lib/i18n";
@@ -50,7 +51,7 @@ function RuleRow({ rule, onChange, onRemove }: { rule: SmartRule; onChange: (r: 
       <select value={rule.op} onChange={(e) => onChange({ ...rule, op: e.target.value as SmartRule["op"] })} className={`${INPUT} w-[150px]`}>
         {def.ops.map((op) => (
           <option key={op} value={op}>
-            {OP_LABEL[op]}
+            {T(OP_LABEL[op])}
           </option>
         ))}
       </select>
@@ -97,7 +98,8 @@ function Editor({ initial, isNew }: { initial: SmartPlaylist; isNew: boolean }) 
   const counts = useCatalog((s) => s.playCounts);
   const liked = useLibrary((s) => s.liked);
   const likedIds = useMemo(() => new Set(liked.map((t) => t.id)), [liked]);
-  const matches = useMemo(() => evaluateSmartPlaylist({ ...sp, sort: "title" }, tracks, counts, likedIds).length, [sp, tracks, counts, likedIds]);
+  const facts = useSound((s) => s.facts);
+  const matches = useMemo(() => evaluateSmartPlaylist({ ...sp, sort: "title" }, tracks, counts, likedIds, (t) => soundOf(t, facts)).length, [sp, tracks, counts, likedIds, facts]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {

@@ -10,7 +10,7 @@ import { PlaylistHero } from "../components/PlaylistHero";
 import { TrackList } from "../components/TrackList";
 import { Btn, EmptyState } from "../components/primitives";
 import { upgradeArtwork } from "../lib/artwork";
-import { fmtTime, plural } from "../lib/format";
+import { fmtMinutes, plural } from "../lib/format";
 import { T } from "../lib/i18n";
 import { useArtworkPalette } from "../lib/palette";
 import { exportM3uPlaylist } from "../lib/playlistFiles";
@@ -30,10 +30,7 @@ export function LikedSongsView() {
   useArtworkPalette(newestThumb);
 
   const totalSec = liked.reduce((acc, t) => acc + (t.duration || 0), 0);
-  const meta = [T("Playlist"), liked.length ? plural(liked.length, T("song"), T("songs")) : "", totalSec > 0 ? T("about {time}", { time: fmtTime(totalSec) }) : ""]
-    .filter(Boolean)
-    .join(" • ")
-    .toUpperCase();
+  const meta = [liked.length ? plural(liked.length, T("song"), T("songs")) : T("No songs yet"), totalSec > 0 ? fmtMinutes(totalSec) : ""].filter(Boolean).join(" · ");
 
   const play = (shuffle: boolean): void => {
     if (!liked.length) return;

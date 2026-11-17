@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { storage } from "../lib/persist";
 import { recordDeletionChanges, searchKey } from "../lib/deletion-sync";
 import type { DeletionChange, DeletionSync } from "../lib/deletion-sync";
+import { useSettings } from "./settings";
 
 interface RecentsState {
   searches: string[];
@@ -31,7 +32,8 @@ export const useRecents = create<RecentsState>()(
       searches: [],
       pushSearch(q) {
         const query = q.trim();
-        if (!query) return;
+        // Searches aren't kept while that's switched off (Settings → Network & privacy).
+        if (!query || !useSettings.getState().recordSearches) return;
         const action: SearchAction = { kind: "add", query };
         hydrationSearches?.push(action);
         set(applySearch(get(), action));

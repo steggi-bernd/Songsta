@@ -8,11 +8,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { CloudOff, Settings, Speaker } from "lucide-react-native";
 import { useNewerVersion } from "../newVersion";
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tinted } from "../color";
-import { refreshEverything } from "../refreshAll";
-import { Card, CARD_SIZE, Chip, Cover, CoverGrid, Shelf } from "../components/ui";
+import { refreshEverything, whenTold } from "../refreshAll";
+import { GreetingTicker } from "../components/GreetingTicker";
+import { PullRefreshScroll } from "../components/PullRefresh";
+import { Card, CARD_SIZE, Chip, Cover, CoverGrid, LoadingBars, Shelf } from "../components/ui";
 import { splitCredits, type LibAlbum, type Track } from "../shared";
 import { useConnection } from "../stores/connection";
 import { useSession } from "../stores/session";
@@ -60,13 +62,10 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<Filter>("all");
   const loaded = useLibrary((s) => s.loaded);
-  // Pulled down: everything read again, as at a start (refreshAll.ts); the ring turns until that's done.
-  const [pulled, setPulled] = useState(false);
-  const refreshing = useLibrary((s) => s.refreshing) || pulled;
-  const refresh = useCallback(() => {
-    setPulled(true);
-    return refreshEverything().finally(() => setPulled(false));
-  }, []);
+  // Pulled down: everything read again, as at a start (refreshAll.ts), while the sound lines dance
+  // (components/PullRefresh.tsx) and the greeting tells each step (components/GreetingTicker.tsx).
+  // The lines dance until the greeting's place has told the last word of it ("All up to date").
+  const refresh = useCallback(() => refreshEverything().then(() => whenTold()), []);
   const error = useLibrary((s) => s.error);
   const unreachable = useConnection((s) => s.reach === "offline");
   const hasServer = useSession((s) => !!s.session);
@@ -132,7 +131,7 @@ export function HomeScreen() {
   if (!loaded) {
     return (
       <View style={[styles.center, { backgroundColor: colors.base }]}>
-        <ActivityIndicator color={colors.ink} />
+        <LoadingBars />
         <Text style={styles.loading}>{T("Reading your library…")}</Text>
       </View>
     );
@@ -149,14 +148,13 @@ export function HomeScreen() {
   );
 
   return (
-    <ScrollView
-      style={styles.root}
+    <PullRefreshScroll
+      onRefresh={refresh}
       contentContainerStyle={{ paddingBottom: PAGE_END + insets.bottom }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.ink} progressViewOffset={insets.top} />}
+      backdrop={<LinearGradient colors={[tinted(color, 0.16), "rgba(0,0,0,0)"]} style={styles.wash} />}
     >
-      <LinearGradient colors={[tinted(color, 0.16), "rgba(0,0,0,0)"]} style={styles.wash} />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.greeting}>{greeting()}</Text>
+        <GreetingTicker greeting={greeting()} />
         <Pressable onPress={() => nav.navigate("Devices")} accessibilityLabel={T("Devices")} style={styles.headerButton}>
           <Speaker size={23} color={colors.ink} />
         </Pressable>
@@ -229,7 +227,7 @@ export function HomeScreen() {
       )}
 
       {filter === "all" && recentSongs.length > 0 && <Shelf title={T("Recently played")}>{recentSongs.map(songCard)}</Shelf>}
-    </ScrollView>
+    </PullRefreshScroll>
   );
 }
 
@@ -237,7 +235,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.base },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   loading: { color: colors.dim, fontSize: 14 },
-  wash: { position: "absolute", left: 0, right: 0, top: 0, height: 300 },
+  wash: { height: 300 },
   header: { flexDirection: "row", alignItems: "center", paddingLeft: 16, paddingRight: 8, paddingBottom: 8 },
   greeting: { flex: 1, color: colors.ink, fontSize: 26, fontWeight: "800", letterSpacing: -0.7 },
   headerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },

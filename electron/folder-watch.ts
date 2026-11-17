@@ -93,9 +93,3 @@ export function syncFolderWatchers(): void {
   }
 }
 
-export function stopFolderWatch(): void {
-  if (timer) clearTimeout(timer);
-  timer = null;
-  for (const w of watchers.values()) w.close();
-  watchers.clear();
-}

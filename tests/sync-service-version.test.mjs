@@ -59,6 +59,11 @@ test("a service from before the library's documents is too old; one that says no
   assert.deepEqual(serviceProblem(old), { missing: ["order", "groups", "albumedits", "albumpictures"] });
   assert.deepEqual(serviceProblem(readServiceInfo({ service: "songsta-sync", docs: ["playlists", "order", "groups"] })).missing, ["albumedits", "albumpictures"]);
   assert.equal(serviceProblem(readServiceInfo({ service: "songsta-sync", docs: ["order", "groups", "albumedits", "albumpictures"] })), null, "no version said: the documents decide");
+  assert.equal(
+    serviceProblem(readServiceInfo({ service: "songsta-sync", version: "1.7.0", docs: ["playlists", "order", "groups", "albumedits", "albumpictures"] })),
+    null,
+    "a service from before the shared listening history isn't too old: only each device's Replay stays its own"
+  );
   const behind = serviceProblem(readServiceInfo({ service: "songsta-sync", version: "1.4.0", docs: ["order", "groups", "albumedits", "albumpictures"] }));
   assert.equal(behind.version, "1.4.0", `below ${SYNC_SERVICE_MIN_VERSION}: too old whatever it lists`);
   assert.equal(readServiceInfo({ service: "jellyfin" }), null);

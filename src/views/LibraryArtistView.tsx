@@ -1,12 +1,13 @@
 /**
  * Artist page for the library, Spotify-style: a full-width photo banner with
- * the name over it, play/shuffle, then two tabs.
+ * the name over it (their genre above it), play / shuffle / sounds like, and
+ * your own numbers with them — time listened, plays, your song — then two tabs.
  *
  *  - Overview: a strip leading to the songs of theirs you've liked (a small
- *    playlist of their own, ArtistLikedView), the artist's most played songs
- *    (from your own listening history), their albums, singles & EPs and
- *    compilations (newest first), the releases they appear on, and an About
- *    card with the Wikipedia bio
+ *    playlist of their own, ArtistLikedView); side by side where there's room,
+ *    the songs of theirs you play most (from your own listening history) and
+ *    their discography as a raster (newest first); the releases they appear
+ *    on, and an About card with the Wikipedia bio
  *  - Discography: every release of theirs in the library, newest on top,
  *    each with its cover, type, year and full track list — filterable by type
  *
@@ -16,22 +17,78 @@
  * (lib/artistBanner.ts); everything else is your own library.
  */
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, ExternalLink, Shuffle, User } from "lucide-react";
+import { AudioWaveform, ChevronRight, ExternalLink, Pause, Play, Shuffle, User } from "lucide-react";
 import { BannerPicture } from "../components/BannerPicture";
 import { AlbumTile, BigPlayButton, playCollection } from "../components/LibraryCards";
 import { TrackList } from "../components/TrackList";
-import { Artwork, EmptyState, ShelfScroller } from "../components/primitives";
+import { Artwork, EqBars, EmptyState, ShelfScroller } from "../components/primitives";
 import { LikedCover } from "../components/LikedCover";
 import { resolveArtistAbout, useArtistPicture, type ArtistAbout } from "../lib/artistAbout";
 import { bannerCandidates } from "../lib/artistBanner";
+import { genresOfTrack } from "../lib/albumGenres";
 import { artistAlbums, artistTracks, byPlays, useLibraryIndex, useLikedAmong, type LibAlbum } from "../lib/catalogIndex";
-import { fmtLength } from "../lib/format";
+import { fmtLength, fmtMinutes, fmtTime } from "../lib/format";
 import { parseRoute } from "../lib/libraryTracks";
 import { RELEASE_LABEL } from "../lib/releases";
 import { useArtistImages } from "../lib/songInfo";
-import { useCatalog, useFreshPlayCounts } from "../stores/catalog";
-import { useUI } from "../stores/ui";
+import { trackMenuItems } from "../lib/trackActions";
+import { sameSong, useCatalog, useFreshPlayCounts } from "../stores/catalog";
+import { usePlayer } from "../stores/player";
+import { tintHoverHandlers, useUI } from "../stores/ui";
+import type { Track } from "../types";
 import { T } from "../lib/i18n";
+
+/**
+ * "Popular with you": the artist's songs you play most, as compact rows — rank, cover, title over
+ * album, how often, how long. A click plays from that song on; right-click opens the song's menu.
+ */
+function PopularRows({ songs, plays }: { songs: Track[]; plays: (t: Track) => number }) {
+  const currentId = usePlayer((s) => s.queue[s.index]?.id ?? null);
+  const playing = usePlayer((s) => s.playing);
+  const openContextMenu = useUI((s) => s.openContextMenu);
+  return (
+    <div className="space-y-0.5">
+      {songs.map((t, i) => {
+        const isCurrent = sameSong(t.id, currentId);
+        const count = plays(t);
+        return (
+          <div
+            key={t.id}
+            role="button"
+            tabIndex={0}
+            {...tintHoverHandlers(t.thumb)}
+            onClick={() => (isCurrent ? usePlayer.getState().toggle() : usePlayer.getState().playQueue(songs, i))}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              if (isCurrent) usePlayer.getState().toggle();
+              else usePlayer.getState().playQueue(songs, i);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openContextMenu(e.clientX, e.clientY, trackMenuItems(t));
+            }}
+            className={`group grid grid-cols-[28px_44px_minmax(0,1fr)_auto_44px] items-center gap-3 h-[58px] px-2 rounded-lg cursor-pointer select-none ${
+              isCurrent ? "bg-ink-hi/[0.12]" : "hover:bg-ink-hi/[0.05]"
+            }`}
+          >
+            <span className="row-number grid place-items-center text-[13px] text-ink-faint tabular-nums">
+              <span className="group-hover:hidden">{isCurrent && playing ? <EqBars /> : <span className={isCurrent ? "text-accent" : ""}>{i + 1}</span>}</span>
+              <span className="hidden group-hover:block text-ink-hi">{isCurrent && playing ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}</span>
+            </span>
+            <Artwork src={t.thumb} className="w-11 h-11 rounded-md" iconClassName="w-4 h-4" alt="" />
+            <span className="min-w-0">
+              <span className={`block truncate text-[15px] font-semibold ${isCurrent ? "text-accent" : "text-ink-hi"}`}>{t.title}</span>
+              <span className="block truncate text-[12.5px] text-ink-dim">{t.album ?? ""}</span>
+            </span>
+            <span className="text-[12.5px] text-ink-dim tabular-nums">{count > 0 ? `${count}×` : ""}</span>
+            <span className="text-right text-[12.5px] text-ink-faint tabular-nums">{t.duration > 0 ? fmtTime(t.duration) : ""}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 type Tab = "overview" | "discography";
 type DiscFilter = "all" | "albums" | "eps" | "compilations";
@@ -123,6 +180,22 @@ export function LibraryArtistView({ param }: { param: string }) {
     }),
     [own]
   );
+  // Your numbers with them: time listened (plays × length), plays, the song you play most; their commonest genre.
+  const yours = useMemo(() => {
+    let heard = 0;
+    let plays = 0;
+    const genreCount = new Map<string, number>();
+    for (const t of songs) {
+      const n = playCounts[t.id]?.plays ?? 0;
+      plays += n;
+      heard += n * (t.duration || 0);
+      const g = genresOfTrack(t)[0];
+      if (g) genreCount.set(g, (genreCount.get(g) ?? 0) + 1);
+    }
+    const genre = [...genreCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+    const top = popular[0] && (playCounts[popular[0].id]?.plays ?? 0) > 0 ? popular[0] : null;
+    return { heard, plays, genre, top };
+  }, [songs, popular, playCounts]);
 
   if (!loaded) return null;
   if (!songs.length) {
@@ -146,6 +219,9 @@ export function LibraryArtistView({ param }: { param: string }) {
         <BannerPicture key={name} candidates={banner} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10" />
         <div className="absolute inset-x-0 page-pad bottom-7">
+          <span className="inline-flex items-center h-[26px] px-2.5 mb-3 rounded-md bg-black/45 backdrop-blur-sm text-[11.5px] font-bold tracking-[0.04em] text-white/90">
+            {yours.genre ? T("{genre} · in your library", { genre: yours.genre }) : T("In your library")}
+          </span>
           <h1 className="font-display font-extrabold tracking-[-0.04em] text-white leading-none drop-shadow-lg" style={{ fontSize: name.length > 18 ? 56 : 88 }}>
             {name}
           </h1>
@@ -155,16 +231,46 @@ export function LibraryArtistView({ param }: { param: string }) {
         </div>
       </header>
 
-      <div className="flex items-center gap-5">
-        <BigPlayButton onClick={() => playCollection(popular)} label={T("Play {name}", { name })} tracks={songs} />
-        <button
-          onClick={() => playCollection(songs, true)}
-          title={T("Shuffle play")}
-          aria-label={T("Shuffle play")}
-          className="w-10 h-10 grid place-items-center rounded-full text-ink-hi/70 hover:text-ink-hi hover:scale-105 transition-all"
-        >
-          <Shuffle className="w-6 h-6" />
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <BigPlayButton onClick={() => playCollection(popular)} label={T("Play {name}", { name })} tracks={songs} />
+          <button
+            onClick={() => playCollection(songs, true)}
+            title={T("Shuffle play")}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-ink-hi/[0.07] hover:bg-ink-hi/[0.12] text-[13.5px] font-semibold text-ink-hi transition-colors"
+          >
+            <Shuffle className="w-4 h-4" />
+            {T("Shuffle")}
+          </button>
+          {(yours.top ?? songs[0]) && (
+            <button
+              onClick={() => navigate({ name: "soundslike", param: (yours.top ?? songs[0]).id })}
+              title={T("Songs that sound like theirs, by tempo and key")}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-ink-hi/[0.07] hover:bg-ink-hi/[0.12] text-[13.5px] font-semibold text-ink-hi transition-colors max-w-full"
+            >
+              <AudioWaveform className="w-4 h-4 shrink-0" />
+              <span className="truncate">{T("Sounds like {name}", { name })}</span>
+            </button>
+          )}
+        </div>
+        {yours.plays > 0 && (
+          <div className="flex flex-wrap gap-x-7 gap-y-2">
+            <div className="min-w-0">
+              <div className="text-[22px] font-black tracking-[-0.02em] text-ink-hi leading-tight tabular-nums">{fmtMinutes(yours.heard)}</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-dim">{T("Heard by you")}</div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-[22px] font-black tracking-[-0.02em] text-ink-hi leading-tight tabular-nums">{yours.plays}</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-dim">{T("Plays")}</div>
+            </div>
+            {yours.top && (
+              <div className="min-w-0 max-w-[220px]">
+                <div className="text-[22px] font-black tracking-[-0.02em] text-accent leading-tight pb-[0.1em] truncate">{yours.top.title}</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-dim">{T("Your song")}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-6 border-b border-ink-hi/[0.08]" role="tablist" aria-label={T("Artist sections")}>
@@ -199,47 +305,45 @@ export function LibraryArtistView({ param }: { param: string }) {
               <ChevronRight className="w-5 h-5 shrink-0 text-ink-dim group-hover:text-ink-hi transition-colors" />
             </button>
           )}
-          <section>
-            <h2 className="section-title text-[21px] mb-3">{T("Popular")}</h2>
-            <TrackList tracks={popular.slice(0, showAll ? 10 : 5)} showAlbum emptyLabel={T("No songs.")} />
-            {popular.length > 5 && (
-              <button onClick={() => setShowAll((v) => !v)} className="mt-2 ml-3 text-[13px] font-bold text-ink-dim hover:text-ink-hi transition-colors">
-                {showAll ? T("Show less") : T("See more")}
-              </button>
+          {/* Side by side where the page has room for both, one under the other where it hasn't. */}
+          <div className="grid gap-x-8 gap-y-8 items-start" style={{ gridTemplateColumns: own.length ? "repeat(auto-fit, minmax(min(100%, 380px), 1fr))" : "1fr" }}>
+            <section className="min-w-0">
+              <h2 className="section-title text-[21px] mb-3">{T("Popular with you")}</h2>
+              <PopularRows songs={popular.slice(0, showAll ? 10 : 5)} plays={(t) => playCounts[t.id]?.plays ?? 0} />
+              {popular.length > 5 && (
+                <button onClick={() => setShowAll((v) => !v)} className="mt-2 ml-2 text-[13px] font-bold text-ink-dim hover:text-ink-hi transition-colors">
+                  {showAll ? T("Show less") : T("See more")}
+                </button>
+              )}
+            </section>
+            {own.length > 0 && (
+              <section className="min-w-0">
+                <div className="flex items-baseline justify-between gap-3 mb-3">
+                  <h2 className="section-title text-[21px]">{T("Discography")}</h2>
+                  {own.length > 4 && (
+                    <button onClick={() => setTab("discography")} className="text-[13px] font-bold text-ink-dim hover:text-ink-hi hover:underline transition-colors shrink-0">
+                      {T("Show all")}
+                    </button>
+                  )}
+                </div>
+                <div className="grid gap-x-1 gap-y-1 -mx-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+                  {own.slice(0, 4).map((a) => (
+                    <AlbumTile key={a.key} fluid album={a} subtitle={releaseLine(a)} />
+                  ))}
+                </div>
+              </section>
             )}
-          </section>
+          </div>
 
-
-          {(
-            [
-              [T("Albums"), byType.albums],
-              [T("Singles & EPs"), byType.eps],
-              [T("Compilations"), byType.compilations],
-              [T("Appears on"), appearsOn],
-            ] as const
-          ).map(
-            ([title, list]) =>
-              list.length > 0 && (
-                <section key={title}>
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="section-title text-[21px]">{title}</h2>
-                    {title !== T("Appears on") && own.length > 0 && (
-                      <button
-                        onClick={() => {
-                          setDiscFilter(title === T("Albums") ? "albums" : title === T("Compilations") ? "compilations" : "eps");
-                          setTab("discography");
-                        }}
-                        className="text-[13px] font-bold text-ink-dim hover:text-ink-hi hover:underline transition-colors"
-                      >{T("Show discography")}</button>
-                    )}
-                  </div>
-                  <ShelfScroller>
-                    {list.map((a) => (
-                      <AlbumTile key={a.key} album={a} subtitle={title === T("Appears on") ? `${a.year ? `${a.year} · ` : ""}${a.artist}` : releaseLine(a)} />
-                    ))}
-                  </ShelfScroller>
-                </section>
-              )
+          {appearsOn.length > 0 && (
+            <section>
+              <h2 className="section-title text-[21px] mb-4">{T("Appears on")}</h2>
+              <ShelfScroller>
+                {appearsOn.map((a) => (
+                  <AlbumTile key={a.key} album={a} subtitle={`${a.year ? `${a.year} · ` : ""}${a.artist}`} />
+                ))}
+              </ShelfScroller>
+            </section>
           )}
 
           {about?.description && (
@@ -252,7 +356,7 @@ export function LibraryArtistView({ param }: { param: string }) {
                   <p className="text-[15px] leading-relaxed text-ink-hi/85 whitespace-pre-line">{about.description}</p>
                   {about.wikiUrl && (
                     <button
-                      onClick={() => window.open(about.wikiUrl as string, "_blank")}
+                      onClick={() => window.open(about.wikiUrl as string, "_blank", "noopener,noreferrer")}
                       className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-hi hover:underline"
                     >{T("Read more on Wikipedia")}{" "}<ExternalLink className="w-3.5 h-3.5" />
                     </button>

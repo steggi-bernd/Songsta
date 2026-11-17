@@ -30,8 +30,3 @@ export async function offerFirewall(name: string): Promise<void> {
     },
   });
 }
-
-/** For the tests: a new run. */
-export function resetFirewallOffer(): void {
-  asked = false;
-}

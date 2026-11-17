@@ -103,8 +103,26 @@ interface SettingsState {
   gapless: boolean;
   /** songs that run on (live albums, DJ mixes, pairs that meet sounding) never crossfade or pause (lib/continuity.ts) */
   seamlessAlbums: boolean;
-  /** tempo, key and energy of every local song, measured once in the background (electron/sound-library.ts) */
+  /** tempo, key and energy of every song measured in the background (electron/sound-library.ts, lib/serverSound.ts); off pauses it */
   soundAnalysis: boolean;
+  /** the media analysis was started by hand once: until then nothing is measured */
+  soundAnalysisStarted: boolean;
+  /** albums' genres also from MusicBrainz and Wikidata, weighed against the tags (lib/albumGenres.ts) */
+  albumGenresOnline: boolean;
+  /** internet services switched off (lib/netServices.ts ids); none: all on (Settings → Network & privacy) */
+  netOff: string[];
+  /** only your own servers and devices: every internet service off at once */
+  netOwnOnly: boolean;
+  /** plays are kept: the listening history, Replay, play counts */
+  recordListening: boolean;
+  /** searches are kept for the search page's recents */
+  recordSearches: boolean;
+  /** songs skipped early are kept, so mixes play them less */
+  recordSkips: boolean;
+  /** the listening history goes to your sync service and comes from your other devices */
+  shareListens: boolean;
+  /** the library's order, groups and album edits go through your sync service */
+  shareLibrary: boolean;
   /** Explore: the open tab, list or tiles, and each tab's column order */
   exploreTab: ExploreTab;
   exploreLayout: "list" | "grid";
@@ -115,6 +133,10 @@ interface SettingsState {
   corners: Corners;
   /** the shell's one colour: what plays, what's on, likes and the main buttons */
   accent: Accent;
+  /** full-screen Now Playing: rays dancing round the cover in the song's tempo, or the classic cover beside the lyrics */
+  nowPlayingLook: "visualizer" | "classic";
+  /** the Your Library field at the top of the side panel, the way to the Your Library page; off for a panel as Spotify's */
+  libraryField: boolean;
 
   setTrackColumns(v: ColumnChoice): void;
   /** `null`: the list's own order again */
@@ -169,12 +191,27 @@ interface SettingsState {
   setGapless(v: boolean): void;
   setSeamlessAlbums(v: boolean): void;
   setSoundAnalysis(v: boolean): void;
+  /** the first, hand-started run of the media analysis */
+  startSoundAnalysis(): void;
+  setAlbumGenresOnline(v: boolean): void;
+  /** one internet service on or off */
+  setServiceOn(id: string, on: boolean): void;
+  /** several at once (the lyrics' main switch) */
+  setServicesOn(ids: string[], on: boolean): void;
+  setNetOwnOnly(v: boolean): void;
+  setRecordListening(v: boolean): void;
+  setRecordSearches(v: boolean): void;
+  setRecordSkips(v: boolean): void;
+  setShareListens(v: boolean): void;
+  setShareLibrary(v: boolean): void;
   setExploreTab(v: ExploreTab): void;
   setExploreLayout(v: "list" | "grid"): void;
   setExploreSort(tab: ExploreTab, sort: ExploreSort): void;
   setRightRailWidth(px: number): void;
   setCorners(v: Corners): void;
   setAccent(v: Accent): void;
+  setNowPlayingLook(v: "visualizer" | "classic"): void;
+  setLibraryField(v: boolean): void;
 }
 
 export type Corners = "round" | "soft" | "square";
@@ -238,12 +275,23 @@ export const useSettings = create<SettingsState>()(
       gapless: true,
       seamlessAlbums: true,
       soundAnalysis: true,
+      soundAnalysisStarted: false,
+      albumGenresOnline: true,
+      netOff: [],
+      netOwnOnly: false,
+      recordListening: true,
+      recordSearches: true,
+      recordSkips: true,
+      shareListens: true,
+      shareLibrary: true,
       exploreTab: "albums",
       exploreLayout: "list",
       exploreSort: DEFAULT_EXPLORE_SORTS,
       rightRailWidth: 328,
       corners: "soft",
       accent: "violet",
+      nowPlayingLook: "visualizer",
+      libraryField: true,
 
       setTrackColumns: (trackColumns) => set({ trackColumns }),
       setListSort: (list, sort) =>
@@ -310,12 +358,24 @@ export const useSettings = create<SettingsState>()(
       setGapless: (gapless) => set({ gapless }),
       setSeamlessAlbums: (seamlessAlbums) => set({ seamlessAlbums }),
       setSoundAnalysis: (soundAnalysis) => set({ soundAnalysis }),
+      startSoundAnalysis: () => set({ soundAnalysisStarted: true, soundAnalysis: true }),
+      setAlbumGenresOnline: (albumGenresOnline) => set({ albumGenresOnline }),
+      setServiceOn: (id, on) => set((st) => ({ netOff: on ? st.netOff.filter((x) => x !== id) : [...new Set([...st.netOff, id])] })),
+      setServicesOn: (ids, on) => set((st) => ({ netOff: on ? st.netOff.filter((x) => !ids.includes(x)) : [...new Set([...st.netOff, ...ids])] })),
+      setNetOwnOnly: (netOwnOnly) => set({ netOwnOnly }),
+      setRecordListening: (recordListening) => set({ recordListening }),
+      setRecordSearches: (recordSearches) => set({ recordSearches }),
+      setRecordSkips: (recordSkips) => set({ recordSkips }),
+      setShareListens: (shareListens) => set({ shareListens }),
+      setShareLibrary: (shareLibrary) => set({ shareLibrary }),
       setExploreTab: (exploreTab) => set({ exploreTab }),
       setExploreLayout: (exploreLayout) => set({ exploreLayout }),
       setExploreSort: (tab, sort) => set((st) => ({ exploreSort: { ...st.exploreSort, [tab]: sort } })),
       setRightRailWidth: (px) => set({ rightRailWidth: Math.round(px) }),
       setCorners: (corners) => set({ corners }),
       setAccent: (accent) => set({ accent }),
+      setNowPlayingLook: (nowPlayingLook) => set({ nowPlayingLook }),
+      setLibraryField: (libraryField) => set({ libraryField }),
     }),
     {
       name: "settings",

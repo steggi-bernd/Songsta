@@ -337,16 +337,19 @@ export function Pills<K extends string>({
   value,
   onChange,
   size = "md",
+  wrap = false,
 }: {
   options: PillOption<K>[];
   value: K;
   onChange: (k: K) => void;
   size?: "sm" | "md";
+  /** onto a second line when the row has no room, instead of running past its edge */
+  wrap?: boolean;
 }) {
   const sizing = size === "sm" ? "h-8 px-3 text-[13px]" : "h-8 px-3.5 text-[13px]";
   const spacing = "gap-1.5";
   return (
-    <div className={`flex items-center ${spacing}`}>
+    <div className={`flex items-center ${spacing} ${wrap ? "flex-wrap" : ""}`}>
       {options.map((opt) => {
         const active = opt.key === value;
         const Icon = opt.icon;
@@ -432,33 +435,6 @@ export function ErrorState({
     </div>
   );
 }
-
-/* ============================================================ skeletons */
-
-export function CardSkeleton({ width = "w-44" }: { width?: string }) {
-  return (
-    <div className={`${width} shrink-0 rounded-xl bg-ink-hi/[0.03] p-3`}>
-      <div className="skeleton w-full aspect-square rounded-lg" />
-      <div className="skeleton h-3.5 rounded-md mt-3 w-[85%]" />
-      <div className="skeleton h-3 rounded-md mt-2 w-[55%]" />
-    </div>
-  );
-}
-
-export function RowSkeleton() {
-  return (
-    <div className="flex items-center gap-3 h-[52px] px-3">
-      <div className="skeleton w-10 h-10 rounded-lg" />
-      <div className="flex-1">
-        <div className="skeleton h-3.5 rounded-md w-[38%]" />
-        <div className="skeleton h-3 rounded-md w-[22%] mt-2" />
-      </div>
-      <div className="skeleton h-3 w-10 rounded-md" />
-    </div>
-  );
-}
-
-/* ============================================================ badges */
 
 /* ============================================================ equalizer */
 

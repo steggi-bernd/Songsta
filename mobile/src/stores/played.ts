@@ -12,6 +12,7 @@ import { readJson, writeJson } from "../storage";
 import { useLibrary } from "./library";
 import { usePlayer } from "./player";
 import { playlistTracks, usePlaylists } from "./playlists";
+import { useSettings } from "./settings";
 
 const FILE = "played.json";
 
@@ -24,6 +25,8 @@ interface Saved {
 interface PlayedState extends Saved {
   restored: boolean;
   touch(key: string): void;
+  /** your plays deleted (Settings → Network & privacy): when anything played is forgotten too */
+  forget(): void;
   /** When things played on the other devices (lib/librarySync.ts): the later time of each stays. */
   adopt(times: Record<string, number>): void;
 }
@@ -39,6 +42,10 @@ export const usePlayed = create<PlayedState>((set, get) => ({
   restored: false,
   touch(key) {
     set({ at: { ...get().at, [key]: Date.now() } });
+    save();
+  },
+  forget() {
+    set({ at: {}, seeded: true });
     save();
   },
   adopt(times) {
@@ -89,6 +96,7 @@ export function watchPlayed(): void {
     if (!list || s.remote) return;
     const started = s.playWhenReady && (!prev.playWhenReady || s.index !== prev.index || s.queue !== prev.queue);
     const song = s.queue[s.index];
-    if (started && song && list.ids.has(song.id)) usePlayed.getState().touch(list.source);
+    // Only while plays are kept here (Settings → Network & privacy).
+    if (started && song && list.ids.has(song.id) && useSettings.getState().recordListening) usePlayed.getState().touch(list.source);
   });
 }

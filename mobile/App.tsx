@@ -23,6 +23,7 @@ import { watchKeptLists } from "./src/stores/keptLists";
 import { watchPlayed } from "./src/stores/played";
 import { useSession } from "./src/stores/session";
 import { useSettings } from "./src/stores/settings";
+import { useStatusScrim } from "./src/stores/statusScrim";
 import { startSync, stopSync } from "./src/sync";
 import { colors } from "./src/theme";
 
@@ -33,9 +34,11 @@ watchNewVersion();
 watchKeptLists();
 watchPlayed();
 
-/** Keeps the clock and icons readable while a page scrolls under them. */
+/** Keeps the clock and icons readable while a page scrolls under them; away while a screen with its own colour up there shows. */
 function StatusScrim() {
   const insets = useSafeAreaInsets();
+  const away = useStatusScrim((s) => s.away > 0);
+  if (away) return null;
   return (
     <LinearGradient
       pointerEvents="none"

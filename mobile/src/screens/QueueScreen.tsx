@@ -6,7 +6,7 @@
  * grip and its head drag it: all the way up, or down and away.
  */
 import { useNavigation } from "@react-navigation/native";
-import { ChevronDown, ChevronUp, Menu, Pause, Play, Repeat, Repeat1, Shuffle, Split, Timer, Trash2, X } from "lucide-react-native";
+import { AudioWaveform, ChevronDown, ChevronUp, Menu, Pause, Play, Repeat, Repeat1, Shuffle, Split, Timer, Trash2, X } from "lucide-react-native";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { Animated, FlatList, PanResponder, PixelRatio, Pressable, StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,7 +14,7 @@ import { glideList, PullRow } from "../components/SwipeRow";
 import { Cover, EqBars } from "../components/ui";
 import { handRows, type Track } from "../shared";
 import { usePlayer } from "../stores/player";
-import { useOverBottomBar } from "../stores/popups";
+import { toast, useOverBottomBar } from "../stores/popups";
 import { feel } from "../stores/settings";
 import { colors } from "../theme";
 import { T } from "../shared";
@@ -22,6 +22,8 @@ import { T } from "../shared";
 /** A row's height: the list knows where everything is by these. On whole pixels, or the area shows hairlines between its rows. */
 const px = PixelRatio.roundToNearestPixel;
 const HEIGHT = { hand: px(44), branch: px(38), song: px(61), more: px(42), handEnd: px(18), list: px(42) };
+/** The "Now playing" line over the playing song. */
+const NOW_TITLE = px(26);
 /** The area of what was asked for by hand stands out a little from the sheet. */
 const AREA = "#2B2B2E";
 const AREA_MARGIN = 8;
@@ -311,9 +313,11 @@ export function QueueScreen() {
           // What the sheet's lower part hides at rest can still be scrolled up into view.
           contentContainerStyle={{ paddingBottom: buttonsHeight + (big ? 0 : rest) }}
           keyExtractor={(row) => row.key}
-          getItemLayout={(_, i) => ({ length: HEIGHT[rows[i].kind], offset: (current ? HEIGHT.song : 0) + tops[i], index: i })}
+          getItemLayout={(_, i) => ({ length: HEIGHT[rows[i].kind], offset: (current ? HEIGHT.song + NOW_TITLE : 0) + tops[i], index: i })}
           ListHeaderComponent={
             current ? (
+              <View>
+              <Text style={styles.nowTitle}>{T("Now playing")}</Text>
               <View style={styles.row}>
                 <View style={styles.rowMain}>
                   <Cover uri={current.thumb} size={46} />
@@ -332,6 +336,7 @@ export function QueueScreen() {
                 <Pressable onPress={toggle} accessibilityLabel={playWhenReady ? T("Pause") : T("Play")} style={styles.currentButton}>
                   {playWhenReady ? <Pause size={15} color="#121212" fill="#121212" /> : <Play size={15} color="#121212" fill="#121212" />}
                 </Pressable>
+              </View>
               </View>
             ) : undefined
           }
@@ -421,6 +426,19 @@ export function QueueScreen() {
             {repeat === "one" ? <Repeat1 size={22} color={colors.accent} /> : <Repeat size={22} color={repeat === "all" ? colors.accent : colors.ink} />}
             <Text style={[styles.bigLabel, repeat !== "off" && { color: colors.accent }]}>{T("Repeat")}</Text>
           </Pressable>
+          {/* What comes next, ordered to flow into each other by key and tempo (the mockup's new button). */}
+          <Pressable
+            onPress={() => {
+              feel("press");
+              glideList();
+              if (usePlayer.getState().flowUpcoming()) toast(T("What comes next now flows from song to song"));
+              else toast(T("That needs songs your computer has measured: Settings → Media analysis there"));
+            }}
+            style={styles.bigButton}
+          >
+            <AudioWaveform size={22} color={colors.ink} />
+            <Text style={styles.bigLabel}>{T("Flowing")}</Text>
+          </Pressable>
           <Pressable onPress={() => cycleSleepTimer()} style={styles.bigButton}>
             <Timer size={22} color={sleepAt ? colors.accent : colors.ink} />
             <Text style={[styles.bigLabel, !!sleepAt && { color: colors.accent }]}>{sleepAt ? `${minutesLeft} min` : T("Timer")}</Text>
@@ -461,6 +479,7 @@ const styles = StyleSheet.create({
   moreRow: { height: HEIGHT.more, flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 15 - AREA_MARGIN + 46 + 12, backgroundColor: AREA },
   moreText: { color: colors.soft, fontSize: 13.5, fontWeight: "600" },
   listHead: { height: HEIGHT.list, justifyContent: "center", paddingHorizontal: 15 },
+  nowTitle: { height: NOW_TITLE, paddingHorizontal: 15, paddingTop: 4, color: colors.dim, fontSize: 13, fontWeight: "700" },
   listTitle: { color: colors.ink, fontSize: 13.5, fontWeight: "700" },
   rowMain: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12, height: "100%" },
   rowText: { flex: 1, minWidth: 0 },
@@ -471,7 +490,7 @@ const styles = StyleSheet.create({
   currentTitle: { flexShrink: 1, color: colors.accent },
   currentButton: { width: 32, height: 32, marginRight: 8, borderRadius: 16, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },
   handle: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  buttons: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", gap: 11, paddingHorizontal: 15, paddingTop: BUTTONS_ABOVE, backgroundColor: colors.sheet },
+  buttons: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", gap: 8, paddingHorizontal: 15, paddingTop: BUTTONS_ABOVE, backgroundColor: colors.sheet },
   bigButton: { flex: 1, height: BUTTON_HEIGHT, gap: 5, borderRadius: 10, backgroundColor: colors.button, alignItems: "center", justifyContent: "center" },
   bigLabel: { color: colors.ink, fontSize: 12.5 },
 });

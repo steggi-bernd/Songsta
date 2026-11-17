@@ -114,6 +114,20 @@ const api = {
   /** the sound analysis: its progress, its results by song id, the Settings switch, and word when more are measured */
   soundStatus: () => ipcRenderer.invoke("sound:status") as Promise<SoundStatus>,
   soundFacts: () => ipcRenderer.invoke("sound:facts") as Promise<Record<string, SoundFacts>>,
+  /** a short low-rate stretch of a server song (from startSeconds on), for measuring it here */
+  soundExcerpt: (id: string, startSeconds: number) => ipcRenderer.invoke("sound:excerpt", id, startSeconds) as Promise<Uint8Array | number | null>,
+  /** what was measured of a server song, kept with the rest */
+  soundKeep: (id: string, facts: SoundFacts) => ipcRenderer.invoke("sound:keep", id, facts) as Promise<boolean>,
+  /** a server song whose stretch was empty, too short or refused: left for a month */
+  soundSkip: (id: string, reason: "unreadable" | "refused" | "short") => ipcRenderer.invoke("sound:skip", id, reason) as Promise<boolean>,
+  /** the songs that can't be measured and why, counted as looked at */
+  soundSkipped: () => ipcRenderer.invoke("sound:skipped") as Promise<{ id: string; reason: "unreadable" | "refused" | "short" }[]>,
+  /** "Try again": every song that couldn't be measured, once more */
+  soundRetry: () => ipcRenderer.invoke("sound:retry") as Promise<number>,
+  /** what another device measured, taken in through the sync service: how many */
+  soundAdopt: (entries: { id: string; facts: SoundFacts }[]) => ipcRenderer.invoke("sound:adopt", entries) as Promise<number>,
+  /** the server songs measured already */
+  soundMeasured: () => ipcRenderer.invoke("sound:measured") as Promise<string[]>,
   setSoundAnalysis: (on: boolean) => ipcRenderer.invoke("sound:enabled", on),
   onSoundUpdated: (cb: () => void): (() => void) => {
     const listener = (): void => cb();
@@ -122,6 +136,42 @@ const api = {
   },
   /** how much each song belongs to this moment of the day and week, from the listening history */
   listensMoment: () => ipcRenderer.invoke("listens:moment") as Promise<MomentScore[]>,
+  /** the shared listening history (src/lib/listenSync.ts): this computer's own plays from a place on, in the order they counted, and how many there are */
+  listensPending: (from: number, max: number) => ipcRenderer.invoke("listens:pending", from, max) as Promise<{ listens: import("../src/lib/listenSync").WireListen[]; total: number }>,
+  /** the other devices' plays, into the history and Replay's counts; how many were new here */
+  listensTake: (listens: unknown[], devices: Record<string, unknown>) => ipcRenderer.invoke("listens:take", listens, devices) as Promise<{ added: number }>,
+  /** album genres from MusicBrainz and Wikidata: what's known so far (electron/album-genres.ts) */
+  albumGenresKnown: () => ipcRenderer.invoke("genres:known") as Promise<Record<string, import("./album-genres").AlbumGenreEntry>>,
+  /** albums to ask about in the background; how many were new */
+  albumGenresAsk: (albums: { key: string; title: string; artist: string }[]) => ipcRenderer.invoke("genres:ask", albums) as Promise<number>,
+  /** the setting went off: nothing more is asked */
+  albumGenresStop: () => ipcRenderer.invoke("genres:stop") as Promise<void>,
+  /** answers came in */
+  onAlbumGenres: (listener: () => void) => {
+    const handler = (): void => listener();
+    ipcRenderer.on("genres:updated", handler);
+    return () => ipcRenderer.removeListener("genres:updated", handler);
+  },
+  /** the songs played around a song (its copies' ids), from the listening history */
+  listensTogether: (ids: string[], limit = 40) => ipcRenderer.invoke("listens:together", ids, limit) as Promise<{ id: string; score: number }[]>,
+  /** Settings → Network & privacy: what may go out and what's kept (electron/net-gate.ts) */
+  setPrivacy: (policy: { ownOnly: boolean; off: string[]; recordListening: boolean }) => ipcRenderer.invoke("net:privacy", policy) as Promise<boolean>,
+  /** the connection log: this run's requests to the internet, by service */
+  netActivity: () => ipcRenderer.invoke("net:activity") as Promise<import("./net-gate").NetActivity>,
+  /** where the data lives (electron/data-location.ts) */
+  dataPlace: () => ipcRenderer.invoke("data:place") as Promise<import("./data-location").DataPlace>,
+  dataUsage: () => ipcRenderer.invoke("data:usage") as Promise<{ listening: number; searches: number; skips: number; analysis: number; caches: number; total: number }>,
+  /** a move of the data folder, done at the next start; Songsta starts again for it */
+  dataMove: (target: string) => ipcRenderer.invoke("data:move", target) as Promise<{ ok: boolean; reason?: string }>,
+  dataCancelMove: () => ipcRenderer.invoke("data:cancelMove") as Promise<void>,
+  /** the old place's data goes */
+  dataForgetLeftover: () => ipcRenderer.invoke("data:forgetLeftover") as Promise<boolean>,
+  /** the network caches go at the next start; Songsta starts again for it */
+  dataClearCaches: () => ipcRenderer.invoke("data:clearCaches") as Promise<boolean>,
+  /** every play kept on this computer goes: the listening history and Replay's counts */
+  dataClearListening: () => ipcRenderer.invoke("data:clearListening") as Promise<boolean>,
+  dataPickFolder: () => ipcRenderer.invoke("data:pickFolder") as Promise<string | null>,
+  dataOpen: () => ipcRenderer.invoke("data:open") as Promise<string>,
   listensPage: (before?: number, limit = 100) =>
     ipcRenderer.invoke("listens:page", before, limit) as Promise<{ listens: Listen[]; more: boolean; total: number }>,
   listensExport: () => ipcRenderer.invoke("listens:export") as Promise<{ path: string; count: number } | null>,
@@ -166,7 +216,7 @@ const api = {
   // The sync service: playlists and where playback stopped (lib/homeSync.ts); the login stays in the main process
   homeSyncInfo: () => ipcRenderer.invoke("homeSync:info") as Promise<HomeSyncInfo>,
   homeSyncSetAddress: (address: string) => ipcRenderer.invoke("homeSync:setAddress", address) as Promise<HomeSyncInfo>,
-  homeSyncRequest: (method: "GET" | "PUT" | "POST", path: string, body?: unknown, timeoutMs?: number) =>
+  homeSyncRequest: (method: "GET" | "PUT" | "POST" | "DELETE", path: string, body?: unknown, timeoutMs?: number) =>
     ipcRenderer.invoke("homeSync:request", method, path, body, timeoutMs) as Promise<{ status: number; body: any }>,
   // Server sync: favorites ↔ Liked Songs, plays reported (what to change is decided in the renderer)
   jellyfinUsers: () => ipcRenderer.invoke("jellyfin:users") as Promise<JellyfinUser[]>,
