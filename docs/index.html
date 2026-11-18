@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Songsta – free music player for Jellyfin, Navidrome and your own files</title>
+<meta name="description" content="Songsta is a free, open-source music player for Windows, Linux and Android. Your files, Jellyfin and Navidrome in one library: Hi-Res FLAC, synced lyrics, mixes from your own listening, no account, no ads.">
+<link rel="canonical" href="https://steggi-bernd.github.io/Songsta/">
+<link rel="alternate" hreflang="en" href="https://steggi-bernd.github.io/Songsta/">
+<link rel="alternate" hreflang="de" href="https://steggi-bernd.github.io/Songsta/de/">
+<link rel="alternate" hreflang="x-default" href="https://steggi-bernd.github.io/Songsta/">
+<meta name="theme-color" content="#0b0b10">
+<link rel="icon" type="image/png" href="site/favicon.png">
+<link rel="apple-touch-icon" href="site/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Songsta">
+<meta property="og:title" content="Songsta – the music player for the music you own">
+<meta property="og:description" content="Your files, Jellyfin and Navidrome in one library on Windows, Linux and Android. Hi-Res FLAC, synced lyrics, mixes from your own listening. Free and open source.">
+<meta property="og:url" content="https://steggi-bernd.github.io/Songsta/">
+<meta property="og:image" content="https://steggi-bernd.github.io/Songsta/social-preview.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="de_DE">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="site/site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Songsta",
+  "description": "A free, open-source music player for Windows, Linux and Android that brings local files, Jellyfin and Navidrome together in one library, with Hi-Res FLAC playback, synced lyrics and mixes made from your own listening.",
+  "url": "https://steggi-bernd.github.io/Songsta/",
+  "downloadUrl": "https://github.com/steggi-bernd/Songsta/releases/latest",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Windows 10, Windows 11, Linux, Android 7 or newer",
+  "isAccessibleForFree": true,
+  "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "image": "https://steggi-bernd.github.io/Songsta/social-preview.jpg",
+  "screenshot": [
+    "https://steggi-bernd.github.io/Songsta/screenshots/local/sounds-like.jpg",
+    "https://steggi-bernd.github.io/Songsta/screenshots/local/replay.jpg",
+    "https://steggi-bernd.github.io/Songsta/screenshots/local/devices.jpg"
+  ],
+  "sameAs": ["https://github.com/steggi-bernd/Songsta"]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Is Songsta free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Songsta is open source under the GNU GPL v3, with no account, no ads and nothing to buy." } },
+    { "@type": "Question", "name": "Do I need a server?", "acceptedAnswer": { "@type": "Answer", "text": "No. The desktop app plays the folders on your computer on its own, and Jellyfin, Navidrome or another Subsonic server can join the same library. The phone app plays your Jellyfin server, folders on the phone, or both." } },
+    { "@type": "Question", "name": "Is Songsta a Spotify alternative?", "acceptedAnswer": { "@type": "Answer", "text": "For the music you own. It doesn't stream a catalogue; it plays your files and servers with the comfort of a streaming app. Your Spotify Liked Songs and playlists can come over, with a list of what you still want to buy." } },
+    { "@type": "Question", "name": "Which formats does Songsta play?", "acceptedAnswer": { "@type": "Answer", "text": "MP3, AAC, FLAC up to 24-bit/192 kHz, WAV, Ogg Vorbis and Opus directly; AIFF, ALAC, WMA, WavPack, APE and DSD with FFmpeg." } },
+    { "@type": "Question", "name": "Is there a version for macOS or iPhone?", "acceptedAnswer": { "@type": "Answer", "text": "Not yet. Songsta runs on Windows 10 and 11, 64-bit Linux and Android 7 or newer." } },
+    { "@type": "Question", "name": "Why does Windows warn me before installing?", "acceptedAnswer": { "@type": "Answer", "text": "The installer isn't code-signed, so Windows SmartScreen asks once. Choose More info, then Run anyway. The source code and every release are public on GitHub." } },
+    { "@type": "Question", "name": "Does Songsta collect data?", "acceptedAnswer": { "@type": "Answer", "text": "No. There is no analytics. What goes online (open music databases, lyrics, the update check) is listed in Settings, Network & privacy, where you can switch each service off." } }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="site/favicon.png" width="28" height="28" alt="">Songsta</a>
+    <nav aria-label="Main">
+      <a class="opt" href="#features">Features</a>
+      <a class="opt" href="#install">Install</a>
+      <a class="opt" href="#faq">FAQ</a>
+      <a href="https://github.com/steggi-bernd/Songsta">GitHub</a>
+      <a class="lang" href="de/" hreflang="de" lang="de">Deutsch</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">Free · Open source · No account</p>
+        <h1>The feel of a streaming app, for <em>the music you own</em>.</h1>
+        <p class="lede">Songsta is a music player for Windows, Linux and Android. It brings your files, Jellyfin and Navidrome together in one library, with Hi-Res FLAC, synced lyrics, mixes made from your own listening and the speakers in your home.</p>
+        <div class="downloads">
+          <a class="btn primary" href="https://github.com/steggi-bernd/Songsta/releases/latest/download/Songsta-Setup.exe">Download for Windows<small>Songsta-Setup.exe</small></a>
+          <a class="btn" href="https://github.com/steggi-bernd/Songsta/releases/latest/download/Songsta.apk">Android<small>Songsta.apk</small></a>
+          <a class="btn" href="https://github.com/steggi-bernd/Songsta/releases/latest">Linux<small>.deb · AppImage</small></a>
+        </div>
+        <p class="meta">Windows 10 and 11 · Android 7+ · 64-bit Linux · <a href="https://github.com/steggi-bernd/Songsta/releases/latest">All downloads</a> · <a href="https://github.com/steggi-bernd/Songsta">Source code</a></p>
+      </div>
+      <img class="hero-art" src="site/hero.webp" width="1500" height="1050" fetchpriority="high" alt="The Songsta desktop app's Home page and the phone app's player playing the same song, kept in sync by your own server with Jellyfin and the Songsta sync service">
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Everything a streaming app does, built from your own music</h2>
+      <p class="intro">A Home page with mixes, artist pages, a real queue and one stream that moves between your devices, for the songs on your disk and your server.</p>
+      <div class="grid">
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4v16M9 4v16M13.5 4.5l5 15"/></svg>
+          <h3>One library from everywhere</h3>
+          <p>Local folders, Jellyfin, Navidrome and any Subsonic server side by side. A song you have twice is listed once and plays from your disk first.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12h1.5M7 8v8M11 4v16M15 7v10M19 10v4"/></svg>
+          <h3>Made for good files</h3>
+          <p>FLAC up to 24-bit/192 kHz, and the player bar shows what really plays. Leveling, crossfade and an equalizer with AutoEQ for 9,000 headphones.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>
+          <h3>Mixes from your listening</h3>
+          <p>On Repeat, Rediscover, Calm, Upbeat and a mix per genre, smart playlists that fill themselves, and mixes that flow from song to song.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+          <h3>Synced lyrics</h3>
+          <p>From your files, your server or LRCLIB, searchable by a line you remember, and a full-screen view with a visualizer that moves with the music.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h10M18 14v6M15 17h6"/></svg>
+          <h3>A queue that listens</h3>
+          <p>First come, first played, shuffle that goes one way, and a song that branches off into the rest of its list.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+          <h3>On your phone</h3>
+          <p>The Android app plays your server and your folders, with downloads for when there's no connection.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
+          <h3>One stream everywhere</h3>
+          <p>Playlists and where you stopped stay in sync, and one device steers another, like Spotify Connect.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+          <h3>Coming from Spotify?</h3>
+          <p>Your Liked Songs and playlists come over in their order, with a list of what you still want to buy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="split alt">
+    <div class="wrap">
+      <div class="text">
+        <h2>Sounds like: find what fits</h2>
+        <p>Pick a song and Songsta finds the songs in your library that sound like it, by tempo, key and energy measured from the music itself. Turn the Camelot wheel to hear another key, and play the matches as a mix that flows from one song into the next.</p>
+        <ul class="ticks">
+          <li>Same tempo, same key, both, or same energy</li>
+          <li>The Camelot wheel DJs use, with key correction</li>
+          <li>Mixes by sound: late night, run, focus, sunlit</li>
+        </ul>
+      </div>
+      <img class="shot" src="site/sounds-like-1200.jpg" srcset="site/sounds-like-1200.jpg 1200w, screenshots/local/sounds-like.jpg 2400w" sizes="(min-width: 900px) 620px, 100vw" width="1200" height="750" loading="lazy" decoding="async" alt="Sounds like: a song with its tempo, key and energy, the Camelot wheel around its key, and the songs of the library that fit, closest first">
+    </div>
+  </section>
+
+  <section class="split flip">
+    <div class="wrap">
+      <div class="text">
+        <h2>Replay: your year, told back</h2>
+        <p>Your month, your year or all of it as a story: the albums you played most, five songs you couldn't stop, your prime time, the pulse of the period and the faces of your top artists.</p>
+        <p>With the optional sync service, Replay counts what all your devices played.</p>
+      </div>
+      <img class="shot" src="site/replay-1200.jpg" srcset="site/replay-1200.jpg 1200w, screenshots/local/replay.jpg 2400w" sizes="(min-width: 900px) 620px, 100vw" width="1200" height="750" loading="lazy" decoding="async" alt="Replay's opening slide: 2026 was loud, over the year's most played albums, with minutes, plays, songs and artists">
+    </div>
+  </section>
+
+  <section class="split alt">
+    <div class="wrap">
+      <div class="text">
+        <h2>Every speaker in the house</h2>
+        <p>Receivers and network speakers over UPnP/DLNA, Chromecast, Google TV and Nest: one press moves the music, and it goes on from the same place in the song.</p>
+        <ul class="ticks">
+          <li>Several speakers at once, each with its own volume</li>
+          <li>A different song in each room</li>
+          <li>Receivers and TVs that switch themselves off afterwards</li>
+        </ul>
+      </div>
+      <img class="shot" src="site/devices-1200.jpg" srcset="site/devices-1200.jpg 1200w, screenshots/local/devices.jpg 2400w" sizes="(min-width: 900px) 620px, 100vw" width="1200" height="750" loading="lazy" decoding="async" alt="The devices panel: this computer, a phone with Songsta, the living room playing the app's music and the kitchen playing a song of its own">
+    </div>
+  </section>
+
+  <section class="split flip">
+    <div class="wrap">
+      <div class="text">
+        <h2>On your phone too</h2>
+        <p>The Android app looks and works like the desktop app: your server's music and the folders on your phone, downloads for when there's no connection, the lock screen and headset buttons, and the speakers at home.</p>
+        <p>It offers its own updates, or follow them with <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/steggi-bernd/Songsta">Obtainium</a>.</p>
+      </div>
+      <img class="shot" src="site/phone-1200.jpg" srcset="site/phone-1200.jpg 1200w, screenshots/phone/phone.jpg 2368w" sizes="(min-width: 900px) 620px, 100vw" width="1200" height="652" loading="lazy" decoding="async" alt="The phone app: Home with mixes, the player, synced lyrics and the devices">
+    </div>
+  </section>
+
+  <section id="install" class="alt">
+    <div class="wrap">
+      <h2>Install in a minute</h2>
+      <p class="intro">The desktop app stands on its own. The phone app and the sync service build on your Jellyfin server.</p>
+      <div class="install-grid">
+        <div class="card">
+          <h3>Windows</h3>
+          <p class="need">Windows 10 or 11, 64-bit</p>
+          <ol>
+            <li>Download and run <code>Songsta-Setup.exe</code>.</li>
+            <li>The installer isn't code-signed, so SmartScreen asks once: <i>More info → Run anyway</i>.</li>
+            <li>Songsta updates itself from then on.</li>
+          </ol>
+          <a class="btn primary" href="https://github.com/steggi-bernd/Songsta/releases/latest/download/Songsta-Setup.exe">Download for Windows<small>Songsta-Setup.exe</small></a>
+        </div>
+        <div class="card">
+          <h3>Android</h3>
+          <p class="need">Android 7 or newer, 64-bit phone</p>
+          <ol>
+            <li>Open <code>Songsta.apk</code> on your phone.</li>
+            <li>It isn't on a store, so Play Protect may ask once: <i>More details → Install anyway</i>.</li>
+            <li>The app offers its own updates.</li>
+          </ol>
+          <a class="btn primary" href="https://github.com/steggi-bernd/Songsta/releases/latest/download/Songsta.apk">Download for Android<small>Songsta.apk</small></a>
+        </div>
+        <div class="card">
+          <h3>Linux</h3>
+          <p class="need">64-bit, the .deb for Debian, Ubuntu and Mint</p>
+          <pre><code>sudo apt install ./Songsta-amd64.deb</code></pre>
+          <pre><code>chmod +x Songsta-x86_64.AppImage
+./Songsta-x86_64.AppImage</code></pre>
+          <a class="btn" href="https://github.com/steggi-bernd/Songsta/releases/latest">All Linux downloads<small>.deb and AppImage</small></a>
+        </div>
+      </div>
+      <div class="card sync">
+        <p><b style="color: var(--ink)">Optional: the sync service.</b> A small Docker container next to Jellyfin, for amd64 and arm64 (a Raspberry Pi too). Playlists, the order of Liked Songs, where you stopped and your listening history stay the same on every device. <a href="https://github.com/steggi-bernd/Songsta/blob/feat/local-player/sync-server/README.md">How to set it up</a></p>
+        <pre><code>docker compose up -d</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Yours, and nobody else's</h2>
+      <p class="intro">Songsta has no servers of its own. Your library and your listening stay on your devices, and on your own server if you run one.</p>
+      <div class="privacy-list">
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>
+          <h3>No account, no ads, no analytics</h3>
+          <p>Nothing to sign up for, nothing that watches what you play.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+          <h3>You decide what goes online</h3>
+          <p>Settings list every outside service Songsta may use, what it sends and why. Allow all, only your own servers, or pick.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <h3>No passwords kept</h3>
+          <p>Your server sign-ins are kept as tokens, sealed by Windows or your Linux desktop's keyring.</p>
+        </div>
+        <div class="card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>
+          <h3>Open source</h3>
+          <p>Every line is on GitHub under the GNU GPL v3, and every release is built in the open.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="faq alt">
+    <div class="wrap">
+      <h2>Questions</h2>
+      <details>
+        <summary>Is Songsta free?</summary>
+        <p>Yes. Songsta is open source under the GNU GPL v3, with no account, no ads and nothing to buy.</p>
+      </details>
+      <details>
+        <summary>Do I need a server?</summary>
+        <p>No. The desktop app plays the folders on your computer on its own, and Jellyfin, Navidrome or another Subsonic server can join the same library. The phone app plays your Jellyfin server, folders on the phone, or both.</p>
+      </details>
+      <details>
+        <summary>Is Songsta a Spotify alternative?</summary>
+        <p>For the music you own. It doesn't stream a catalogue; it plays your files and servers with the comfort of a streaming app. Your Spotify Liked Songs and playlists can come over, with a list of what you still want to buy.</p>
+      </details>
+      <details>
+        <summary>Which formats does Songsta play?</summary>
+        <p>MP3, AAC, FLAC up to 24-bit/192 kHz, WAV, Ogg Vorbis and Opus directly; AIFF, ALAC, WMA, WavPack, APE and DSD with FFmpeg.</p>
+      </details>
+      <details>
+        <summary>Is there a version for macOS or iPhone?</summary>
+        <p>Not yet. Songsta runs on Windows 10 and 11, 64-bit Linux and Android 7 or newer.</p>
+      </details>
+      <details>
+        <summary>Why does Windows warn me before installing?</summary>
+        <p>The installer isn't code-signed, so Windows SmartScreen asks once. Choose <i>More info</i>, then <i>Run anyway</i>. The source code and every release are public on GitHub.</p>
+      </details>
+      <details>
+        <summary>Does Songsta collect data?</summary>
+        <p>No. There is no analytics. What goes online (open music databases, lyrics, the update check) is listed in <i>Settings → Network &amp; privacy</i>, where you can switch each service off.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="https://github.com/steggi-bernd/Songsta">GitHub</a>
+      <a href="https://github.com/steggi-bernd/Songsta/releases">Releases</a>
+      <a href="https://github.com/steggi-bernd/Songsta/blob/feat/local-player/docs/GUIDE.md">Full guide</a>
+      <a href="https://github.com/steggi-bernd/Songsta/issues">Report a problem</a>
+      <a href="de/" hreflang="de" lang="de">Deutsch</a>
+    </div>
+    <p>Songsta is free software under the GNU GPL v3. It is not affiliated with Spotify, Jellyfin or Navidrome.</p>
+    <p>The screenshots show a made-up demo library; the covers are public-domain paintings and NASA photographs (<a href="https://github.com/steggi-bernd/Songsta/blob/feat/local-player/docs/screenshots/CREDITS.md">credits</a>). This site sets no cookies and loads nothing from other sites.</p>
+  </div>
+</footer>
+</body>
+</html>
