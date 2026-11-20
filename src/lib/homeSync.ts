@@ -26,7 +26,7 @@ import { syncFavorites } from "./serverSync";
 import { libraryDocHosts, librarySyncReady, onLibrarySyncReady, watchLibraryDocs } from "./libraryDocs";
 import { computerListenHost, keepOwnPlaysHere, useListenCursors } from "./listenShare";
 import { sharesListens } from "./listenSync";
-import { anchorPlace, createSyncEngine, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "./syncEngine";
+import { createSyncEngine, DEVICE_ONLINE_MS, keptFrom, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "./syncEngine";
 import { problemKey, serviceProblem, type SyncServiceInfo, type SyncServiceProblem } from "./syncService";
 import { T } from "./i18n";
 
@@ -673,15 +673,16 @@ export function watchHomeSync(): () => void {
         break;
       }
       case "setUpcoming": {
+        const songs = songsOf(command.tracks);
         // Edited where only a stretch of this queue was known: what comes after the last song known there stays.
         let keepFrom: number | undefined;
         if (command.keepAfter) {
           const { queue, index } = usePlayer.getState();
           const anchor = findSong(command.keepAfter.track);
-          const at = anchor ? anchorPlace(queue, index, command.keepAfter.ahead, (t) => songKey(t.id) === songKey(anchor.id)) : -1;
-          keepFrom = (at >= 0 ? at : Math.min(queue.length - 1, index + command.keepAfter.ahead)) + 1;
+          const key = (t: Track): string => songKey(t.id);
+          keepFrom = keptFrom(queue, index, command.keepAfter, (t) => !!anchor && key(t) === key(anchor), songs, key);
         }
-        player.replaceUpcoming(songsOf(command.tracks), command.line, keepFrom);
+        player.replaceUpcoming(songs, command.line, keepFrom);
         break;
       }
       case "branchOff":

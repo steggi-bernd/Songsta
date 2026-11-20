@@ -830,6 +830,55 @@ test("who's around: an answer to an earlier question arriving after a newer one 
   await until(() => seen.at(-1) === "B", "the phone to see B again");
 });
 
+test("an observer ignores a delayed device list and sees a third device's real skip back", async (t) => {
+  const token = freshLogin();
+  const player = deviceEngine("player", token);
+  const remote = deviceEngine("remote", token);
+  const titles = [];
+  let holdNext = false;
+  let release;
+  const observer = deviceEngine("observer", token, {
+    request(method, url) {
+      if (!holdNext || method !== "GET" || url !== "/v1/devices") return undefined;
+      holdNext = false;
+      return call(method, url, { token }).then((snapshot) => new Promise((resolve) => {
+        release = () => resolve(snapshot);
+      }));
+    },
+    applyDevices(list) {
+      const title = list.find((d) => d.id === "player")?.presence.track?.title;
+      if (title && titles.at(-1) !== title) titles.push(title);
+    },
+  });
+  t.after(() => {
+    release?.();
+    for (const device of [observer, player, remote]) device.engine.stop();
+  });
+  const announce = (title) => {
+    player.presence.track = { id: `jf:${title}`, title, artist: "Band", duration: 100 };
+    player.presence.playing = true;
+    player.engine.presenceChanged();
+  };
+  for (const device of [observer, player, remote]) device.engine.start();
+  announce("B");
+  await until(() => titles.at(-1) === "B", "the observer to see B");
+  holdNext = true;
+  const delayed = observer.engine.devicesNow();
+  await until(() => !!release, "a snapshot of B to be held");
+  announce("C");
+  await until(async () => (await call("GET", "/v1/devices", { token })).body.devices.find((d) => d.id === "player")?.doc.track?.title === "C", "the service to see C");
+  await observer.engine.devicesNow();
+  assert.deepEqual(titles, ["B", "C"]);
+  release();
+  await delayed;
+  assert.deepEqual(titles, ["B", "C"]);
+  assert.equal(await remote.engine.sendCommand("player", { action: "previous" }), true);
+  await until(() => player.heard.commands.some((c) => c.action === "previous"), "the player to receive the remote skip");
+  announce("B");
+  await until(() => titles.at(-1) === "B", "the observer to see the real skip back");
+  assert.deepEqual(titles, ["B", "C", "B"]);
+});
+
 test("where the music stands: an older note arriving after a newer one isn't gone on from", async (t) => {
   const token = freshLogin();
   const phone = holdingDevice("phone", token, (method, url) => method === "GET" && url === "/v1/docs/position", { wantsPlayback: () => true });
@@ -856,4 +905,82 @@ test("where the music stands: an older note arriving after a newer one isn't gon
   phone.held[0]();
   await new Promise((r) => setTimeout(r, 150));
   assert.deepEqual(phone.heard.adopted.map((a) => a.note.queueId).filter((q, i, all) => q !== all[i - 1]), ["q1", "q2"], "the late word about song 1 changes nothing");
+});
+
+test("a hand-over that arrives late, after a newer word from a third device, starts nothing", async (t) => {
+  const token = freshLogin();
+  const song = (title) => ({ id: `jf:${title}`, title, artist: "Band", duration: 180 });
+  const sending = (id, title) =>
+    deviceEngine(id, token, {
+      readPlayback: () => ({
+        note: { device: { id, name: id }, track: song(title), playing: true, at: Date.now(), positionMs: 17000, queueId: `q-${title}` },
+        queue: () => ({ id: `q-${title}`, tracks: [song(title)] }),
+      }),
+    });
+  const a = sending("source-a", "A");
+  const c = sending("source-c", "C");
+  assert.equal(await a.engine.handOver("target"), true);
+  // The target's first look at the queue (the hand-over's) is held back.
+  let release = null;
+  let first = true;
+  const target = deviceEngine("target", token, {
+    wantsPlayback: () => true,
+    request: (method, url, body) => {
+      if (!first || method !== "GET" || url !== "/v1/docs/queue") return undefined;
+      first = false;
+      const answer = call(method, url, { token, body });
+      return new Promise((resolve) => (release = () => answer.then(resolve)));
+    },
+  });
+  t.after(() => {
+    release?.();
+    target.engine.stop();
+  });
+  target.engine.start();
+  await until(() => !!release, "the hand-over on its way");
+  // Meanwhile the music starts on a third device, and the target goes by that.
+  await c.engine.flushPlayback();
+  await target.engine.checkPlayback();
+  assert.equal(target.heard.adopted.at(-1)?.note.track.title, "C");
+  release();
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  const titles = target.heard.adopted.map((p) => p.note.track.title);
+  assert.equal(titles.includes("A"), false, `A's late hand-over isn't gone on from: ${titles.join(" ")}`);
+  assert.equal(target.heard.commands.some((command) => command.action === "takeOver"), false, "and starts nothing");
+});
+
+test("a hand-over still goes on when the device that handed over said something newer since", async (t) => {
+  const token = freshLogin();
+  const song = { id: "jf:handed", title: "Handed", artist: "Band", duration: 180 };
+  let playing = true;
+  const source = deviceEngine("source", token, {
+    readPlayback: () => ({
+      note: { device: { id: "source", name: "Source" }, track: song, playing, at: Date.now(), positionMs: 20000, queueId: "q-h" },
+      queue: () => ({ id: "q-h", tracks: [song] }),
+    }),
+  });
+  assert.equal(await source.engine.handOver("target"), true);
+  let release = null;
+  let first = true;
+  const target = deviceEngine("target", token, {
+    wantsPlayback: () => true,
+    request: (method, url, body) => {
+      if (!first || method !== "GET" || url !== "/v1/docs/queue") return undefined;
+      first = false;
+      const answer = call(method, url, { token, body });
+      return new Promise((resolve) => (release = () => answer.then(resolve)));
+    },
+  });
+  t.after(() => {
+    release?.();
+    target.engine.stop();
+  });
+  target.engine.start();
+  await until(() => !!release, "the hand-over on its way");
+  // The source pauses and says so; the target hears of it before its hand-over is through.
+  playing = false;
+  await source.engine.flushPlayback();
+  await target.engine.checkPlayback();
+  release();
+  await until(() => target.heard.commands.some((command) => command.action === "takeOver"), "the target takes over");
 });

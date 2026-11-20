@@ -144,7 +144,7 @@ export interface KeepAfter {
  * Where the song an edit was anchored to (KeepAfter) stands in the queue now: at its place, else the
  * nearest copy around it (songs played on since, or added in front), else -1.
  */
-export function anchorPlace<T>(queue: readonly T[], index: number, ahead: number, isIt: (t: T) => boolean, reach = 64): number {
+export function anchorPlace<T>(queue: readonly T[], index: number, ahead: number, isIt: (t: T) => boolean, reach = ANCHOR_REACH): number {
   const at = index + Math.max(1, ahead);
   if (at < queue.length && isIt(queue[at])) return at;
   for (let d = 1; d <= reach; d++) {
@@ -152,6 +152,24 @@ export function anchorPlace<T>(queue: readonly T[], index: number, ahead: number
     if (at + d < queue.length && isIt(queue[at + d])) return at + d;
   }
   return -1;
+}
+
+/** How far around its place the song an edit was anchored to is looked for. */
+export const ANCHOR_REACH = 64;
+
+/**
+ * From where a queue stays as it is after an edit anchored to a song (KeepAfter): right after that
+ * song. When it isn't there any more (another device took it out meanwhile), what came after it stands
+ * at its place now and stays, except songs that are among the last ones just sent (Codex's review of
+ * these fixes: the song after a removed anchor went too).
+ */
+export function keptFrom<T>(queue: readonly T[], index: number, keep: KeepAfter, isAnchor: (t: T) => boolean, sent: readonly T[], keyOf: (t: T) => string): number {
+  const at = anchorPlace(queue, index, keep.ahead, isAnchor);
+  if (at >= 0) return at + 1;
+  const justSent = new Set(sent.slice(-ANCHOR_REACH).map(keyOf));
+  let from = Math.min(queue.length, index + Math.max(1, keep.ahead));
+  while (from < queue.length && justSent.has(keyOf(queue[from]))) from += 1;
+  return from;
 }
 
 export interface MutedDoc {
@@ -319,6 +337,12 @@ export function createSyncEngine(host: SyncHost) {
   /** who's around, and where the music stands: an older answer arriving late changes nothing */
   const devicesAnswers = newestAnswers();
   const playbackAnswers = newestAnswers();
+  /** the newest word on where the music stands taken from another device, and whose it was: a hand-over that arrives later than it starts nothing */
+  let newestElsewhere: { rev: number; device: string } | null = null;
+  function noteTaken(rev: unknown, note: PlaybackNote | null): void {
+    if (typeof rev !== "number" || !note || note.device.id === host.deviceId) return;
+    if (!newestElsewhere || rev >= newestElsewhere.rev) newestElsewhere = { rev, device: note.device.id };
+  }
   let sentQueueId: string | null = null;
   /** the note last sent or taken over: nothing newer, nothing to say */
   let sentAt = 0;
@@ -588,13 +612,15 @@ export function createSyncEngine(host: SyncHost) {
     const note = readNote(got.body.doc);
     if (!note || note.device.id === host.deviceId || !host.wantsPlayback(note)) {
       // Seen all the same: an older word arriving after it changes nothing.
-      playbackAnswers.take(mine, got.body.rev);
+      if (playbackAnswers.take(mine, got.body.rev)) noteTaken(got.body.rev, note);
       return;
     }
     const queue = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
     const doc = queue.status === 200 ? (queue.body.doc as QueueDoc | null) : null;
     // The wait for the queue may have changed things here, and a newer word may have come meanwhile.
-    if (!playbackAnswers.take(mine, got.body.rev) || !host.wantsPlayback(note)) return;
+    const newest = playbackAnswers.take(mine, got.body.rev);
+    if (newest) noteTaken(got.body.rev, note);
+    if (!newest || !host.wantsPlayback(note)) return;
     const matching = doc?.id === note.queueId && Array.isArray(doc.tracks) ? doc : null;
     sentQueueId = note.queueId;
     sentAt = note.at;
@@ -690,14 +716,18 @@ export function createSyncEngine(host: SyncHost) {
     const got = await call("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.position = got.body.rev;
-    // Asked for, so gone on from in any case; an older word arriving after it changes nothing.
-    playbackAnswers.take(mine, got.body.rev);
+    const rev = got.body.rev;
     const note = readNote(got.body.doc);
+    // An older word arriving after this one changes nothing.
+    if (playbackAnswers.take(mine, rev)) noteTaken(rev, note);
     // Without the other device's word on where it stands there's nothing to go on from: what this one had
     // before (its own word, the latest there) isn't what was asked for.
     if (!note || note.device.id === host.deviceId) return;
     {
       const queue = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
+      // A newer word from yet another device came while this one was on its way: the music went on
+      // there, and this hand-over starts nothing (Codex's review of these fixes).
+      if (typeof rev === "number" && newestElsewhere && newestElsewhere.rev > rev && newestElsewhere.device !== note.device.id) return;
       const doc = queue.status === 200 ? (queue.body.doc as QueueDoc | null) : null;
       sentQueueId = note.queueId;
       sentAt = note.at;
@@ -777,6 +807,7 @@ export function createSyncEngine(host: SyncHost) {
         hasDevices = revs.devices !== undefined;
         devicesAnswers.seen(revs.devices);
         playbackAnswers.seen(revs.position);
+        if (newestElsewhere && typeof revs.position === "number" && revs.position < newestElsewhere.rev) newestElsewhere = null;
         if (hasDevices) {
           if (reply.body.inbox > 0) await takeCommands();
           // Also without news: a device that went away says nothing about it.
@@ -849,6 +880,7 @@ export function createSyncEngine(host: SyncHost) {
       known.devices = -1;
       devicesAnswers.afresh();
       playbackAnswers.afresh();
+      newestElsewhere = null;
       for (const name of LIBRARY_DOCS) delete libraryKnown[name];
       libraryMissing.clear();
       listensKnown = -1;
@@ -1029,6 +1061,7 @@ export function createSyncEngine(host: SyncHost) {
       // Maybe another service now: its counts are its own, and who's around and what plays is asked again.
       devicesAnswers.afresh();
       playbackAnswers.afresh();
+      newestElsewhere = null;
       known.devices = -1;
       known.position = -1;
       lastDevicesAt = 0;

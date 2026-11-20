@@ -19,7 +19,7 @@ import { streamUrl, type Session } from "../jellyfin";
 import { withoutServer } from "../addresses";
 import { branched } from "../playingFrom";
 import { chooseStream, levelGain, ORIGINAL, sameChoice, stepDown, type Leveling, type QualityMode, type StreamChoice } from "../quality";
-import { anchorPlace, flowOrder, jumpTarget, lineInList, listAround, orderUpTo, orderWithout, placeOf, playCreditSeconds, putBack, tendedBranches, toWireTrack, withoutSongs, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueBranch, type QueueDoc, type RemoteDevice, type Track, type WireTrack } from "../shared";
+import { flowOrder, jumpTarget, keptFrom, lineInList, listAround, orderUpTo, orderWithout, placeOf, playCreditSeconds, putBack, tendedBranches, toWireTrack, withoutSongs, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueBranch, type QueueDoc, type RemoteDevice, type Track, type WireTrack } from "../shared";
 import { readJson, writeJson } from "../storage";
 import { useConnection } from "./connection";
 import { isAround, useDevices } from "./devices";
@@ -1424,13 +1424,13 @@ export function runCommand(command: DeviceCommand): void {
     case "setUpcoming": {
       const { queue, index, unshuffled, branches } = usePlayer.getState();
       // Edited where only a stretch of this queue was known: what comes after the last song known there stays.
+      const sent = songsOf(command.tracks);
       let cut = queue.length;
       if (command.keepAfter) {
         const anchor = findSong(command.keepAfter.track);
-        const at = anchor ? anchorPlace(queue, index, command.keepAfter.ahead, (t) => t.id === anchor.id) : -1;
-        cut = Math.max(index + 1, (at >= 0 ? at : Math.min(queue.length - 1, index + command.keepAfter.ahead)) + 1);
+        cut = keptFrom(queue, index, command.keepAfter, (t) => !!anchor && t.id === anchor.id, sent, (t) => t.id);
       }
-      const upcoming = [...songsOf(command.tracks), ...queue.slice(cut)];
+      const upcoming = [...sent, ...queue.slice(cut)];
       if (!upcoming.length) {
         // Cleared there: just as if it had been cleared here.
         branchUndo.clear();

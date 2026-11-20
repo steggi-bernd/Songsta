@@ -544,3 +544,12 @@ test("a volume meant for the phone and not sent yet doesn't reach the kitchen on
     await wait(30);
   }
 });
+
+test("an edit anchored to a song taken out here meanwhile keeps what came after it", async () => {
+  await playingHere(0);
+  // One controller took out C here; another one, from the earlier window that ended at C, takes out B.
+  player().removeAt(2);
+  phone.tell({ action: "setUpcoming", line: 0, tracks: [wire("c")], keepAfter: { track: wire("c"), ahead: 2 } });
+  await until(() => !player().queue.some((t) => t.title === "B"), "the edit arrives");
+  assert.deepEqual(player().queue.map((t) => t.title), ["A", "C", "D"], "D, after the anchor, stays");
+});

@@ -51,7 +51,7 @@ export { camelotLabel, camelotOf, DEFAULT_MATCH, keyLabel, keyOfCamelot, keyStep
 export { ringSlice } from "../../src/lib/ringSlice";
 export { recordDeletionChanges, type DeletionChange } from "../../src/lib/deletion-sync";
 export { likedInOrder, mergePlaylistDocs, oneCopyEach, songFinder, toPlaylistDoc, toWireTrack, type PlaylistDoc, type WirePlaylist, type WireTrack } from "../../src/lib/playlistSync";
-export { anchorPlace, createSyncEngine, defaultSyncAddress, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "../../src/lib/syncEngine";
+export { anchorPlace, createSyncEngine, defaultSyncAddress, DEVICE_ONLINE_MS, keptFrom, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "../../src/lib/syncEngine";
 export { castPlayer, EndWatch, mimeOf, upnpPlayer, type DevicePlayer } from "../../electron/device-player";
 export { describe as describeRenderer, isLanUrl, parseSsdp, type Renderer } from "../../electron/upnp-control";
 export {

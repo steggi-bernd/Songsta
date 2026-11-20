@@ -171,24 +171,31 @@ export async function noteRemoteListens(listens: SharedListen[], devices: Record
   await flushListens();
   remoteKeys ??= new Set(readAll().filter((l) => l.device).map((l) => listenKey(l.device as string, l)));
   const keys = remoteKeys;
-  const seen = new Set<string>();
-  const fresh = listens.filter((l) => {
-    const key = listenKey(l.device, l);
-    if (keys.has(key) || seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  // Looked up and written in one go, after any write under way: the same play arriving twice at once
+  // is new only once, and written once (Codex's review of these fixes).
+  const run = writing.then(async () => {
+    const seen = new Set<string>();
+    const fresh = listens.filter((l) => {
+      const key = listenKey(l.device, l);
+      if (keys.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    if (!fresh.length) return fresh;
+    const lines = fresh.map((l) => {
+      const from = devices[l.device];
+      return JSON.stringify({ at: l.at, id: l.id, title: l.title, artist: l.artist, album: l.album ?? "", duration: Math.round(l.ms / 1000), device: l.device, deviceName: from?.name ?? "", ...(from?.kind ? { deviceKind: from.kind } : {}) });
+    });
+    await append(lines);
+    for (const key of seen) keys.add(key);
+    return fresh;
   });
-  if (!fresh.length) return fresh;
-  const lines = fresh.map((l) => {
-    const from = devices[l.device];
-    return JSON.stringify({ at: l.at, id: l.id, title: l.title, artist: l.artist, album: l.album ?? "", duration: Math.round(l.ms / 1000), device: l.device, deviceName: from?.name ?? "", ...(from?.kind ? { deviceKind: from.kind } : {}) });
-  });
-  const run = writing.then(() => append(lines));
   // The next write waits for this one, failed or not.
-  writing = run.catch(() => undefined);
-  await run;
-  for (const key of seen) keys.add(key);
-  return fresh;
+  writing = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
 }
 
 /** Newest first, a page at a time: the listens before `before` (ms), and whether older ones exist. */

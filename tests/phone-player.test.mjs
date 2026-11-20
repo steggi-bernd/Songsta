@@ -870,3 +870,21 @@ test("told to play a list from the second copy of a song in it: that copy, and w
   assert.equal(now(), "c");
   assert.deepEqual(ids(), ["a", "c", "d"]);
 });
+
+test("an edit anchored to a song another controller took out meanwhile keeps what came after it", () => {
+  player().playTracks(many(1200), 0, "Long list", false);
+  // One controller took out s800, the last song another one knew; that one, from the earlier window, takes out s2.
+  player().removeAt(800);
+  m.runCommand({ action: "setUpcoming", tracks: many(801).slice(1).filter((x) => x.id !== "s2"), keepAfter: { track: t("s800"), ahead: 800 } });
+  assert.ok(ids().includes("s801"), "the song after the anchor stays");
+  assert.equal(ids().indexOf("s2"), -1);
+  assert.equal(ids().at(-1), "s1199");
+  assert.equal(new Set(ids()).size, ids().length, "nothing twice");
+  // Moved on by one meanwhile as well: what was just sent doesn't come twice.
+  player().playTracks(many(1200), 0, "Long list", false);
+  player().addToQueue([t("x")]);
+  player().removeAt(801);
+  m.runCommand({ action: "setUpcoming", tracks: many(801).slice(1), keepAfter: { track: t("s800"), ahead: 800 } });
+  assert.equal(new Set(ids()).size, ids().length, "nothing twice");
+  assert.ok(ids().includes("s801"));
+});

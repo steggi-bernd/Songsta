@@ -101,3 +101,16 @@ test("a line cut short doesn't swallow the next play, and lines written twice co
     h.close();
   }
 });
+
+test("the same play from another device arriving twice at once is new once and written once", async () => {
+  const h = await load();
+  try {
+    const add = () => h.api.noteRemoteListens([shared(7)], devices);
+    const calls = await Promise.all([add(), add()]);
+    assert.deepEqual(calls.map((x) => Array.from(x).length).sort(), [0, 1], "Replay counts it once");
+    assert.equal(fs.readFileSync(h.file, "utf8").trim().split("\n").length, 1, "one line in the journal");
+    assert.equal((await h.api.readListens()).total, 1);
+  } finally {
+    h.close();
+  }
+});
