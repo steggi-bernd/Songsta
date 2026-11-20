@@ -595,14 +595,18 @@ function deviceEngine(id, token, extra = {}) {
   const mutedDoc = { at: 0, tracks: [] };
   const engine = createSyncEngine({
     deviceId: id,
-    request: (method, url, body) => call(method, url, { token, body }),
+    // `extra.request` may answer a request itself, else it goes to the service.
+    request: (method, url, body) => extra.request?.(method, url, body) ?? call(method, url, { token, body }),
     readPlaylists: () => toPlaylistDoc({ playlists: [], folders: [], deletionSync: undefined }),
     applyPlaylists: () => undefined,
     readPlayback: () => extra.readPlayback?.() ?? null,
-    wantsPlayback: () => false,
+    wantsPlayback: (note) => extra.wantsPlayback?.(note) ?? false,
     adoptPlayback: (note, queue) => heard.adopted.push({ note, queue }),
     readPresence: () => presence,
-    applyDevices: (list) => (heard.devices = list),
+    applyDevices: (list) => {
+      heard.devices = list;
+      extra.applyDevices?.(list);
+    },
     onCommand: (command) => heard.commands.push(command),
     readMuted: () => mutedDoc,
     applyMuted: (doc) => {
@@ -667,6 +671,61 @@ test("a device takes over from another: where that one stands, then playing", as
   assert.equal(phone.heard.adopted[0].queue.tracks[0].title, "Handed over");
 });
 
+// Codex's review (2026-11-20): the position's write failed, the hand-over went out anyway, the source
+// stopped and the other device played what it knew from before.
+test("no hand-over until where the device stands is stored: the music stays where it is", async (t) => {
+  const token = freshLogin();
+  const song = { id: "jf:10", title: "Stays here", artist: "Band", duration: 200 };
+  let failPosition = true;
+  const pc = deviceEngine("pc", token, {
+    readPlayback: () => ({
+      note: { device: { id: "pc", name: "PC" }, at: Date.now(), playing: true, positionMs: 30000, track: song, queueId: "q2" },
+      queue: () => ({ id: "q2", tracks: [song] }),
+    }),
+    request: (method, url) => (failPosition && method === "PUT" && url === "/v1/docs/position" ? Promise.resolve({ status: 503, body: {} }) : undefined),
+  });
+  const phone = deviceEngine("phone", token);
+  t.after(() => {
+    pc.engine.stop();
+    phone.engine.stop();
+  });
+  pc.engine.start();
+  phone.engine.start();
+  await until(() => pc.heard.devices.some((d) => d.id === "phone"), "the computer to see the phone");
+  assert.equal(await pc.engine.handOver("phone"), false, "not handed over: the computer plays on");
+  await new Promise((r) => setTimeout(r, 1500));
+  assert.equal(phone.heard.commands.some((c) => c.action === "takeOver"), false, "the phone wasn't asked");
+  failPosition = false;
+  assert.equal(await pc.engine.handOver("phone"), true);
+  await until(() => phone.heard.commands.some((c) => c.action === "takeOver"), "the phone to take over now");
+  assert.equal(phone.heard.adopted.at(-1).note.track.title, "Stays here");
+});
+
+test("a take-over without the other device's word doesn't start what this device had before", async (t) => {
+  const token = freshLogin();
+  const own = { id: "jf:11", title: "From before", artist: "Band", duration: 200 };
+  const pc = deviceEngine("pc", token);
+  const phone = deviceEngine("phone", token, {
+    readPlayback: () => ({
+      note: { device: { id: "phone", name: "Phone" }, at: Date.now(), playing: false, positionMs: 0, track: own, queueId: "q3" },
+      queue: () => ({ id: "q3", tracks: [own] }),
+    }),
+  });
+  t.after(() => {
+    pc.engine.stop();
+    phone.engine.stop();
+  });
+  pc.engine.start();
+  phone.engine.start();
+  await until(() => pc.heard.devices.some((d) => d.id === "phone"), "the computer to see the phone");
+  // The latest word on where the music stands is the phone's own.
+  await phone.engine.flushPlayback();
+  assert.equal(await pc.engine.sendCommand("phone", { action: "takeOver" }), true);
+  await new Promise((r) => setTimeout(r, 2000));
+  assert.equal(phone.heard.commands.some((c) => c.action === "takeOver"), false, "nothing to go on from: nothing starts");
+  assert.equal(phone.heard.adopted.length, 0);
+});
+
 test("a long list goes ahead as the queue document, and its command brings the songs along", async (t) => {
   const token = freshLogin();
   const pc = deviceEngine("pc", token);
@@ -710,4 +769,91 @@ test("muted songs are one list for all devices: the newer one wins", async (t) =
   pc.engine.mutedChanged();
   await until(() => phone.mutedDoc.at === 2000, "the phone to get the newer list");
   assert.deepEqual(phone.mutedDoc.tracks, []);
+});
+
+/* ------------------------------------------------- answers out of order (Codex's review, 2026-11-20) */
+
+/** A device whose questions of one kind can be held back, each answered as the service stood when it was asked, and let go in another order. */
+function holdingDevice(id, token, holds, extra = {}) {
+  const held = [];
+  const device = deviceEngine(id, token, {
+    ...extra,
+    request: (method, url, body) => {
+      if (!held.on || !holds(method, url)) return undefined;
+      const answer = call(method, url, { token, body });
+      return new Promise((resolve) => held.push(() => answer.then(resolve)));
+    },
+  });
+  return { ...device, held };
+}
+
+test("who's around: an answer to an earlier question arriving after a newer one doesn't set the screen back", async (t) => {
+  const token = freshLogin();
+  const seen = [];
+  const pcTrack = (list) => list.find((d) => d.id === "pc")?.presence.track?.title ?? null;
+  const phone = holdingDevice("phone", token, (method, url) => method === "GET" && url.startsWith("/v1/devices") && !url.includes("/commands"), {
+    applyDevices: (list) => seen.push(pcTrack(list)),
+  });
+  const pc = deviceEngine("pc", token);
+  t.after(() => {
+    pc.engine.stop();
+    phone.engine.stop();
+  });
+  const plays = async (title) => {
+    pc.presence.playing = true;
+    pc.presence.track = { id: `jf:${title}`, title, artist: "Band", duration: 100 };
+    pc.engine.presenceChanged();
+    await until(async () => (await call("GET", "/v1/devices", { token })).body.devices.find((d) => d.id === "pc")?.doc.track?.title === title, `the service to hear of ${title}`);
+  };
+  pc.engine.start();
+  phone.engine.start();
+  await plays("B");
+  await until(() => seen.at(-1) === "B", "the phone to see B");
+
+  phone.held.on = true;
+  void phone.engine.devicesNow();
+  await until(() => phone.held.length === 1, "a question under way while B plays");
+  await plays("C");
+  void phone.engine.devicesNow();
+  await until(() => phone.held.length >= 2, "another one, after C started");
+  phone.held.on = false;
+  // The answers about C come back first, the one about B last.
+  for (const answer of phone.held.slice(1)) answer();
+  await until(() => seen.at(-1) === "C", "the phone to see C");
+  phone.held[0]();
+  await new Promise((r) => setTimeout(r, 150));
+  assert.equal(seen.at(-1), "C", "the late answer about B changes nothing");
+  assert.equal(seen.lastIndexOf("B") < seen.indexOf("C"), true, `no B after C: ${seen.join(" ")}`);
+
+  // A real skip back to B is newer, and shows at once.
+  await plays("B");
+  await until(() => seen.at(-1) === "B", "the phone to see B again");
+});
+
+test("where the music stands: an older note arriving after a newer one isn't gone on from", async (t) => {
+  const token = freshLogin();
+  const phone = holdingDevice("phone", token, (method, url) => method === "GET" && url === "/v1/docs/position", { wantsPlayback: () => true });
+  t.after(() => phone.engine.stop());
+  const song = (n) => ({ id: `jf:n${n}`, title: `Song ${n}`, artist: "Band", duration: 100 });
+  const note = async (n) => {
+    const put = (doc, what) => call("PUT", `/v1/docs/${what}`, { token, body: { doc } });
+    assert.equal((await put({ id: `q${n}`, tracks: [song(n)] }, "queue")).status, 200);
+    assert.equal((await put({ device: { id: "pc", name: "PC" }, at: Date.now(), playing: true, positionMs: 0, track: song(n), queueId: `q${n}` }, "position")).status, 200);
+  };
+  await note(1);
+  phone.engine.start();
+  await until(() => phone.heard.adopted.length === 1, "the phone to go on from song 1");
+
+  phone.held.on = true;
+  void phone.engine.checkPlayback();
+  await until(() => phone.held.length === 1, "a question under way while song 1 is the word");
+  await note(2);
+  void phone.engine.checkPlayback();
+  await until(() => phone.held.length >= 2, "another one, after song 2 became the word");
+  phone.held.on = false;
+  for (const answer of phone.held.slice(1)) answer();
+  await until(() => phone.heard.adopted.at(-1)?.note.queueId === "q2", "the phone to go on from song 2");
+  phone.held[0]();
+  await new Promise((r) => setTimeout(r, 150));
+  assert.deepEqual(phone.heard.adopted.map((a) => a.note.queueId).filter((q, i, all) => q !== all[i - 1]), ["q1", "q2"], "the late word about song 1 changes nothing");
 });

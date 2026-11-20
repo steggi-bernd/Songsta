@@ -720,3 +720,153 @@ test("started with the service away: the others hear of it when it's back", () =
   hearDevices([pc("x")]);
   assert.equal(sent.filter((c) => c.action === "yield").length, 1, "once");
 });
+
+/* ------------------------------------------------- edits where only a stretch of the queue is known */
+
+// Codex's review (2026-11-20): the phone knew 800 of the other device's 1,200 songs, removed one, and the
+// other device's queue ended at song 800. The phone now says up to which song it knew the queue.
+const many = (n) => Array.from({ length: n }, (_, i) => t(`s${i}`));
+
+test("an edit made while only a stretch of the followed queue is known says up to which song it knew", () => {
+  const window = many(801);
+  m.runCommand({ action: "yield", to: "pc" });
+  hearDevices([pc("s0")]);
+  adoptPlayback({ device: { id: "pc", name: "PC" }, at: 1, playing: true, positionMs: 0, track: t("s0"), queueId: "q-long", place: 0 }, { id: "q-long", from: 0, tracks: window, total: 1200 });
+  assert.equal(player().queue.length, 801);
+  player().removeAt(2);
+  const edit = sent.at(-1);
+  assert.equal(edit.action, "setUpcoming");
+  assert.equal(edit.tracks.length, 799);
+  assert.deepEqual(edit.keepAfter, { track: t("s800"), ahead: 800 }, "the last song known, 800 after the one playing");
+  // A second edit before that device answers anchors on what it has now.
+  player().removeAt(3);
+  assert.deepEqual(sent.at(-1).keepAfter, { track: t("s800"), ahead: 799 });
+});
+
+test("a whole queue known: an edit replaces what comes next, as before", () => {
+  followPc("b", LIST, { from: 0, total: 4 });
+  player().removeAt(3);
+  assert.equal(sent.at(-1).action, "setUpcoming");
+  assert.equal(sent.at(-1).keepAfter, undefined);
+});
+
+test("the device playing keeps what comes after the song the edit was anchored to", () => {
+  player().playTracks(many(1200), 0, "Long list", false);
+  assert.equal(player().queue.length, 1200);
+  // The other device knew songs up to s800, removed s2, and sent the 799 it has left.
+  const kept = many(801).slice(1).filter((x) => x.id !== "s2");
+  m.runCommand({ action: "setUpcoming", tracks: kept, keepAfter: { track: t("s800"), ahead: 800 } });
+  assert.equal(player().queue.length, 1199, "only the removed song is gone");
+  assert.equal(ids().at(-1), "s1199");
+  assert.equal(ids().indexOf("s2"), -1);
+  // Played on two songs meanwhile: the anchor is found a little nearer.
+  player().playTracks(many(1200), 2, "Long list", false);
+  m.runCommand({ action: "setUpcoming", tracks: many(801).slice(3), keepAfter: { track: t("s800"), ahead: 800 } });
+  assert.equal(player().queue.length, 1200);
+  assert.equal(ids().at(-1), "s1199");
+});
+
+test("cleared here while only a stretch of the followed queue is known: all of that queue goes, also what this phone never saw", () => {
+  m.runCommand({ action: "yield", to: "pc" });
+  hearDevices([pc("s0")]);
+  adoptPlayback({ device: { id: "pc", name: "PC" }, at: 1, playing: true, positionMs: 0, track: t("s0"), queueId: "q-long", place: 0 }, { id: "q-long", from: 0, tracks: many(801), total: 1200 });
+  player().removeAt(2);
+  assert.ok(sent.at(-1).keepAfter, "an edit keeps the rest there");
+  player().clearUpcoming();
+  assert.equal(sent.at(-1).action, "setUpcoming");
+  assert.deepEqual(sent.at(-1).tracks, []);
+  assert.equal(sent.at(-1).keepAfter, undefined, "nothing of it stays");
+});
+
+/* ------------------------------------------------- shuffle after the queue was cleared (Codex's review, 2026-11-20) */
+
+test("cleared with shuffle on: shuffle off brings none of it back, nor what was asked for by hand and cleared", () => {
+  player().playTracks(songs("a", "b", "c"), 0, "List", false);
+  player().toggleShuffle();
+  player().clearUpcoming();
+  assert.deepEqual(ids(), ["a"]);
+  player().toggleShuffle();
+  assert.deepEqual(ids(), ["a"], "only what was there");
+
+  player().playTracks(songs("a", "b", "c", "d"), 0, "List", false);
+  player().toggleShuffle();
+  player().addToQueue([t("x")]);
+  player().clearLine();
+  assert.equal(ids().indexOf("x"), -1);
+  player().toggleShuffle();
+  assert.deepEqual(ids(), ["a", "b", "c", "d"], "the list's own order, without what was asked for");
+});
+
+test("cleared further on with a song in the queue twice: what was heard stays, and shuffle off adds nothing", () => {
+  player().playTracks(songs("a", "b", "c", "d", "e", "f"), 0, "List", true);
+  nativeSays(1);
+  nativeSays(2);
+  const heard = ids().slice(0, 3);
+  assert.equal(now(), heard[2]);
+  player().addToQueue([t(heard[0])]);
+  assert.equal(ids().filter((x) => x === heard[0]).length, 2, "the first song again, by hand");
+  player().clearUpcoming();
+  assert.deepEqual(ids(), heard);
+  player().toggleShuffle();
+  assert.deepEqual(ids(), heard);
+});
+
+test("edited on another device with shuffle on: what it took out stays out here too, and cleared there is cleared here", () => {
+  player().playTracks(songs("a", "b", "c", "d"), 0, "List", false);
+  player().toggleShuffle();
+  m.runCommand({ action: "setUpcoming", line: 0, tracks: ids().slice(1).filter((x) => x !== "c").map(t) });
+  player().toggleShuffle();
+  assert.deepEqual(ids(), ["a", "b", "d"], "the list's own order, without what was taken out there");
+
+  player().toggleShuffle();
+  player().branchOff(songs("r", "s"), 0, "Mix");
+  m.runCommand({ action: "setUpcoming", line: 0, tracks: [] });
+  assert.deepEqual(ids(), ["a"]);
+  assert.deepEqual(player().branches, [], "no branch left of what went");
+  player().toggleShuffle();
+  assert.deepEqual(ids(), ["a"], "shuffle off brings none of it back");
+});
+
+/* ------------------------------------------------- the volume of the device being followed (Codex's review, 2026-11-20) */
+
+const kitchen = (id, more = {}) => ({ id: "kitchen", ageMs: 0, lastSeen: Date.now(), presence: { name: "Kitchen", kind: "speaker", playing: true, positionMs: 1000, durationMs: 100000, track: t(id), queueId: "qk", ...more } });
+
+test("a volume meant for the PC and not sent yet doesn't reach the kitchen once the music moved there", async () => {
+  const to = [];
+  linkDevices({
+    self: "phone",
+    send: async (id, command) => {
+      to.push([id, command]);
+      return true;
+    },
+    sendList: async () => true,
+    handOver: async () => true,
+    look: () => undefined,
+    presence: () => undefined,
+  });
+  followPc("b");
+  player().setRemoteVolume(0.3);
+  player().setRemoteVolume(0.8);
+  // The music moves on to the kitchen within the moment the second value waits.
+  m.runCommand({ action: "yield", to: "kitchen" });
+  hearDevices([pc("b", { playing: false }), kitchen("c", { volume: 0.4 })]);
+  assert.equal(player().remote?.id, "kitchen");
+  await new Promise((r) => setTimeout(r, 250));
+  const volumes = () => to.filter(([, c]) => c.action === "volume").map(([id, c]) => [id, c.level]);
+  assert.deepEqual(volumes(), [["pc", 0.3]], "0.8 was for the PC");
+  assert.equal(player().remoteVolume, 0.4, "the kitchen's own volume shows");
+  player().setRemoteVolume(0.6);
+  assert.deepEqual(volumes().at(-1), ["kitchen", 0.6], "its first own value goes at once");
+});
+
+/* ------------------------------------------------- a list sent by another device */
+
+test("told to play a list from the second copy of a song in it: that copy, and what comes after it", () => {
+  m.runCommand({ action: "playList", start: 2, tracks: songs("a", "b", "a", "c"), context: "Mix" });
+  assert.equal(player().index, 2);
+  assert.deepEqual(ids().slice(player().index), ["a", "c"]);
+  // A song this phone doesn't have: the next one it does.
+  m.runCommand({ action: "playList", start: 1, tracks: [t("a"), t("elsewhere"), t("c"), t("d")], context: "Mix" });
+  assert.equal(now(), "c");
+  assert.deepEqual(ids(), ["a", "c", "d"]);
+});

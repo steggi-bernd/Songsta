@@ -1307,7 +1307,8 @@ html.platform-mac body {
 .camelot-slice:focus {
   outline: none;
 }
-.camelot-slice:focus-visible path {
+/* Only the slice drawn (it lifts), not the still place under it that takes the pointer. */
+.camelot-slice:focus-visible > g > path {
   stroke: rgb(var(--accent));
   stroke-width: 3.5;
 }

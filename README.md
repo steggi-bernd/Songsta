@@ -66,7 +66,7 @@ Every feature in detail, with more pictures: **[the full guide](docs/GUIDE.md)**
 
 ## Install
 
-Everything is on the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest). The desktop app stands on its own; the phone app and the sync service build on your Jellyfin server.
+Everything is on the [Releases page](https://github.com/steggi-bernd/Songsta/releases/latest). The desktop app and the phone app work on their own with the music in your folders; Jellyfin adds your server, and the sync service builds on it.
 
 **Windows 10 / 11 (64-bit):** run `Songsta-Setup.exe`. It isn't code-signed, so SmartScreen asks once: *More info → Run anyway*. Songsta updates itself from then on. For AIFF, ALAC, WMA, WavPack, APE and DSD, add FFmpeg with `winget install ffmpeg`.
 
@@ -118,3 +118,5 @@ The phone app has its own instructions in [mobile/README.md](mobile/README.md). 
 Songsta began as a fork of [ByTune](https://github.com/rishiteja21/ByTune) by [rishiteja21](https://github.com/rishiteja21), the open-source YouTube Music desktop app, itself a desktop port of the BitChord Android player, and was rebuilt into a player for your own collection. Like both, it is licensed under the **GNU GPL v3**, see [LICENSE](LICENSE).
 
 Built with Electron, React, TypeScript, Tailwind CSS, Zustand and music-metadata, the phone app with Expo, React Native and Media3. Songsta is not affiliated with Spotify, Discord, Jellyfin or Navidrome.
+
+Songsta is free and stays free. If you like it, you can [buy me a coffee on Ko-fi](https://ko-fi.com/besteck).

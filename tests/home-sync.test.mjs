@@ -488,3 +488,59 @@ test("started here with the service away: the others hear of it when it's back",
   phone.silent();
   await wait(30);
 });
+
+/* ------------------------------------------------------------ Codex's review, 2026-11-20 */
+
+test("a list started here past its 800th song: the phone gets the stretch around it and starts at that very song", async () => {
+  await followingPhone("b");
+  const long = Array.from({ length: 1200 }, (_, i) => song(`jf:long${i}`, `Long ${i}`));
+  player().playQueue(long, 900);
+  await until(() => phone.heard("playList").length === 1, "the list goes to the phone");
+  const command = phone.heard("playList")[0];
+  const list = service.docs.queue.tracks;
+  assert.equal(list[command.start]?.id, "jf:long900", "the song asked for, where the command says");
+  assert.equal(command.start, 200, "with what came before it");
+  assert.equal(list.at(-1).id, "jf:long1199", "and all that comes after");
+});
+
+test("cleared here while the phone plays a longer queue than this computer knows: all of it goes there", async () => {
+  await followingPhone("b");
+  phone.note("b", { queueId: "q-long", place: 1, doc: { total: 1200 } }, [wire("a"), wire("b"), wire("c")]);
+  phone.say("b", { queueId: "q-long" });
+  await until(() => player().queue.length === 3, "the stretch the phone showed");
+  player().removeAt(2);
+  await until(() => phone.heard("setUpcoming").length === 1, "the edit goes to the phone");
+  assert.equal(phone.heard("setUpcoming")[0].keepAfter?.track.title, "C", "an edit keeps the rest there");
+  player().clearUpcoming();
+  await until(() => phone.heard("setUpcoming").length === 2, "the clearing goes to the phone");
+  const cleared = phone.heard("setUpcoming")[1];
+  assert.deepEqual(cleared.tracks, []);
+  assert.equal(cleared.keepAfter, undefined, "nothing of it stays");
+});
+
+test("a volume meant for the phone and not sent yet doesn't reach the kitchen once the music moved there", async () => {
+  await followingPhone("b");
+  try {
+    // The music moves on: the phone's word for it comes first, then the kitchen says it plays.
+    phone.tell({ action: "yield", to: "kitchen" });
+    await wait(80);
+    player().setVolume(0.3);
+    player().setVolume(0.8);
+    service.devices.kitchen = { at: Date.now(), doc: { name: "Kitchen", kind: "speaker", playing: true, positionMs: 1000, durationMs: 200000, track: wire("c"), queueId: "q-kitchen", volume: 0.4 } };
+    service.devicesRev += 1;
+    service.changed();
+    await until(() => useHomeSync.getState().followed?.id === "kitchen", "following the kitchen");
+    await wait(250);
+    const volumes = () => service.sent.filter((c) => c.action === "volume").map((c) => [c.target, c.level]);
+    assert.deepEqual(volumes(), [["phone", 0.3]], "0.8 was for the phone");
+    assert.equal(player().remoteVolume, 0.4, "the kitchen's own volume shows");
+    player().setVolume(0.6);
+    await until(() => volumes().length === 2, "a move for the kitchen goes");
+    assert.deepEqual(volumes()[1], ["kitchen", 0.6]);
+  } finally {
+    delete service.devices.kitchen;
+    service.devicesRev += 1;
+    service.changed();
+    await wait(30);
+  }
+});

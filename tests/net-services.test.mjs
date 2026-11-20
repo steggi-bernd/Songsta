@@ -14,7 +14,7 @@ const { NET_SERVICES, serviceOfHost, isHomeHost, judgeRequest, hostsOf, readPoli
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 /** Addresses in the code that aren't requests: XML namespaces, links you open in your browser, examples. */
-const NOT_ASKED = new Set(["www.w3.org", "schemas.xmlsoap.org", "purl.org", "invalid.invalid", "music.example.org", "discord.com", "exportify.net", "open.spotify.com", "www.qobuz.com", "bandcamp.com", "www.7digital.com", "us.7digital.com", "www.amazon.com", "www.amazon.de", "music.amazon.com"]);
+const NOT_ASKED = new Set(["www.w3.org", "schemas.xmlsoap.org", "purl.org", "invalid.invalid", "music.example.org", "discord.com", "ko-fi.com", "exportify.net", "open.spotify.com", "www.qobuz.com", "bandcamp.com", "www.7digital.com", "us.7digital.com", "www.amazon.com", "www.amazon.de", "music.amazon.com"]);
 
 function sources(dir, out = []) {
   for (const name of fs.readdirSync(dir)) {

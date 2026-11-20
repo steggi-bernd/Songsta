@@ -51,7 +51,7 @@ export { camelotLabel, camelotOf, DEFAULT_MATCH, keyLabel, keyOfCamelot, keyStep
 export { ringSlice } from "../../src/lib/ringSlice";
 export { recordDeletionChanges, type DeletionChange } from "../../src/lib/deletion-sync";
 export { likedInOrder, mergePlaylistDocs, oneCopyEach, songFinder, toPlaylistDoc, toWireTrack, type PlaylistDoc, type WirePlaylist, type WireTrack } from "../../src/lib/playlistSync";
-export { createSyncEngine, defaultSyncAddress, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "../../src/lib/syncEngine";
+export { anchorPlace, createSyncEngine, defaultSyncAddress, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "../../src/lib/syncEngine";
 export { castPlayer, EndWatch, mimeOf, upnpPlayer, type DevicePlayer } from "../../electron/device-player";
 export { describe as describeRenderer, isLanUrl, parseSsdp, type Renderer } from "../../electron/upnp-control";
 export {
@@ -102,7 +102,7 @@ export { playCreditSeconds } from "../../src/lib/favoriteSync";
 export { fmtLength, fmtMinutes, fmtTime, plural } from "../../src/lib/format";
 export { RELEASE_LABEL } from "../../src/lib/releases";
 export { isNewerVersion, latestApk, latestVersion, lookForNewVersion, NEW_VERSION_FIRST_LOOK_MS, NEW_VERSION_LOOK_EVERY_MS, NO_VERSION_MEMORY, RELEASE_PAGE, type NewVersionMemory, type ReleaseApk } from "../../src/lib/newVersion";
-export { handRows, jumpTarget, lineInList, listAround, placeOf, putBack, tendedBranches, withoutSongs, type HandRow, type QueueBranch } from "../../src/lib/queueSections";
+export { handRows, jumpTarget, lineInList, listAround, orderUpTo, orderWithout, placeOf, putBack, tendedBranches, withoutSongs, type HandRow, type QueueBranch } from "../../src/lib/queueSections";
 export { currentLanguage, languageOf, LANGUAGES, setLanguage, T, textLocale, type Language, type LanguageChoice } from "../../src/lib/i18n";
 // How the library is organised, the same as on the computer: album edits, and the documents they travel in.
 export {

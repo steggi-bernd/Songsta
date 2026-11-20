@@ -19,7 +19,7 @@ import { streamUrl, type Session } from "../jellyfin";
 import { withoutServer } from "../addresses";
 import { branched } from "../playingFrom";
 import { chooseStream, levelGain, ORIGINAL, sameChoice, stepDown, type Leveling, type QualityMode, type StreamChoice } from "../quality";
-import { flowOrder, jumpTarget, lineInList, listAround, placeOf, playCreditSeconds, putBack, tendedBranches, toWireTrack, withoutSongs, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueBranch, type QueueDoc, type RemoteDevice, type Track, type WireTrack } from "../shared";
+import { anchorPlace, flowOrder, jumpTarget, lineInList, listAround, orderUpTo, orderWithout, placeOf, playCreditSeconds, putBack, tendedBranches, toWireTrack, withoutSongs, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueBranch, type QueueDoc, type RemoteDevice, type Track, type WireTrack } from "../shared";
 import { readJson, writeJson } from "../storage";
 import { useConnection } from "./connection";
 import { isAround, useDevices } from "./devices";
@@ -621,9 +621,11 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   clearLine() {
     const { remote } = get();
     for (const b of get().branches) set(withoutBranch(b));
-    const { queue, index } = get();
-    const rest = queue.slice(lineAt(queue, index));
-    set({ queue: [...queue.slice(0, index + 1), ...rest], lineEnd: 0 });
+    const { queue, index, unshuffled } = get();
+    const end = lineAt(queue, index);
+    const rest = queue.slice(end);
+    // What was asked for by hand goes from the list's own order too: shuffle going off doesn't bring it back.
+    set({ queue: [...queue.slice(0, index + 1), ...rest], lineEnd: 0, unshuffled: unshuffled && orderWithout(unshuffled, queue.slice(index + 1, end), rest) });
     if (remote) {
       sendUpcoming();
       return;
@@ -675,11 +677,12 @@ export const usePlayer = create<PlayerState>((set, get) => ({
   },
 
   clearUpcoming() {
-    const { queue, index, remote } = get();
+    const { queue, index, remote, unshuffled } = get();
     branchUndo.clear();
-    set({ queue: queue.slice(0, index + 1), lineEnd: 0, branches: [], ...namesNow([], get()) });
+    // Out of the list's own order too: shuffle going off doesn't bring any of it back.
+    set({ queue: queue.slice(0, index + 1), lineEnd: 0, branches: [], unshuffled: unshuffled && orderUpTo(unshuffled, queue, index), ...namesNow([], get()) });
     if (remote) {
-      sendUpcoming();
+      sendUpcoming(true);
       return;
     }
     void output.replaceUpcoming([]);
@@ -701,12 +704,12 @@ export const usePlayer = create<PlayerState>((set, get) => ({
     if (!remote) return;
     volumeHeldUntil = Date.now() + VOLUME_HELD_MS;
     set({ remoteVolume: level });
-    volumeWanted = level;
+    volumeWanted = { to: remote.id, level };
     if (volumeTimer) return;
     const send = (): void => {
-      const target = usePlayer.getState().remote;
-      if (target && volumeWanted !== null) void deviceLink?.send(target.id, { action: "volume", level: volumeWanted });
+      const wanted = volumeWanted;
       volumeWanted = null;
+      if (wanted && usePlayer.getState().remote?.id === wanted.to) void deviceLink?.send(wanted.to, { action: "volume", level: wanted.level });
     };
     send();
     volumeTimer = setTimeout(() => {
@@ -1108,8 +1111,17 @@ const RESTART_AFTER_MS = 3000;
 let steeringTo: { id: string; until: number } | null = null;
 let steerHoldUntil = 0;
 let volumeHeldUntil = 0;
-let volumeWanted: number | null = null;
+/** a volume dragged here and not sent yet, and the device it's for */
+let volumeWanted: { to: string; level: number } | null = null;
 let volumeTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** A volume dragged for one device goes nowhere else: another device keeps its own until it's moved for that one. */
+function dropVolume(): void {
+  if (volumeTimer) clearTimeout(volumeTimer);
+  volumeTimer = null;
+  volumeWanted = null;
+  volumeHeldUntil = 0;
+}
 
 /** Songs for another device: right in the command if they fit. */
 function sendSongs(deviceId: string, tracks: Track[], command: DeviceCommand): void {
@@ -1118,10 +1130,25 @@ function sendSongs(deviceId: string, tracks: Track[], command: DeviceCommand): v
   else void deviceLink?.sendList(deviceId, wire, undefined, command);
 }
 
+/**
+ * The last song of the followed device's queue known here, when it showed only a stretch of it
+ * (QueueDoc.total): an edit made here keeps what comes after that song there.
+ */
+let remoteTail: KeepAfter | null = null;
+
 /** The queue was edited here while another device plays it. */
-function sendUpcoming(): void {
+function sendUpcoming(all = false): void {
   const { remote, queue, index, lineEnd } = usePlayer.getState();
-  if (remote) sendSongs(remote.id, queue.slice(index + 1), { action: "setUpcoming", line: Math.max(0, lineEnd - index - 1) });
+  if (!remote) return;
+  // Cleared: nothing comes after these there either, also what this phone never saw.
+  if (all) remoteTail = null;
+  const upcoming = queue.slice(index + 1);
+  sendSongs(remote.id, upcoming, { action: "setUpcoming", line: Math.max(0, lineEnd - index - 1), ...(remoteTail ? { keepAfter: remoteTail } : {}) });
+  // That queue runs on now: the song playing, these, then what came after the last song known here.
+  if (remoteTail) {
+    const last = upcoming[upcoming.length - 1] ?? queue[index];
+    remoteTail = last ? { track: toWireTrack(last), ahead: upcoming.length } : null;
+  }
 }
 
 /** Started here, not following anybody: there's one stream, and it's here now. */
@@ -1188,6 +1215,7 @@ let idleLook: ReturnType<typeof setTimeout> | null = null;
 
 export function linkDevices(link: DeviceLink | null): void {
   deviceLink = link;
+  if (!link) dropVolume();
 }
 
 function tickFollow(): void {
@@ -1224,6 +1252,7 @@ function stopFollowing(play: boolean, loadHere = true): void {
   followNext = null;
   steeringTo = null;
   steerHoldUntil = 0;
+  dropVolume();
   usePlayer.setState({ remote: null, playWhenReady: play, isPlaying: play, remoteVolume: null });
   if (loadHere && queue.length) {
     jumpedAt = Date.now();
@@ -1239,6 +1268,7 @@ function follow(device: RemoteDevice): void {
   const p = device.presence;
   if (!p.track) return;
   const before = usePlayer.getState();
+  if (before.remote && before.remote.id !== device.id) dropVolume();
   if (!before.remote) {
     // Nothing of its own may start under the other device's music.
     void output.setQueue([], 0, 0, false);
@@ -1382,19 +1412,40 @@ export function runCommand(command: DeviceCommand): void {
       void output.play();
       break;
     case "playList": {
-      const asked = command.tracks?.[command.start];
-      const song = asked && findSong(asked);
-      const songs = songsOf(command.tracks);
+      // The very entry asked for (a list can have a song twice), or the next one this phone has.
+      const found = (command.tracks ?? []).map(findSong);
+      const songs = found.filter((t): t is Track => !!t);
       if (!songs.length) break;
-      const start = song ? Math.max(0, songs.indexOf(song)) : 0;
+      const start = Math.min(songs.length - 1, found.slice(0, Math.max(0, command.start)).filter((t) => !!t).length);
       if (command.keepOrder) load(songs, start, command.context ?? usePlayer.getState().context, { shuffle: usePlayer.getState().shuffle, unshuffled: null });
       else usePlayer.getState().playTracks(songs, start, command.context ?? "", command.shuffle ?? usePlayer.getState().shuffle);
       break;
     }
     case "setUpcoming": {
-      const { queue, index } = usePlayer.getState();
-      const upcoming = songsOf(command.tracks);
-      usePlayer.setState({ queue: [...queue.slice(0, index + 1), ...upcoming], lineEnd: command.line ? index + 1 + command.line : 0 });
+      const { queue, index, unshuffled, branches } = usePlayer.getState();
+      // Edited where only a stretch of this queue was known: what comes after the last song known there stays.
+      let cut = queue.length;
+      if (command.keepAfter) {
+        const anchor = findSong(command.keepAfter.track);
+        const at = anchor ? anchorPlace(queue, index, command.keepAfter.ahead, (t) => t.id === anchor.id) : -1;
+        cut = Math.max(index + 1, (at >= 0 ? at : Math.min(queue.length - 1, index + command.keepAfter.ahead)) + 1);
+      }
+      const upcoming = [...songsOf(command.tracks), ...queue.slice(cut)];
+      if (!upcoming.length) {
+        // Cleared there: just as if it had been cleared here.
+        branchUndo.clear();
+        usePlayer.setState({ queue: queue.slice(0, index + 1), lineEnd: 0, branches: [], unshuffled: unshuffled && orderUpTo(unshuffled, queue, index), ...namesNow([], usePlayer.getState()) });
+      } else {
+        // What was taken out there stays out, also when shuffle goes off.
+        const left = queue.slice(index + 1, cut);
+        const stays = new Set(upcoming.map((t) => t.id));
+        usePlayer.setState({
+          queue: [...queue.slice(0, index + 1), ...upcoming],
+          lineEnd: command.line ? index + 1 + command.line : 0,
+          unshuffled: unshuffled && orderWithout(unshuffled, left, upcoming),
+          branches: withoutSongs(branches, new Set(left.filter((t) => !stays.has(t.id)).map((t) => t.id))),
+        });
+      }
       void output.replaceUpcoming(upcoming.map(toItem));
       queueChanged();
       save(true);
@@ -1509,6 +1560,7 @@ export function playbackNote(device: PlaybackNote["device"]): { note: PlaybackNo
         context,
         home: homeContext ?? undefined,
         tracks: queue.slice(from, index + QUEUE_NOTE_AHEAD).map(toWireTrack),
+        total: queue.length,
         lineEnd: lineInList(lineEnd, from),
         branches: branches.map((b) => ({ ...b, ids: b.ids.slice(0, BRANCH_IDS_SENT) })),
         unshuffled: unshuffled ? listAround(unshuffled, track.id, QUEUE_NOTE_BEHIND, QUEUE_NOTE_AHEAD).map(toWireTrack) : undefined,
@@ -1570,6 +1622,11 @@ export function adoptPlayback(given: PlaybackNote, queue: QueueDoc | null, hande
   const said = note.place !== undefined && queue?.from !== undefined ? note.place - queue.from : -1;
   const playingAt = songs[said]?.id === current.id ? songs.slice(0, said).filter(plays).length : list.findIndex((t) => t.id === current.id);
   const index = going >= 0 ? going : playingAt;
+  // Following a device that showed only a stretch of its queue: the last song of it known here anchors the edits made here.
+  const wires = queue?.tracks ?? [];
+  const end = (queue?.from ?? 0) + wires.length;
+  const more = queue?.total !== undefined ? queue.total > end : said >= 0 && wires.length - said - 1 >= QUEUE_NOTE_AHEAD - 1;
+  remoteTail = usePlayer.getState().remote && whole && more && note.place !== undefined && wires.length ? { track: wires[wires.length - 1], ahead: end - 1 - note.place } : null;
   activityAt = note.at;
   queueId = note.queueId;
   branchUndo.clear();

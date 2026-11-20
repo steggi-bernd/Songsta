@@ -22,8 +22,8 @@ import { colors } from "../theme";
 const ROOM = 170;
 /** Pulled this far, letting go reads everything again. */
 const ARM = 104;
-/** While it loads, the page stays this far down. */
-const HOLD = 88;
+/** While it loads, the page stays this far down (lower since the user found 88 too high, 2026-11-20). */
+const HOLD = 64;
 const BARS = 27;
 /** How short loading keeps the lines dancing at least, so a quick answer still shows them. */
 const MIN_LOADING_MS = 900;
@@ -34,34 +34,35 @@ const SHAPE = Array.from({ length: BARS }, (_, i) => {
   return Math.max(0.08, Math.pow(t, 0.9) * [0.86, 1, 0.9, 0.96, 0.82, 1, 0.92][i % 7]);
 });
 /** The longest a line gets while loading, as a share of its length pulled all the way: it fits the room left open. */
-const LOAD_MAX = (HOLD - 10) / (ROOM * 0.8);
+const LOAD_MAX = (HOLD - 12) / (ROOM * 0.8);
 /** While loading the V is flatter, so the outer lines move too. */
-const LOAD_SHAPE = SHAPE.map((share) => 0.32 + 0.68 * share);
+const LOAD_SHAPE = SHAPE.map((share) => 0.4 + 0.6 * share);
 
 /**
- * The visualizer: frames of a spectrum one after the other, neighbours close to each other as in real
- * music, a beat every fourth frame that lifts the middle and comes quicker. Made once, the same moves
- * every time; a frame says each line's share of its loading length.
+ * The visualizer, as music flows rather than in steps (the user found frames robotic, 2026-11-20): two
+ * waves run across the lines in opposite directions and a slower third one rolls under them, so the
+ * shape keeps moving like sound does, and a soft beat swells the middle four times a round, 120 beats a
+ * minute. Everything repeats whole within one round, so the loop has no seam. Each line gets its share
+ * of its loading length at SAMPLES points of the round; the native side moves smoothly in between.
  */
-const FRAMES: number[][] = (() => {
-  let s = 20261117;
-  const rand = (): number => (s = (s * 16807) % 2147483647) / 2147483647;
-  const out: number[][] = [];
-  for (let f = 0; f < 32; f++) {
-    const peaks = Array.from({ length: 3 }, () => ({ at: rand() * (BARS - 1), wide: 1.6 + rand() * 3.4, high: 0.45 + rand() * 0.55 }));
-    const beat = f % 4 === 0;
-    out.push(
-      Array.from({ length: BARS }, (_, i) => {
-        let v = 0.18 + rand() * 0.16;
-        for (const p of peaks) v = Math.max(v, p.high * Math.exp(-((i - p.at) ** 2) / (2 * p.wide * p.wide)));
-        if (beat) v += 0.34 * Math.exp(-((i - (BARS - 1) / 2) ** 2) / 50);
-        return Math.min(1, v);
-      })
-    );
+const LOOP_MS = 2000;
+const SAMPLES = 64;
+const WAVES: number[][] = Array.from({ length: BARS }, (_, i) => {
+  const out: number[] = [];
+  for (let k = 0; k <= SAMPLES; k++) {
+    const s = k / SAMPLES;
+    const a = 0.5 + 0.5 * Math.sin(2 * Math.PI * (s + i * 0.055));
+    const b = 0.5 + 0.5 * Math.sin(2 * Math.PI * (2 * s - i * 0.09) + 1.3);
+    const c = 0.5 + 0.5 * Math.sin(2 * Math.PI * (3 * s + i * 0.031) + 2.1);
+    // The beat rises quickly and dies away slowly, strongest in the middle, where the bass sits.
+    const phase = (s * 4) % 1;
+    const swell = phase < 0.08 ? phase / 0.08 : Math.exp(-(phase - 0.08) / 0.16);
+    const beat = swell * Math.exp(-((i - (BARS - 1) / 2) ** 2) / 45);
+    out.push(Math.max(0.12, Math.min(1, 0.16 + 0.32 * a + 0.2 * b + 0.12 * c + 0.28 * beat)));
   }
   return out;
-})();
-const FRAME_MS = FRAMES.map((_, f) => (f % 4 === 0 ? 80 : 130 + (f % 3) * 25));
+});
+const SAMPLE_AT = Array.from({ length: SAMPLES + 1 }, (_, k) => k / SAMPLES);
 
 export function PullRefreshScroll({
   onRefresh,
@@ -86,8 +87,14 @@ export function PullRefreshScroll({
   const settling = useRef(false);
   const loadingRef = useRef(false);
   const placed = useRef(false);
-  /** each line's length while loading, as a share of its length pulled all the way; and how bright they are */
-  const eq = useRef(Array.from({ length: BARS }, () => new Animated.Value(0))).current;
+  /**
+   * The visualizer's clock (0 to 1 each round), the lines' length where the visualizer takes over or
+   * hands back, and how far it has taken over (0 to 1): the lines blend from the pull into the waves
+   * and back instead of jumping. And how bright they are.
+   */
+  const clock = useRef(new Animated.Value(0)).current;
+  const handover = useRef(new Animated.Value(0)).current;
+  const mix = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(1)).current;
   /**
    * 1 while loading, else 0. The lines stay tied to the same animated values all along, and this switch
@@ -107,13 +114,18 @@ export function PullRefreshScroll({
   const follow = useMemo(() => y.interpolate({ inputRange: [ROOM - HOLD, ROOM - HOLD + 600], outputRange: [0, -600], extrapolate: "clamp" }), [y]);
   const tied = useMemo(() => {
     const pulling = Animated.subtract(1, loading);
+    const before = Animated.multiply(handover, Animated.subtract(1, mix));
     return {
-      scales: eq.map((v) => Animated.add(Animated.multiply(grow, pulling), Animated.multiply(v, loading))),
+      scales: WAVES.map((wave, i) => {
+        const flowing = clock.interpolate({ inputRange: SAMPLE_AT, outputRange: wave.map((v) => (LOAD_MAX * v * LOAD_SHAPE[i]) / SHAPE[i]) });
+        const visualizer = Animated.add(before, Animated.multiply(flowing, mix));
+        return Animated.add(Animated.multiply(grow, pulling), Animated.multiply(visualizer, loading));
+      }),
       opacity: Animated.add(Animated.multiply(lit, pulling), Animated.multiply(glow, loading)),
       halo: Animated.multiply(halo, pulling),
       shift: Animated.multiply(follow, loading),
     };
-  }, [eq, grow, lit, glow, halo, follow, loading]);
+  }, [clock, handover, mix, grow, lit, glow, halo, follow, loading]);
   /** the length a pull to here gives the lines */
   const grownAt = (offset: number): number => Math.max(0, Math.min(1, (ROOM - offset) / ROOM));
 
@@ -122,37 +134,30 @@ export function PullRefreshScroll({
     list.current?.scrollTo({ y: to, animated: true });
   };
 
-  /** The visualizer, from the lines' length when the finger let go into the spectrum's frames, over and over. */
+  /**
+   * The visualizer: its clock runs round after round (each round ends where it began, so the loop's
+   * reset to 0 is seamless), and the lines blend from their length when the finger let go into it.
+   */
   const play = (from: number): void => {
     moves.current?.stop();
-    eq.forEach((v) => v.setValue(from));
+    handover.setValue(from);
+    mix.setValue(0);
     glow.setValue(1);
-    moves.current = Animated.parallel(
-      eq.map((v, i) =>
-        Animated.loop(
-          Animated.sequence(
-            FRAMES.map((frame, f) =>
-              Animated.timing(v, { toValue: (LOAD_MAX * frame[i] * LOAD_SHAPE[i]) / SHAPE[i], duration: FRAME_MS[f], easing: Easing.out(Easing.quad), useNativeDriver: true })
-            )
-          ),
-          // A loop puts its value back where it was made (0) before each round, the first one too: the
-          // lines dropped to nothing as the finger let go, and again every round.
-          { iterations: -1, resetBeforeIteration: false }
-        )
-      )
-    );
+    clock.setValue(0);
+    moves.current = Animated.loop(Animated.timing(clock, { toValue: 1, duration: LOOP_MS, easing: Easing.linear, useNativeDriver: true }));
     moves.current.start();
+    Animated.timing(mix, { toValue: 1, duration: 450, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start();
   };
 
   const done = (): void => {
-    moves.current?.stop();
-    moves.current = null;
-    // The lines take the length the pull gives where the page stands, then go back up with it.
-    const to = grownAt(at.current);
+    // The lines blend back to the length the pull gives where the page stands, then go up with it.
+    handover.setValue(grownAt(at.current));
     Animated.parallel([
-      ...eq.map((v) => Animated.timing(v, { toValue: to, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true })),
-      Animated.timing(glow, { toValue: 0.5, duration: 240, useNativeDriver: true }),
+      Animated.timing(mix, { toValue: 0, duration: 380, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 0.5, duration: 380, useNativeDriver: true }),
     ]).start(() => {
+      moves.current?.stop();
+      moves.current = null;
       loadingRef.current = false;
       armed.current = false;
       loading.setValue(0);

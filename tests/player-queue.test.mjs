@@ -466,3 +466,89 @@ test("an older save, shuffled: its order is mixed once, and it's the queue from 
   const plain = migrate({ queue: LIST, index: 2, shuffle: false, volume: 0.5 }, 1);
   assert.deepEqual(plain.queue.map((s) => s.id), LIST.map((s) => s.id));
 });
+
+/* ------------------------------------------------------------- Codex's review, 2026-11-20 */
+
+const inside = () => {
+  const { queue, index } = usePlayer.getState();
+  assert.ok(!queue.length || (index >= 0 && index < queue.length), `index ${index} inside a queue of ${queue.length}`);
+};
+
+test("a single song with nothing queued: a queue of one that plays it, also after the last song was taken out", () => {
+  usePlayer.getState().playTrack(t("x"));
+  inside();
+  assert.deepEqual(ids(), ["x"]);
+  assert.equal(usePlayer.getState().current()?.id, "x", "the song on screen is the song that plays");
+  assert.equal(usePlayer.getState().playing, true);
+  usePlayer.getState().removeAt(0);
+  assert.deepEqual(ids(), []);
+  usePlayer.getState().playTrack(t("y"));
+  inside();
+  assert.equal(usePlayer.getState().current()?.id, "y");
+  usePlayer.getState().playTrack(t("z"));
+  inside();
+  assert.deepEqual(ids(), ["y", "z"], "with a song on, the next one comes after it as before");
+  assert.equal(now(), "z");
+});
+
+test("cleared with shuffle on: shuffle off brings none of it back, nor what was asked for by hand and cleared", () => {
+  usePlayer.getState().playQueue(songs("a", "b", "c"), 0);
+  usePlayer.getState().toggleShuffle();
+  usePlayer.getState().clearUpcoming();
+  assert.deepEqual(ids(), ["a"]);
+  usePlayer.getState().toggleShuffle();
+  assert.deepEqual(ids(), ["a"], "only what was there");
+
+  usePlayer.getState().playQueue(songs("a", "b", "c", "d"), 0);
+  usePlayer.getState().toggleShuffle();
+  usePlayer.getState().addToQueue(t("x"));
+  usePlayer.getState().clearLine();
+  assert.equal(ids().indexOf("x"), -1);
+  usePlayer.getState().toggleShuffle();
+  assert.deepEqual(ids(), ["a", "b", "c", "d"], "the list's own order, without what was asked for");
+});
+
+test("cleared further on with a song in the queue twice: what was heard stays, and shuffle off adds nothing", () => {
+  usePlayer.setState({ shuffle: true });
+  usePlayer.getState().playQueue(LIST, 0);
+  usePlayer.getState().next(true);
+  usePlayer.getState().next(true);
+  const heard = ids().slice(0, 3);
+  usePlayer.getState().addToQueue(t("a"));
+  assert.equal(ids().filter((x) => x === "a").length, 2, "the first song again, by hand");
+  usePlayer.getState().clearUpcoming();
+  assert.deepEqual(ids(), heard);
+  usePlayer.getState().toggleShuffle();
+  assert.deepEqual(ids(), heard);
+  assert.equal(now(), heard[2]);
+});
+
+test("edited on another device with shuffle on: what it took out stays out here too, and cleared there is cleared here", () => {
+  usePlayer.getState().playQueue(songs("a", "b", "c", "d"), 0);
+  usePlayer.getState().toggleShuffle();
+  usePlayer.getState().replaceUpcoming(ids().slice(1).filter((x) => x !== "c").map(t), 0);
+  usePlayer.getState().toggleShuffle();
+  assert.deepEqual(ids(), ["a", "b", "d"], "the list's own order, without what was taken out there");
+
+  usePlayer.getState().toggleShuffle();
+  usePlayer.getState().branchOff(songs("r", "s"), "Mix");
+  usePlayer.getState().replaceUpcoming([], 0);
+  assert.deepEqual(ids(), ["a"]);
+  assert.deepEqual(usePlayer.getState().branches, [], "no branch left of what went");
+  usePlayer.getState().toggleShuffle();
+  assert.deepEqual(ids(), ["a"], "shuffle off brings none of it back");
+});
+
+test("cleared while a device is followed: all of that queue goes, also what this computer never saw of it", () => {
+  const said = [];
+  const quiet = () => undefined;
+  setSteering({
+    play: quiet, add: quiet, jump: quiet, branchOff: quiet, cancelBranch: quiet, shuffle: quiet, repeat: quiet, next: quiet, previous: quiet, volume: quiet,
+    upcoming: (tracks, all) => said.push([tracks.map((s) => s.id), all]),
+  });
+  usePlayer.setState({ queue: songs("a", "b", "c"), index: 0, playing: true });
+  usePlayer.getState().removeAt(1);
+  assert.deepEqual(said.at(-1), [["c"], undefined], "an edit: what comes after stays there");
+  usePlayer.getState().clearUpcoming();
+  assert.deepEqual(said.at(-1), [[], true]);
+});

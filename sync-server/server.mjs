@@ -14,7 +14,7 @@
  *   GET  /v1/docs/:name           { rev, updatedAt, doc }   (rev 0: nothing yet)
  *   PUT  /v1/docs/:name           { rev?, doc } → { rev, seq, updatedAt }, 409 when rev is behind
  *   GET  /v1/changes?since&wait&device   { seq, revs, inbox }: answers at once when seq differs, else within `wait` seconds
- *   GET  /v1/devices              { now, devices: [{ id, updatedAt, doc }] }: who is around and what they play
+ *   GET  /v1/devices              { now, rev, devices: [{ id, updatedAt, doc }] }: who is around and what they play
  *   PUT  /v1/devices/:id          { doc }: what this device says about itself
  *   POST /v1/devices/:id/commands { command }: a word for that device, kept for a minute
  *   GET  /v1/devices/:id/commands { commands }: that device's words, handed over once
@@ -227,14 +227,22 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
           if (err.code !== "ENOENT") console.error(`[sync] unreadable devices of ${userId}:`, err.message);
         }
         // The shared listening history, kept in memory too: a few megabytes even for years of listening.
-        const listens = { items: [], keys: new Set(), devices: {} };
+        // `cutShort`: the file may end in the middle of a line (a write broke off), so the next plays
+        // start on a line of their own, or they'd be glued to the broken one and lost at the next start.
+        const listens = { items: [], keys: new Set(), devices: {}, cutShort: false };
         try {
-          for (const line of (await readFile(path.join(dir, LISTENS_FILE), "utf8")).split("\n")) {
+          const content = await readFile(path.join(dir, LISTENS_FILE), "utf8");
+          listens.cutShort = content.length > 0 && !content.endsWith("\n");
+          for (const line of content.split("\n")) {
             if (!line) continue;
             try {
               const l = JSON.parse(line);
+              // A play can stand twice when a write broke off after some lines and the device sent
+              // them all again: it counts once.
+              const key = `${l.device}|${l.at}|${l.id}`;
+              if (listens.keys.has(key)) continue;
               listens.items.push(l);
-              listens.keys.add(`${l.device}|${l.at}|${l.id}`);
+              listens.keys.add(key);
             } catch {
               /* a line cut short by a crash: the rest stands */
             }
@@ -308,26 +316,43 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
   /**
    * Plays a device counted, added to the history in the order they come; one already there (the same
    * device, moment and song: sent again after a lost answer) is left out. Each gets its place, from 1.
+   *
+   * Nothing counts as stored before it is on disk: a play marked as there before its write failed was
+   * answered "0 added" when the device sent it again, and it was lost (found by Codex's review,
+   * 2026-11-20). So a failed write fails the request and leaves memory as it was, for the device to
+   * send again.
    */
   function appendListens(user, device, raw) {
     const run = user.writing.then(async () => {
       const log = user.listens;
       const added = [];
+      const fresh = new Set();
       for (const r of raw) {
         const listen = readListen(r, device.id);
         if (!listen) continue;
         const key = `${listen.device}|${listen.at}|${listen.id}`;
-        if (log.keys.has(key)) continue;
-        log.keys.add(key);
+        if (log.keys.has(key) || fresh.has(key)) continue;
+        fresh.add(key);
         added.push({ n: log.items.length + added.length + 1, ...listen });
       }
       const known = log.devices[device.id];
       if (!known || known.name !== device.name || known.kind !== device.kind) {
-        log.devices[device.id] = { name: device.name, ...(device.kind ? { kind: device.kind } : {}) };
-        await writeAtomic(path.join(user.dir, LISTEN_DEVICES_FILE), log.devices);
+        const devices = { ...log.devices, [device.id]: { name: device.name, ...(device.kind ? { kind: device.kind } : {}) } };
+        await writeAtomic(path.join(user.dir, LISTEN_DEVICES_FILE), devices);
+        log.devices = devices;
       }
       if (!added.length) return 0;
-      await appendFile(path.join(user.dir, LISTENS_FILE), `${added.map((l) => JSON.stringify(l)).join("\n")}\n`, "utf8");
+      const lines = `${added.map((l) => JSON.stringify(l)).join("\n")}\n`;
+      try {
+        await appendFile(path.join(user.dir, LISTENS_FILE), log.cutShort ? `\n${lines}` : lines, "utf8");
+      } catch (err) {
+        // Part of it may have reached the file: the next write starts on a fresh line, and plays
+        // standing twice count once when the file is read again.
+        log.cutShort = true;
+        throw err;
+      }
+      log.cutShort = false;
+      for (const key of fresh) log.keys.add(key);
       log.items.push(...added);
       user.seq += 1;
       for (const wake of [...user.waiters]) wake();
@@ -346,18 +371,25 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
   function removeListens(user, deviceId) {
     const run = user.writing.then(async () => {
       const log = user.listens;
-      const kept = log.items.filter((l) => l.device !== deviceId);
-      const removed = log.items.length - kept.length;
-      if (!removed) return 0;
-      log.items = kept.map((l, i) => ({ ...l, n: i + 1 }));
-      log.keys = new Set(log.items.map((l) => `${l.device}|${l.at}|${l.id}`));
-      await writeAtomic(path.join(user.dir, LISTENS_FILE), log.items.length ? `${log.items.map((l) => JSON.stringify(l)).join("\n")}\n` : "", true);
-      if (log.devices[deviceId]) {
-        delete log.devices[deviceId];
-        await writeAtomic(path.join(user.dir, LISTEN_DEVICES_FILE), log.devices);
+      const items = log.items.filter((l) => l.device !== deviceId).map((l, i) => ({ ...l, n: i + 1 }));
+      const removed = log.items.length - items.length;
+      // The device's name goes too; when its plays are gone already, only that is left to do.
+      if (removed) {
+        // Written first, kept in memory after: a failed write leaves the plays there for another try,
+        // where taking them out of memory first made the next try find nothing to remove.
+        await writeAtomic(path.join(user.dir, LISTENS_FILE), items.length ? `${items.map((l) => JSON.stringify(l)).join("\n")}\n` : "", true);
+        log.items = items;
+        log.keys = new Set(items.map((l) => `${l.device}|${l.at}|${l.id}`));
+        log.cutShort = false;
+        user.seq += 1;
+        for (const wake of [...user.waiters]) wake();
       }
-      user.seq += 1;
-      for (const wake of [...user.waiters]) wake();
+      if (log.devices[deviceId]) {
+        const devices = { ...log.devices };
+        delete devices[deviceId];
+        await writeAtomic(path.join(user.dir, LISTEN_DEVICES_FILE), devices);
+        log.devices = devices;
+      }
       return removed;
     });
     user.writing = run.catch(() => undefined);
@@ -462,7 +494,8 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         const devices = Object.entries(user.devices)
           .filter(([, entry]) => now - entry.updatedAt <= DEVICE_KEPT_MS)
           .map(([deviceId, entry]) => ({ id: deviceId, updatedAt: entry.updatedAt, doc: entry.doc }));
-        return send(res, 200, { now, devices });
+        // The count of the list described: an answer arriving after a newer one is known to be older.
+        return send(res, 200, { now, rev: user.devicesRev, devices });
       }
       if (commands) {
         if (req.method === "GET") {

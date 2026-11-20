@@ -59,14 +59,37 @@ export function noteListen(track: Track, startedAt: number): void {
   timer ??= setTimeout(() => void flushListens(), 2000);
 }
 
-/** Written in order, one append at a time. */
+/** The file may end in the middle of a line (a write broke off): the next lines start on one of their own. */
+let cutShort = false;
+
+/** Lines onto the end of the journal; a failure reaches the caller. */
+async function append(lines: string[]): Promise<void> {
+  const text = `${lines.join("\n")}\n`;
+  try {
+    await fs.promises.appendFile(file(), cutShort ? `\n${text}` : text, "utf8");
+    cutShort = false;
+  } catch (err) {
+    cutShort = true;
+    throw err;
+  }
+}
+
+/**
+ * Written in order, one append at a time. A write that fails keeps its lines for the next flush, in
+ * front of what came since: they were dropped before, and the plays were lost (Codex's review, 2026-11-20).
+ */
 export function flushListens(): Promise<void> {
   if (timer) clearTimeout(timer);
   timer = null;
   if (!pending.length) return writing;
-  const lines = `${pending.join("\n")}\n`;
+  const batch = pending;
   pending = [];
-  writing = writing.then(() => fs.promises.appendFile(file(), lines, "utf8")).catch(() => undefined);
+  writing = writing
+    .then(() => append(batch))
+    .catch(() => {
+      pending = [...batch, ...pending];
+      timer ??= setTimeout(() => void flushListens(), 30_000);
+    });
   return writing;
 }
 
@@ -76,7 +99,8 @@ export function flushListensSync(): void {
   timer = null;
   if (!pending.length) return;
   try {
-    fs.appendFileSync(file(), `${pending.join("\n")}\n`, "utf8");
+    const text = `${pending.join("\n")}\n`;
+    fs.appendFileSync(file(), cutShort ? `\n${text}` : text, "utf8");
   } catch {
     /* a read-only profile keeps nothing */
   }
@@ -91,11 +115,16 @@ function readAll(): Listen[] {
     return [];
   }
   const out: Listen[] = [];
+  // A listen can stand twice when a write broke off after some lines and they were written again: once counts.
+  const seen = new Set<string>();
   for (const line of text.split("\n")) {
     if (!line.trim()) continue;
     try {
       const l = JSON.parse(line) as Partial<Listen>;
       if (typeof l.at === "number" && typeof l.title === "string" && typeof l.id === "string") {
+        const key = `${typeof l.device === "string" ? l.device : ""}|${l.at}|${l.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
         out.push({
           at: l.at,
           id: l.id,
@@ -133,26 +162,32 @@ let remoteKeys: Set<string> | null = null;
 /**
  * Plays counted on other devices (the shared history), written here with the device that played
  * them; one already here is left out. The ones new here come back, for Replay's counts.
+ *
+ * Only what reached the disk counts as here: a failed write throws, so the reader keeps its place and
+ * asks for the same page again. It used to count the plays as here and new before the write, and a
+ * failed write left them out for good (Codex's review, 2026-11-20).
  */
 export async function noteRemoteListens(listens: SharedListen[], devices: Record<string, ListenDevice>): Promise<SharedListen[]> {
   await flushListens();
   remoteKeys ??= new Set(readAll().filter((l) => l.device).map((l) => listenKey(l.device as string, l)));
   const keys = remoteKeys;
+  const seen = new Set<string>();
   const fresh = listens.filter((l) => {
     const key = listenKey(l.device, l);
-    if (keys.has(key)) return false;
-    keys.add(key);
+    if (keys.has(key) || seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
   if (!fresh.length) return fresh;
-  const lines = fresh
-    .map((l) => {
-      const from = devices[l.device];
-      return JSON.stringify({ at: l.at, id: l.id, title: l.title, artist: l.artist, album: l.album ?? "", duration: Math.round(l.ms / 1000), device: l.device, deviceName: from?.name ?? "", ...(from?.kind ? { deviceKind: from.kind } : {}) });
-    })
-    .join("\n");
-  writing = writing.then(() => fs.promises.appendFile(file(), `${lines}\n`, "utf8")).catch(() => undefined);
-  await writing;
+  const lines = fresh.map((l) => {
+    const from = devices[l.device];
+    return JSON.stringify({ at: l.at, id: l.id, title: l.title, artist: l.artist, album: l.album ?? "", duration: Math.round(l.ms / 1000), device: l.device, deviceName: from?.name ?? "", ...(from?.kind ? { deviceKind: from.kind } : {}) });
+  });
+  const run = writing.then(() => append(lines));
+  // The next write waits for this one, failed or not.
+  writing = run.catch(() => undefined);
+  await run;
+  for (const key of seen) keys.add(key);
   return fresh;
 }
 

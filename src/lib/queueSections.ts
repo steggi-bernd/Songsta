@@ -157,3 +157,19 @@ export function listAround<T extends { id: string }>(list: T[], id: string, behi
 export function lineInList(lineEnd: number, from: number): number {
   return Math.max(0, lineEnd - from);
 }
+
+/**
+ * A shuffled list's own order once everything after the song playing is cleared: nothing after that
+ * song, so turning shuffle off brings none of it back. Turning it off finds the song the same way.
+ */
+export function orderUpTo<T extends { id: string }>(order: T[], queue: T[], index: number): T[] {
+  const at = order.findIndex((t) => t.id === queue[index]?.id);
+  return at >= 0 ? order.slice(0, at + 1) : queue.slice(0, index + 1);
+}
+
+/** Songs that left what's to come leave the shuffled list's own order too, unless they're still to come. */
+export function orderWithout<T extends { id: string }>(order: T[], left: readonly T[], coming: readonly T[], keyOf: (song: T) => string = (song) => song.id): T[] {
+  const stays = new Set(coming.map(keyOf));
+  const gone = new Set(left.map(keyOf).filter((key) => !stays.has(key)));
+  return gone.size ? order.filter((t) => !gone.has(keyOf(t))) : order;
+}

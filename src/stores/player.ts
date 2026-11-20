@@ -12,7 +12,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { withoutOtherCopies } from "../lib/duplicates";
-import { placeOf, putBack, tendedBranches, withoutSongs, type QueueBranch } from "../lib/queueSections";
+import { orderUpTo, orderWithout, placeOf, putBack, tendedBranches, withoutSongs, type QueueBranch } from "../lib/queueSections";
 // Coalescing, lazily serialized storage: the engine bumps `position` ~4Hz and
 // persist saves on every change — that would stringify the whole queue and
 // hit disk/IPC several times a second.
@@ -43,8 +43,8 @@ export function setPlayHook(hook: typeof playHook): void {
 export interface Steering {
   /** this list from this song; `keepOrder` when it's in its final order already */
   play(tracks: Track[], start: number, keepOrder: boolean): void;
-  /** what comes after the playing song, edited here */
-  upcoming(tracks: Track[]): void;
+  /** what comes after the playing song, edited here; `all` when nothing comes after these, also what this computer never saw of that queue */
+  upcoming(tracks: Track[], all?: boolean): void;
   add(tracks: Track[]): void;
   jump(track: Track): void;
   branchOff(tracks: Track[], name: string): void;
@@ -136,7 +136,7 @@ interface PlayerState {
   /** The branch into this list goes, and what it took out of what was coming comes back. Without a name, the newest one. */
   cancelBranch(name?: string): void;
   /** What comes after the playing song, as another device edited it; `line` of them were asked for by hand. */
-  replaceUpcoming(tracks: Track[], line?: number): void;
+  replaceUpcoming(tracks: Track[], line?: number, keepFrom?: number): void;
   /** Only what was asked for by hand goes. */
   clearLine(): void;
   /**
@@ -247,6 +247,11 @@ export const usePlayer = create<PlayerState>()(
 
       playTrack(track) {
         const { queue, index } = get();
+        // Nothing on to put it after: a list of one, started the way every list starts.
+        if (!queue[index]) {
+          get().playQueue([track], 0);
+          return;
+        }
         const at = placeOf(queue, songKey(track.id), index, undefined, (t) => songKey(t.id));
         if (at >= 0) {
           get().jumpTo(at);
@@ -354,17 +359,35 @@ export const usePlayer = create<PlayerState>()(
         set(withoutBranch(get(), branch));
       },
 
-      replaceUpcoming(tracks, line = 0) {
-        const { queue, index } = get();
-        set({ queue: [...queue.slice(0, index + 1), ...tracks], lineEnd: line ? index + 1 + line : 0 });
+      replaceUpcoming(tracks, line = 0, keepFrom) {
+        const { queue, index, unshuffled, branches } = get();
+        // From `keepFrom` on the queue stays: what the device that edited it knew nothing of.
+        const cut = keepFrom !== undefined ? clamp(keepFrom, index + 1, queue.length) : queue.length;
+        const coming = [...tracks, ...queue.slice(cut)];
+        if (!coming.length) {
+          // Cleared there: just as if it had been cleared here.
+          branchUndo.clear();
+          set({ queue: queue.slice(0, index + 1), lineEnd: 0, branches: [], unshuffled: unshuffled && orderUpTo(unshuffled, queue, index) });
+          return;
+        }
+        // What was taken out there stays out, also when shuffle goes off.
+        const left = queue.slice(index + 1, cut);
+        const stays = new Set(coming.map((t) => songKey(t.id)));
+        set({
+          queue: [...queue.slice(0, index + 1), ...coming],
+          lineEnd: line ? index + 1 + line : 0,
+          unshuffled: unshuffled && orderWithout(unshuffled, left, coming, (t) => songKey(t.id)),
+          branches: withoutSongs(branches, new Set(left.filter((t) => !stays.has(songKey(t.id))).map((t) => t.id))),
+        });
       },
 
       clearLine() {
         for (const b of get().branches) set(withoutBranch(get(), b));
-        const { queue, index, lineEnd } = get();
+        const { queue, index, lineEnd, unshuffled } = get();
         const end = clamp(lineEnd, index + 1, queue.length);
         const q = [...queue.slice(0, index + 1), ...queue.slice(end)];
-        set({ queue: q, lineEnd: 0 });
+        // What was asked for by hand goes from the list's own order too: shuffle going off doesn't bring it back.
+        set({ queue: q, lineEnd: 0, unshuffled: unshuffled && orderWithout(unshuffled, queue.slice(index + 1, end), queue.slice(end), (t) => songKey(t.id)) });
         steering?.upcoming(q.slice(index + 1));
       },
 
@@ -429,10 +452,11 @@ export const usePlayer = create<PlayerState>()(
       },
 
       clearUpcoming() {
-        const { index } = get();
+        const { queue, index, unshuffled } = get();
         branchUndo.clear();
-        set({ queue: get().queue.slice(0, index + 1), lineEnd: 0, branches: [] });
-        steering?.upcoming([]);
+        // Out of the list's own order too: shuffle going off doesn't bring any of it back.
+        set({ queue: queue.slice(0, index + 1), lineEnd: 0, branches: [], unshuffled: unshuffled && orderUpTo(unshuffled, queue, index) });
+        steering?.upcoming([], true);
       },
 
       collapseCopies() {

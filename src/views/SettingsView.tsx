@@ -1691,6 +1691,14 @@ export function SettingsView() {
           subtitle={T("Releases, the source code and a place to report problems")}
           onClick={() => void window.open("https://github.com/steggi-bernd/Songsta", "_blank", "noopener,noreferrer")}
         />
+        <Divider />
+        {/* Only here, only on a click: the page opens in the browser, the app itself asks Ko-fi nothing. */}
+        <SettingsRow
+          icon={Heart}
+          title={T("Support Songsta")}
+          subtitle={T("Songsta is free and stays free. If you like it, you can buy me a coffee on Ko-fi.")}
+          onClick={() => void window.open("https://ko-fi.com/besteck", "_blank", "noopener,noreferrer")}
+        />
       </SettingsGroup>
     ),
   };

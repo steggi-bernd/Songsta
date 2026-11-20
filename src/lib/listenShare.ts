@@ -90,7 +90,9 @@ export function computerListenHost(serverKey: () => string | null, name: () => s
     readUpTo: () => cursor().readUpTo,
     async take(listens, devices, upTo, startOver) {
       if (listens.length) {
-        const { added } = (await window.bytune?.listensTake(listens, devices).catch(() => ({ added: 0 }))) ?? { added: 0 };
+        // Plays that couldn't be written stop the step here, before the place read up to moves on: the
+        // same page comes again next time. Taken as "none new", the place moved past them for good.
+        const added = (await window.bytune?.listensTake(listens, devices))?.added ?? 0;
         if (added) {
           void useCatalog.getState().refreshPlayCounts();
           window.dispatchEvent(new Event(LISTENS_UPDATED));

@@ -70,6 +70,8 @@ export interface QueueDoc {
   home?: string;
   /** shuffled: the list's own order around the playing song, to go back to */
   unshuffled?: WireTrack[];
+  /** how long the device's whole queue is: `tracks` may be only a stretch of it */
+  total?: number;
 }
 
 /** What a device says about itself to the others. */
@@ -122,10 +124,35 @@ export type DeviceCommand =
   | { action: "volume"; level: number }
   /** a new list, from this song of it; `keepOrder` when it's in its final order already */
   | ({ action: "playList"; start: number; context?: string; shuffle?: boolean; keepOrder?: boolean } & WithSongs)
-  /** what comes after the playing song, edited elsewhere; `line` of them were asked for by hand */
-  | ({ action: "setUpcoming"; line?: number } & WithSongs)
+  /** what comes after the playing song, edited elsewhere; `line` of them were asked for by hand; `keepAfter`: up to which song */
+  | ({ action: "setUpcoming"; line?: number; keepAfter?: KeepAfter } & WithSongs)
   /** the first of these next and the rest after it, what was coming behind them */
   | ({ action: "branchOff"; name: string } & WithSongs);
+
+/**
+ * Sent with an edit by a device that knows only a stretch of another's queue (QueueDoc.total says
+ * there's more): the songs sent replace what comes up to and including this one, `ahead` places after
+ * the song playing when it was sent, and what comes after it stays. Without it, an edit made where only
+ * 800 of 1,200 songs were known cut the queue there to 800 (Codex's review, 2026-11-20).
+ */
+export interface KeepAfter {
+  track: WireTrack;
+  ahead: number;
+}
+
+/**
+ * Where the song an edit was anchored to (KeepAfter) stands in the queue now: at its place, else the
+ * nearest copy around it (songs played on since, or added in front), else -1.
+ */
+export function anchorPlace<T>(queue: readonly T[], index: number, ahead: number, isIt: (t: T) => boolean, reach = 64): number {
+  const at = index + Math.max(1, ahead);
+  if (at < queue.length && isIt(queue[at])) return at;
+  for (let d = 1; d <= reach; d++) {
+    if (at - d > index && at - d < queue.length && isIt(queue[at - d])) return at - d;
+    if (at + d < queue.length && isIt(queue[at + d])) return at + d;
+  }
+  return -1;
+}
 
 export interface MutedDoc {
   /** when the list last changed (ms) */
@@ -244,6 +271,41 @@ function readNote(doc: unknown): PlaybackNote | null {
   return n && typeof n === "object" && typeof n.device?.id === "string" && typeof n.at === "number" && typeof n.track?.id === "string" ? n : null;
 }
 
+/**
+ * Answers that can come back in any order (two questions under way at once): one about an older state
+ * of the service than one already used doesn't set the screen back (Codex's review, 2026-11-20). The
+ * service's own count for that state decides; a service without one, the order the questions went out in.
+ */
+export function newestAnswers() {
+  let asked = 0;
+  /** questions up to this one were asked before a start, maybe of another service: their answers don't count */
+  let floor = 0;
+  let usedAsk = 0;
+  let usedRev = -1;
+  return {
+    ask: (): number => ++asked,
+    /** Whether the answer to question `mine`, about the service's state `rev` (when it says), is the newest yet; it counts from now on. */
+    take(mine: number, rev: unknown): boolean {
+      const count = typeof rev === "number" ? rev : null;
+      if (mine <= floor) return false;
+      const older = count !== null && usedRev >= 0 ? count < usedRev || (count === usedRev && mine < usedAsk) : mine < usedAsk;
+      if (older) return false;
+      usedAsk = Math.max(usedAsk, mine);
+      usedRev = count ?? -1;
+      return true;
+    },
+    /** The service's count is lower than the one used (restored from a backup, or another one): compared afresh from now on. */
+    seen(rev: unknown): void {
+      if (typeof rev === "number" && rev < usedRev) usedRev = -1;
+    },
+    /** Another start, maybe of another service: what was asked before doesn't count. */
+    afresh(): void {
+      floor = usedAsk = asked;
+      usedRev = -1;
+    },
+  };
+}
+
 export function createSyncEngine(host: SyncHost) {
   /** on at all: what happens here goes out */
   let enabled = false;
@@ -254,6 +316,9 @@ export function createSyncEngine(host: SyncHost) {
   let status: SyncStatus = "off";
   let seq = -1;
   const known = { playlists: -1, position: -1, likes: -1, muted: -1, devices: -1 };
+  /** who's around, and where the music stands: an older answer arriving late changes nothing */
+  const devicesAnswers = newestAnswers();
+  const playbackAnswers = newestAnswers();
   let sentQueueId: string | null = null;
   /** the note last sent or taken over: nothing newer, nothing to say */
   let sentAt = 0;
@@ -495,9 +560,11 @@ export function createSyncEngine(host: SyncHost) {
     }, delay);
   }
 
-  async function pushPlayback(evenIfSent = false): Promise<void> {
+  /** Where this device stands, to the service; true once it's there (written now, or there already). */
+  async function pushPlayback(evenIfSent = false): Promise<boolean> {
     const state = host.readPlayback();
-    if (!state || (!evenIfSent && state.note.at <= sentAt)) return;
+    if (!state) return false;
+    if (!evenIfSent && state.note.at <= sentAt) return true;
     lastPlaybackAt = Date.now();
     if (state.note.queueId !== sentQueueId) {
       const put = await call("PUT", "/v1/docs/queue", { doc: state.queue() }, REQUEST_TIMEOUT_MS);
@@ -510,18 +577,24 @@ export function createSyncEngine(host: SyncHost) {
     sentAt = state.note.at;
     // The others should see the same moment; this also runs in the background, where other timers don't.
     await sendPresence().catch(() => undefined);
+    return true;
   }
 
   async function checkPlayback(): Promise<void> {
+    const mine = playbackAnswers.ask();
     const got = await call("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.position = got.body.rev;
     const note = readNote(got.body.doc);
-    if (!note || note.device.id === host.deviceId || !host.wantsPlayback(note)) return;
+    if (!note || note.device.id === host.deviceId || !host.wantsPlayback(note)) {
+      // Seen all the same: an older word arriving after it changes nothing.
+      playbackAnswers.take(mine, got.body.rev);
+      return;
+    }
     const queue = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
     const doc = queue.status === 200 ? (queue.body.doc as QueueDoc | null) : null;
-    // The wait for the queue may have changed things here.
-    if (!host.wantsPlayback(note)) return;
+    // The wait for the queue may have changed things here, and a newer word may have come meanwhile.
+    if (!playbackAnswers.take(mine, got.body.rev) || !host.wantsPlayback(note)) return;
     const matching = doc?.id === note.queueId && Array.isArray(doc.tracks) ? doc : null;
     sentQueueId = note.queueId;
     sentAt = note.at;
@@ -578,8 +651,10 @@ export function createSyncEngine(host: SyncHost) {
 
   async function pullDevices(): Promise<void> {
     if (!host.applyDevices) return;
+    const mine = devicesAnswers.ask();
     const got = await call("GET", "/v1/devices", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
+    if (!devicesAnswers.take(mine, got.body.rev)) return;
     const list: { id: string; updatedAt: number; doc: DevicePresence }[] = Array.isArray(got.body.devices) ? got.body.devices : [];
     lastDevicesAt = Date.now();
     host.applyDevices(
@@ -611,11 +686,17 @@ export function createSyncEngine(host: SyncHost) {
   }
 
   async function takeOver(): Promise<void> {
+    const mine = playbackAnswers.ask();
     const got = await call("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
     known.position = got.body.rev;
+    // Asked for, so gone on from in any case; an older word arriving after it changes nothing.
+    playbackAnswers.take(mine, got.body.rev);
     const note = readNote(got.body.doc);
-    if (note) {
+    // Without the other device's word on where it stands there's nothing to go on from: what this one had
+    // before (its own word, the latest there) isn't what was asked for.
+    if (!note || note.device.id === host.deviceId) return;
+    {
       const queue = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
       const doc = queue.status === 200 ? (queue.body.doc as QueueDoc | null) : null;
       sentQueueId = note.queueId;
@@ -694,6 +775,8 @@ export function createSyncEngine(host: SyncHost) {
         // Who's around and what plays there comes first: it's what somebody opening the app looks at,
         // and no document that takes its time (or fails) may stand in its way.
         hasDevices = revs.devices !== undefined;
+        devicesAnswers.seen(revs.devices);
+        playbackAnswers.seen(revs.position);
         if (hasDevices) {
           if (reply.body.inbox > 0) await takeCommands();
           // Also without news: a device that went away says nothing about it.
@@ -764,6 +847,8 @@ export function createSyncEngine(host: SyncHost) {
       known.likes = -1;
       known.muted = -1;
       known.devices = -1;
+      devicesAnswers.afresh();
+      playbackAnswers.afresh();
       for (const name of LIBRARY_DOCS) delete libraryKnown[name];
       libraryMissing.clear();
       listensKnown = -1;
@@ -845,7 +930,10 @@ export function createSyncEngine(host: SyncHost) {
     flushPlayback(): Promise<void> {
       if (playbackTimer) clearTimeout(playbackTimer);
       playbackTimer = null;
-      return pushPlayback().catch(() => undefined);
+      return pushPlayback().then(
+        () => undefined,
+        () => undefined
+      );
     },
 
     /** Look again whether another device has something to continue from, say when this one comes back to the front. */
@@ -904,7 +992,10 @@ export function createSyncEngine(host: SyncHost) {
 
     /** Hands the music to another device: where this one stands goes out first, and it goes on from there. */
     async handOver(deviceId: string): Promise<boolean> {
-      await pushPlayback(true).catch(() => undefined);
+      // Where this one stands has to be there first. Without it, the other device went on from what it
+      // knew from before and this one stopped for nothing (Codex's review, 2026-11-20): the music stays.
+      const there = await pushPlayback(true).catch(() => false);
+      if (!there) return false;
       return this.sendCommand(deviceId, { action: "takeOver" });
     },
 
@@ -935,6 +1026,12 @@ export function createSyncEngine(host: SyncHost) {
 
     /** A retry now instead of at the end of the wait, say after a new address was entered. */
     retryNow(): void {
+      // Maybe another service now: its counts are its own, and who's around and what plays is asked again.
+      devicesAnswers.afresh();
+      playbackAnswers.afresh();
+      known.devices = -1;
+      known.position = -1;
+      lastDevicesAt = 0;
       wakeSleep?.();
     },
 

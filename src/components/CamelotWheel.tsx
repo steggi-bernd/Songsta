@@ -174,7 +174,11 @@ export function CamelotWheel({ songKey, aim, onPick, counts, correcting, onPoint
               onFocus={() => setPointed(s.c)}
               onBlur={() => setPointed((p) => (sameCamelot(p, s.c) ? null : p))}
             >
-              <g style={{ transform: `translate(${(Math.cos(s.mid) * lift).toFixed(2)}px, ${(Math.sin(s.mid) * lift).toFixed(2)}px)`, transition: reduce ? "none" : "transform 180ms ease" }}>
+              {/* The slice's own place, which never moves, takes the pointer. The slice drawn above it lifts
+                  outward when pointed at; when it took the pointer itself, it moved away from a pointer at
+                  its inner edge, came back, met the pointer and moved away again: it shook (2026-11-20). */}
+              <path d={s.d} fill="transparent" style={{ pointerEvents: "all" }} />
+              <g style={{ transform: `translate(${(Math.cos(s.mid) * lift).toFixed(2)}px, ${(Math.sin(s.mid) * lift).toFixed(2)}px)`, transition: reduce ? "none" : "transform 180ms ease", pointerEvents: "none" }}>
                 <path d={s.d} style={{ fill, transition: reduce ? "none" : "fill 320ms ease" }} />
                 <text
                   x={s.tx}

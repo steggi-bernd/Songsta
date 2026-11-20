@@ -86,7 +86,7 @@ Everything takes the client's Jellyfin login.
 |---|---|
 | `GET`/`PUT /v1/docs/:name` | a document with its revision: `playlists`, `order`, `groups`, `albumedits`, `albumpictures` (merged by the apps, a write must name the revision it was built on), `queue`, `position`, `likes`, `muted` |
 | `GET /v1/changes?since=&wait=&device=` | waits until something changed; answers the revisions and whether commands wait for this device |
-| `GET /v1/devices` | the user's devices: what each one plays, and how long ago it said so |
+| `GET /v1/devices` | the user's devices: what each one plays, and how long ago it said so, with a count that rises with every change, so an answer that arrives late is known to be older |
 | `PUT /v1/devices/:id` | what this device plays right now |
 | `POST /v1/devices/:id/commands` | asks another device for something: play, pause, next, seek, take over, a new list, the volume. The service only passes these on: a new app can ask for new things without a new service |
 | `GET /v1/devices/:id/commands` | this device's waiting commands, which leave the list by being read |

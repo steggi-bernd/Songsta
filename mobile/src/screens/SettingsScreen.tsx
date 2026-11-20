@@ -1,9 +1,9 @@
 /** Everything that can be chosen: the music on this phone, the server, how it plays and feels, downloads, sync. */
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BarChart3, AudioLines, Check, ChevronLeft, ChevronRight, CircleAlert, CircleArrowDown, CirclePlay, CloudOff, FileDown, FileUp, FolderPlus, Hand, Info, Link2, LogOut, MicVocal, MonitorSmartphone, Palette, RefreshCw, Server, ShieldCheck, SlidersHorizontal, Trash2, X, type LucideIcon } from "lucide-react-native";
+import { BarChart3, AudioLines, Check, ChevronLeft, ChevronRight, CircleAlert, CircleArrowDown, CirclePlay, CloudOff, FileDown, FileUp, Heart, FolderPlus, Hand, Info, Link2, LogOut, MicVocal, MonitorSmartphone, Palette, RefreshCw, Server, ShieldCheck, SlidersHorizontal, Trash2, X, type LucideIcon } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { APP_VERSION, installPhoneUpdate, lookNow, openReleasePage, updatePhone, useNewerVersion, usePhoneUpdate } from "../newVersion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Reach } from "../addresses";
@@ -908,6 +908,15 @@ export function SettingsScreen() {
             <SwitchRow title={T("Automatic updates")} line={T("Fetches new versions on Wi-Fi. Android asks you before one goes in.")} value={settings.autoUpdate} onChange={(autoUpdate) => change({ autoUpdate })} />
             <View style={styles.divider} />
             <SwitchRow title={T("Tell me about new versions")} line={T("A short note and a dot on the settings button when one is out")} value={settings.checkNewVersion} onChange={(checkNewVersion) => change({ checkNewVersion })} />
+            <View style={styles.divider} />
+            {/* Only here, only on a tap: Ko-fi opens in the browser, the app itself asks it nothing. */}
+            <Pressable onPress={() => void Linking.openURL("https://ko-fi.com/besteck").catch(() => undefined)} style={styles.notice}>
+              <Heart size={20} color={colors.accent} />
+              <View style={styles.noticeText}>
+                <Text style={styles.rowTitle}>{T("Support Songsta")}</Text>
+                <Text style={styles.rowSub}>{T("Songsta is free and stays free. If you like it, you can buy me a coffee on Ko-fi.")}</Text>
+              </View>
+            </Pressable>
             <View style={styles.divider} />
             <Pressable onPress={exportData} style={styles.notice}>
               <FileUp size={20} color={colors.ink} />

@@ -26,7 +26,7 @@ import { syncFavorites } from "./serverSync";
 import { libraryDocHosts, librarySyncReady, onLibrarySyncReady, watchLibraryDocs } from "./libraryDocs";
 import { computerListenHost, keepOwnPlaysHere, useListenCursors } from "./listenShare";
 import { sharesListens } from "./listenSync";
-import { createSyncEngine, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "./syncEngine";
+import { anchorPlace, createSyncEngine, DEVICE_ONLINE_MS, type DeviceCommand, type DevicePresence, type KeepAfter, type PlaybackNote, type QueueDoc, type RemoteDevice, type SyncEngine, type SyncStatus } from "./syncEngine";
 import { problemKey, serviceProblem, type SyncServiceInfo, type SyncServiceProblem } from "./syncService";
 import { T } from "./i18n";
 
@@ -108,6 +108,9 @@ export const otherDevices = {
 
 /** A list this long goes by the queue document rather than in a command. */
 const SONGS_IN_A_COMMAND = 100;
+/** The most of a list another device is sent, and how much of it comes before the song it starts at (as from the phone). */
+const LONGEST_LIST = 5000;
+const LIST_BEHIND = 200;
 /** A song's volume dragged here: what the other device says for a moment is older than that. */
 const VOLUME_HELD_MS = 1500;
 const VOLUME_EVERY_MS = 150;
@@ -239,6 +242,8 @@ export function watchHomeSync(): () => void {
   let device = { id: "", name: "" };
   /** the device being followed and where it stood when last heard */
   let followed: (FollowedDevice & { playing: boolean; positionMs: number; heardAt: number; pausedSince: number }) | null = null;
+  /** the last song of the followed device's queue known here, when only a stretch of it is (QueueDoc.total): an edit keeps what comes after it there */
+  let followedTail: KeepAfter | null = null;
   /** started while the service was away: the others hear of it when it's back */
   let claimWhenBack = false;
   let followTimer: number | null = null;
@@ -249,7 +254,8 @@ export function watchHomeSync(): () => void {
   let steeringTo: { id: string; until: number } | null = null;
   let heldUntil = 0;
   let volumeTimer: number | null = null;
-  let volumeWanted: number | null = null;
+  /** a volume dragged here and not sent yet, and the device it's for */
+  let volumeWanted: { to: string; level: number } | null = null;
   /** which server, and the address the service was last looked for at */
   let serverKey: string | null = null;
   let lookedAt: string | null = null;
@@ -289,6 +295,7 @@ export function watchHomeSync(): () => void {
           id,
           from,
           tracks: queue.slice(from, index + QUEUE_NOTE_AHEAD).map(toWireTrack),
+          total: queue.length,
           lineEnd: lineInList(lineEnd, from),
           branches: branches.map((b) => ({ ...b, ids: b.ids.slice(0, BRANCH_IDS_SENT) })),
           unshuffled: unshuffled ? listAround(unshuffled, track.id, QUEUE_NOTE_BEHIND, QUEUE_NOTE_AHEAD).map(toWireTrack) : undefined,
@@ -343,6 +350,10 @@ export function watchHomeSync(): () => void {
     // In its list twice: where that device says it stands.
     const said = note.place !== undefined && queue?.from !== undefined ? note.place - queue.from : -1;
     const playingAt = songs[said]?.id === current.id ? songs.slice(0, said).filter(Boolean).length : list.findIndex((t) => t.id === current.id);
+    // Following a device that showed only a stretch of its queue: the last song of it known here anchors the edits made here.
+    const end = (queue?.from ?? 0) + wires.length;
+    const more = queue?.total !== undefined ? queue.total > end : said >= 0 && wires.length - said - 1 >= QUEUE_NOTE_AHEAD - 1;
+    followedTail = followed && whole && more && note.place !== undefined && wires.length ? { track: wires[wires.length - 1], ahead: end - 1 - note.place } : null;
     applying = true;
     activityAt = note.at;
     queueId = note.queueId;
@@ -371,7 +382,7 @@ export function watchHomeSync(): () => void {
   /** Songs for the device being followed: right in the command if they fit. */
   function sendSongs(tracks: Track[], command: DeviceCommand): void {
     if (!followed) return;
-    const wire = tracks.slice(0, QUEUE_NOTE_AHEAD).map(toWireTrack);
+    const wire = tracks.slice(0, LONGEST_LIST).map(toWireTrack);
     if (wire.length <= SONGS_IN_A_COMMAND) void engine?.sendCommand(followed.id, { ...command, tracks: wire } as DeviceCommand);
     else void engine?.sendList(followed.id, wire, undefined, command);
   }
@@ -403,11 +414,20 @@ export function watchHomeSync(): () => void {
       queueId = "";
       followed = { ...followed, playing: true, positionMs: 0, heardAt: Date.now() };
       followClock(0, true);
-      void engine?.sendList(followed.id, tracks.slice(0, QUEUE_NOTE_AHEAD).map(toWireTrack), undefined, { action: "playList", start, keepOrder, shuffle: usePlayer.getState().shuffle });
+      // The stretch of the list around the song asked for, so that song is in it, wherever it stands.
+      const from = Math.max(0, start - LIST_BEHIND);
+      void engine?.sendList(followed.id, tracks.slice(from, from + LONGEST_LIST).map(toWireTrack), undefined, { action: "playList", start: start - from, keepOrder, shuffle: usePlayer.getState().shuffle });
     },
-    upcoming(tracks) {
-      const { lineEnd, index } = usePlayer.getState();
-      sendSongs(tracks, { action: "setUpcoming", line: Math.max(0, lineEnd - index - 1) });
+    upcoming(tracks, all = false) {
+      const { lineEnd, index, queue } = usePlayer.getState();
+      // Cleared: nothing comes after these there either, also what this computer never saw.
+      if (all) followedTail = null;
+      sendSongs(tracks, { action: "setUpcoming", line: Math.max(0, lineEnd - index - 1), ...(followedTail ? { keepAfter: followedTail } : {}) });
+      // That queue runs on now: the song playing, these, then what came after the last song known here.
+      if (followedTail) {
+        const last = tracks[tracks.length - 1] ?? queue[index];
+        followedTail = last ? { track: toWireTrack(last), ahead: tracks.length } : null;
+      }
     },
     add: (tracks) => sendSongs(tracks, { action: "enqueue", next: true }),
     jump: (track) => steerTo(usePlayer.getState().queue.indexOf(track)),
@@ -430,12 +450,14 @@ export function watchHomeSync(): () => void {
       usePlayer.setState({ position: 0, seekNonce: seekNonce + 1 });
     },
     volume(level) {
+      if (!followed) return;
       volumeHeldUntil = Date.now() + VOLUME_HELD_MS;
-      volumeWanted = level;
+      volumeWanted = { to: followed.id, level };
       if (volumeTimer !== null) return;
       const send = (): void => {
-        if (followed && volumeWanted !== null) void engine?.sendCommand(followed.id, { action: "volume", level: volumeWanted });
+        const wanted = volumeWanted;
         volumeWanted = null;
+        if (wanted && followed?.id === wanted.to) void engine?.sendCommand(wanted.to, { action: "volume", level: wanted.level });
       };
       send();
       volumeTimer = window.setTimeout(() => {
@@ -478,10 +500,20 @@ export function watchHomeSync(): () => void {
     applying = false;
   }
 
+  /** A volume dragged for one device goes nowhere else: another device keeps its own until it's moved for that one. */
+  function dropVolume(): void {
+    if (volumeTimer !== null) window.clearTimeout(volumeTimer);
+    volumeTimer = null;
+    volumeWanted = null;
+    volumeHeldUntil = 0;
+  }
+
   /** This computer is by itself again, from the place the other device had reached. */
   function stopFollowing(play: boolean): void {
     if (!followed) return;
+    dropVolume();
     followed = null;
+    followedTail = null;
     followNext = null;
     setSteering(null);
     if (followTimer !== null) window.clearInterval(followTimer);
@@ -500,6 +532,7 @@ export function watchHomeSync(): () => void {
   function follow(other: RemoteDevice): void {
     const p = other.presence;
     if (!p.track) return;
+    if (followed && followed.id !== other.id) dropVolume();
     if (!followed) {
       handOverToCast(steer);
       setSteering(steering);
@@ -629,19 +662,28 @@ export function watchHomeSync(): () => void {
         player.setPlaying(true);
         break;
       case "playList": {
-        const asked = command.tracks?.[command.start];
-        const song = asked && findSong(asked);
-        const songs = songsOf(command.tracks);
+        // The very entry asked for (a list can have a song twice), or the next one this computer has.
+        const found = (command.tracks ?? []).map(findSong);
+        const songs = found.filter((t): t is Track => !!t);
         if (!songs.length) break;
-        const start = song ? Math.max(0, songs.indexOf(song)) : 0;
+        const start = Math.min(songs.length - 1, found.slice(0, Math.max(0, command.start)).filter((t) => !!t).length);
         if (command.shuffle !== undefined) usePlayer.setState({ shuffle: command.shuffle });
         if (command.keepOrder) usePlayer.setState({ queue: songs, index: start, unshuffled: null, lineEnd: 0, branches: [], playing: true, position: 0, error: null });
         else player.playQueue(songs, start);
         break;
       }
-      case "setUpcoming":
-        player.replaceUpcoming(songsOf(command.tracks), command.line);
+      case "setUpcoming": {
+        // Edited where only a stretch of this queue was known: what comes after the last song known there stays.
+        let keepFrom: number | undefined;
+        if (command.keepAfter) {
+          const { queue, index } = usePlayer.getState();
+          const anchor = findSong(command.keepAfter.track);
+          const at = anchor ? anchorPlace(queue, index, command.keepAfter.ahead, (t) => songKey(t.id) === songKey(anchor.id)) : -1;
+          keepFrom = (at >= 0 ? at : Math.min(queue.length - 1, index + command.keepAfter.ahead)) + 1;
+        }
+        player.replaceUpcoming(songsOf(command.tracks), command.line, keepFrom);
         break;
+      }
       case "branchOff":
         player.branchOff(songsOf(command.tracks), command.name);
         break;
