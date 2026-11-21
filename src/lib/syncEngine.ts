@@ -115,8 +115,8 @@ export type DeviceCommand =
   | { action: "jump"; trackId: string; by?: number; track?: WireTrack }
   /** songs for its queue, behind the playing one and what was asked for before */
   | ({ action: "enqueue"; next?: boolean } & WithSongs)
-  /** go on from the position and queue documents, playing */
-  | { action: "takeOver" }
+  /** go on from the position and queue documents, playing; `from`: the device that handed over */
+  | { action: "takeOver"; from?: string }
   /** another device started the music: pause, and show that one */
   | { action: "yield"; to: string }
   | { action: "shuffle"; on: boolean }
@@ -279,6 +279,9 @@ const LISTENS_AFTER_CHANGE_MS = 10_000;
 const NOBODY_HEARD_AFTER_MS = 30_000;
 const PRESENCE_EVERY_MS = 40_000;
 const DEVICES_LOOK_MS = 45_000;
+/** A command taken from the inbox whose step the service let down: tried this often, a growing moment apart. */
+const COMMAND_TRIES = 3;
+const COMMAND_RETRY_MS = 1000;
 const MERGE_ATTEMPTS = 4;
 
 /** Heard of within this long, a device is around. */
@@ -694,11 +697,30 @@ export function createSyncEngine(host: SyncHost) {
     if (!host.onCommand) return;
     const got = await call("GET", `/v1/devices/${encodeURIComponent(host.deviceId)}/commands`, undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
+    // They're out of the inbox now: each one by itself, so one going wrong doesn't take the ones after it
+    // along (Codex's review: a hand-over that failed lost the pause behind it as well).
     for (const command of Array.isArray(got.body.commands) ? got.body.commands : []) {
-      // Going on from where another device stands needs that device's latest word.
-      if (command?.action === "takeOver") await takeOver();
-      else if (typeof command?.listId === "string") await takeList(command);
-      else host.onCommand(command);
+      await takeCommand(command).catch(() => undefined);
+    }
+  }
+
+  async function takeCommand(command: DeviceCommand & WithSongs): Promise<void> {
+    // Going on from where another device stands needs that device's latest word.
+    if (command?.action === "takeOver") return stumbleTwice(() => takeOver(command));
+    if (typeof command?.listId === "string") return stumbleTwice(() => takeList(command));
+    host.onCommand?.(command);
+  }
+
+  /** A step tried again a moment later while the service stumbles (no answer, or a 5xx): its command can't be asked for again. */
+  async function stumbleTwice(step: () => Promise<void>): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await step();
+      } catch (err) {
+        const code = (err as { status?: number }).status;
+        if (attempt >= COMMAND_TRIES || (code !== undefined && code < 500)) throw err;
+        await new Promise((resolve) => setTimeout(resolve, attempt * COMMAND_RETRY_MS));
+      }
     }
   }
 
@@ -711,7 +733,7 @@ export function createSyncEngine(host: SyncHost) {
     if (doc && doc.id === command.listId && Array.isArray(doc.tracks)) host.onCommand?.({ ...command, tracks: doc.tracks } as DeviceCommand);
   }
 
-  async function takeOver(): Promise<void> {
+  async function takeOver(command: { from?: string } = {}): Promise<void> {
     const mine = playbackAnswers.ask();
     const got = await call("GET", "/v1/docs/position", undefined, REQUEST_TIMEOUT_MS);
     if (got.status !== 200) throw refused(got);
@@ -723,6 +745,9 @@ export function createSyncEngine(host: SyncHost) {
     // Without the other device's word on where it stands there's nothing to go on from: what this one had
     // before (its own word, the latest there) isn't what was asked for.
     if (!note || note.device.id === host.deviceId) return;
+    // The word on where the music stands isn't from the device that handed over: another one spoke after
+    // it, and its music goes on where it is (Codex's review: the target played that device's song).
+    if (typeof command.from === "string" && note.device.id !== command.from) return;
     {
       const queue = await call("GET", "/v1/docs/queue", undefined, REQUEST_TIMEOUT_MS);
       // A newer word from yet another device came while this one was on its way: the music went on
@@ -818,7 +843,15 @@ export function createSyncEngine(host: SyncHost) {
           if (!synced || Date.now() - lastPresenceAt > PRESENCE_EVERY_MS) await sendPresence();
         }
         if (!synced || revs.position !== known.position) await checkPlayback();
-        if (!synced || revs.playlists !== known.playlists) await syncPlaylists();
+        if (!synced || revs.playlists !== known.playlists) {
+          // A file the service can't read (423, Codex's review) doesn't hold up the rest, and nothing is sent over it.
+          try {
+            await syncPlaylists();
+          } catch (err) {
+            const code = (err as { status?: number }).status;
+            if (code === undefined || code === 401 || code === 403 || code >= 500) throw err;
+          }
+        }
         // A service from before this document doesn't list it.
         if (revs.likes !== undefined) {
           if (host.applyLikes) {
@@ -1011,7 +1044,8 @@ export function createSyncEngine(host: SyncHost) {
 
     /** A command with a list of songs of any length: they go ahead as the queue document. */
     async sendList(deviceId: string, tracks: WireTrack[], context: string | undefined, command: DeviceCommand): Promise<boolean> {
-      const listId = `list${Date.now()}`;
+      // Two lists sent in the same millisecond never share an id (Codex's review: the second one ran twice).
+      const listId = `list${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       try {
         const put = await call("PUT", "/v1/docs/queue", { doc: { id: listId, context, tracks } }, REQUEST_TIMEOUT_MS);
         if (put.status !== 200) return false;
@@ -1028,7 +1062,7 @@ export function createSyncEngine(host: SyncHost) {
       // knew from before and this one stopped for nothing (Codex's review, 2026-11-20): the music stays.
       const there = await pushPlayback(true).catch(() => false);
       if (!there) return false;
-      return this.sendCommand(deviceId, { action: "takeOver" });
+      return this.sendCommand(deviceId, { action: "takeOver", from: host.deviceId });
     },
 
     /**

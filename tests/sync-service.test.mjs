@@ -746,6 +746,34 @@ test("a long list goes ahead as the queue document, and its command brings the s
   assert.equal(heard.tracks[399].id, "jf:399");
 });
 
+test("two pending enqueue lists keep their own songs when both senders have the same time", { todo: "sendList still shares one queue document: needs a list store of its own" }, async (t) => {
+  const token = freshLogin();
+  const target = deviceEngine("target", token);
+  t.after(() => target.engine.stop());
+  const tracks = (prefix) => Array.from({ length: 400 }, (_, i) => ({ id: `jf:${prefix}${i}`, title: `${prefix}${i}`, artist: "Band", duration: 100 }));
+  const a = tracks("a");
+  const b = tracks("b");
+  const instant = Date.now();
+  function enqueue(id, list) {
+    const sender = deviceEngine(id, token);
+    const clock = Date.now;
+    try {
+      // Only the synchronous creation of each outgoing command sees this timestamp.
+      Date.now = () => instant;
+      return sender.engine.sendList("target", list, undefined, { action: "enqueue" });
+    } finally {
+      Date.now = clock;
+    }
+  }
+  assert.equal(await enqueue("first", a), true);
+  assert.equal(await enqueue("second", b), true);
+  target.engine.start();
+  await until(() => target.heard.commands.length === 2, "both additions to reach the player");
+  const received = target.heard.commands.map((command) => command.tracks.map((song) => song.id));
+  assert.deepEqual(received.map((list) => list[0]), [a[0].id, b[0].id], "each addition must carry its own list");
+  assert.deepEqual(received, [a, b].map((list) => list.map((song) => song.id)));
+});
+
 test("muted songs are one list for all devices: the newer one wins", async (t) => {
   const token = freshLogin();
   const pc = deviceEngine("pc", token);
@@ -983,4 +1011,138 @@ test("a hand-over still goes on when the device that handed over said something 
   await target.engine.checkPlayback();
   release();
   await until(() => target.heard.commands.some((command) => command.action === "takeOver"), "the target takes over");
+});
+
+/* ------------------------------------------------- commands, Codex's second look (2026-11-21) */
+
+const playing = (token, id, title) =>
+  deviceEngine(id, token, {
+    readPlayback: () => ({
+      note: { device: { id, name: id }, track: { id: `jf:${title}`, title, artist: "Band", duration: 180 }, playing: true, at: Date.now(), positionMs: 9000, queueId: `q-${title}` },
+      queue: () => ({ id: `q-${title}`, tracks: [{ id: `jf:${title}`, title, artist: "Band", duration: 180 }] }),
+    }),
+  });
+
+test("a hand-over whose word on where the music stands is from another device by now starts nothing", async (t) => {
+  const token = freshLogin();
+  const a = playing(token, "source-a", "A");
+  const c = playing(token, "source-c", "C");
+  const target = deviceEngine("target", token);
+  t.after(() => target.engine.stop());
+  assert.equal(await a.engine.handOver("target"), true);
+  // Another device starts playing before the target opens its inbox.
+  await c.engine.flushPlayback();
+  target.engine.start();
+  await until(async () => (await call("GET", "/v1/changes?since=-1&wait=0&device=target", { token })).body.inbox === 0, "the target to take its commands");
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.deepEqual(target.heard.adopted.map((a) => a.note.track.title), [], "C's music isn't taken over");
+  assert.equal(target.heard.commands.some((command) => command.action === "takeOver"), false);
+});
+
+test("a hand-over the service stumbles on is tried again, and the commands after it still arrive", async (t) => {
+  const token = freshLogin();
+  const source = playing(token, "source", "Again");
+  let stumbles = 1;
+  const target = deviceEngine("target", token, {
+    request: (method, url) => (method === "GET" && url === "/v1/docs/position" && stumbles-- > 0 ? Promise.resolve({ status: 503, body: { error: "busy" } }) : undefined),
+  });
+  t.after(() => target.engine.stop());
+  assert.equal(await source.engine.handOver("target"), true);
+  assert.equal(await source.engine.sendCommand("target", { action: "pause" }), true);
+  target.engine.start();
+  await until(() => target.heard.commands.some((command) => command.action === "pause"), "the pause behind it");
+  assert.equal(target.heard.commands.filter((command) => command.action === "takeOver").length, 1, "the hand-over went through on the second try");
+});
+
+test("a hand-over that keeps failing doesn't take the pause behind it along", async (t) => {
+  const token = freshLogin();
+  const source = playing(token, "source", "Never");
+  const target = deviceEngine("target", token, {
+    request: (method, url) => (method === "GET" && url === "/v1/docs/position" ? Promise.resolve({ status: 503, body: { error: "busy" } }) : undefined),
+  });
+  t.after(() => target.engine.stop());
+  assert.equal(await source.engine.handOver("target"), true);
+  assert.equal(await source.engine.sendCommand("target", { action: "pause" }), true);
+  target.engine.start();
+  await until(() => target.heard.commands.some((command) => command.action === "pause"), "the pause behind it", 12000);
+  assert.equal(target.heard.commands.some((command) => command.action === "takeOver"), false);
+});
+
+test("two lists sent in the same millisecond never run as the same list twice", async (t) => {
+  const token = freshLogin();
+  const target = deviceEngine("target", token);
+  t.after(() => target.engine.stop());
+  const tracks = (prefix) => Array.from({ length: 150 }, (_, i) => ({ id: `jf:${prefix}${i}`, title: `${prefix}${i}`, artist: "Band", duration: 100 }));
+  const instant = Date.now();
+  const clock = Date.now;
+  for (const [id, prefix] of [["first", "a"], ["second", "b"]]) {
+    const sender = deviceEngine(id, token);
+    let sent;
+    try {
+      Date.now = () => instant;
+      sent = sender.engine.sendList("target", tracks(prefix), undefined, { action: "enqueue" });
+    } finally {
+      Date.now = clock;
+    }
+    assert.equal(await sent, true);
+  }
+  target.engine.start();
+  await until(async () => (await call("GET", "/v1/changes?since=-1&wait=0&device=target", { token })).body.inbox === 0, "the target to take its commands");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  const firsts = target.heard.commands.map((command) => command.tracks?.[0]?.id);
+  assert.equal(new Set(firsts).size, firsts.length, `no list runs twice: ${firsts.join(" ")}`);
+  assert.equal(firsts.at(-1), "jf:b0", "the newer list arrives");
+});
+
+/* ------------------------------------------------- the service's files, Codex's second look (2026-11-21) */
+
+async function restartService() {
+  service.closeAllConnections();
+  await new Promise((resolve) => service.close(resolve));
+  service = createSyncServer({ dataDir, jellyfinUrl: process.env.SYNC_TEST_JELLYFIN });
+  base = `http://127.0.0.1:${await listen(service)}`;
+}
+const userDir = (token) => path.join(dataDir, "users", TOKENS[token]);
+const playlistsOf = (...names) => ({ playlists: names.map((name) => ({ id: `p-${name}`, name, tracks: [], updatedAt: 1 })), folders: [] });
+
+test("a document file the service can't read goes on from its newest kept version, not as an empty one", async () => {
+  const token = freshLogin();
+  assert.equal((await call("PUT", "/v1/docs/playlists", { token, body: { rev: 0, doc: playlistsOf("Kept") } })).status, 200);
+  assert.equal((await call("PUT", "/v1/docs/playlists", { token, body: { rev: 1, doc: playlistsOf("Kept", "Newer") } })).status, 200);
+  fs.writeFileSync(path.join(userDir(token), "playlists.json"), '{"rev":2,"seq":2,"doc":{"playl');
+  await restartService();
+  const got = await call("GET", "/v1/docs/playlists", { token });
+  assert.equal(got.status, 200);
+  assert.deepEqual(got.body.doc.playlists.map((p) => p.name), ["Kept"], "the version kept before the last write");
+  assert.ok(got.body.rev > 2, `numbered past what a device may know: ${got.body.rev}`);
+  const empty = await call("PUT", "/v1/docs/playlists", { token, body: { rev: 0, doc: playlistsOf() } });
+  assert.equal(empty.status, 409, "an empty collection on base 0 isn't taken");
+  assert.ok(fs.readdirSync(userDir(token)).some((file) => file.startsWith("playlists.json.unreadable-")), "the unreadable file is kept aside");
+});
+
+test("without a kept version, a document the apps merge stays shut, and the rest goes on", async (t) => {
+  const token = freshLogin();
+  assert.equal((await call("PUT", "/v1/docs/playlists", { token, body: { rev: 0, doc: playlistsOf("Only") } })).status, 200);
+  assert.equal((await call("PUT", "/v1/docs/muted", { token, body: { doc: { at: 5000, tracks: [{ id: "jf:m1", title: "Muted", artist: "Band", duration: 100 }] } } })).status, 200);
+  fs.writeFileSync(path.join(userDir(token), "playlists.json"), "{not json");
+  await restartService();
+  assert.equal((await call("GET", "/v1/docs/playlists", { token })).status, 423);
+  assert.equal((await call("PUT", "/v1/docs/playlists", { token, body: { rev: 0, doc: playlistsOf() } })).status, 423, "nothing written over it");
+  assert.equal((await call("GET", "/v1/docs/muted", { token })).status, 200, "another document still reads");
+  // A device's round doesn't stop at the shut document: the muted list behind it still arrives.
+  const device = deviceEngine("phone", token);
+  t.after(() => device.engine.stop());
+  device.engine.start();
+  await until(() => device.heard.muted.length > 0, "the muted list behind the shut document");
+  assert.equal(device.mutedDoc.at, 5000);
+});
+
+test("a command taken on is still there after a restart, and one taken isn't handed over again", async () => {
+  const token = freshLogin();
+  assert.equal((await call("POST", "/v1/devices/receiver/commands", { token, body: { command: { action: "takeOver", from: "sender" } } })).status, 200);
+  await restartService();
+  const after = await call("GET", "/v1/devices/receiver/commands", { token });
+  assert.deepEqual(after.body.commands, [{ action: "takeOver", from: "sender" }], "taken on before the restart, still there");
+  await restartService();
+  assert.deepEqual((await call("GET", "/v1/devices/receiver/commands", { token })).body.commands, [], "taken once, not again");
 });

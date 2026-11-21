@@ -16,7 +16,7 @@
  *   GET  /v1/changes?since&wait&device   { seq, revs, inbox }: answers at once when seq differs, else within `wait` seconds
  *   GET  /v1/devices              { now, rev, devices: [{ id, updatedAt, doc }] }: who is around and what they play
  *   PUT  /v1/devices/:id          { doc }: what this device says about itself
- *   POST /v1/devices/:id/commands { command }: a word for that device, kept for a minute
+ *   POST /v1/devices/:id/commands { command }: a word for that device, kept for a minute (on disk, through a restart)
  *   GET  /v1/devices/:id/commands { commands }: that device's words, handed over once
  *   POST /v1/listens              { device: { id, name, kind }, listens } → { added, count }: plays a device counted
  *   GET  /v1/listens?since&limit  { count, listens, devices, more }: everybody's plays after the first `since`
@@ -26,7 +26,7 @@
  * from (src/lib/listenSync.ts), kept in order, one line each, so Replay counts every play everywhere.
  */
 import { createHash } from "node:crypto";
-import { appendFile, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
+import { appendFile, copyFile, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -55,6 +55,8 @@ const DOCS = {
   keys: { merged: true, keepVersions: 10 },
 };
 const DEVICES_FILE = "devices.json";
+/** The commands waiting for each device, so one taken on is still there after a restart. */
+const INBOX_FILE = "inbox.json";
 const LISTENS_FILE = "listens.jsonl";
 const LISTEN_DEVICES_FILE = "listen-devices.json";
 const MAX_LISTENS_PER_POST = 1000;
@@ -129,6 +131,27 @@ function readBody(req) {
 }
 
 /** Whole or not at all: a crash in the middle leaves the last good file. `raw` writes the text as it is. */
+/** The newest kept version of a document that still reads, or null. */
+async function newestVersion(dir, name) {
+  const prefix = `${name}.`;
+  const revOf = (file) => Number(file.slice(prefix.length, -".json".length));
+  let files;
+  try {
+    files = (await readdir(path.join(dir, "versions"))).filter((file) => file.startsWith(prefix) && file.endsWith(".json") && Number.isFinite(revOf(file)));
+  } catch {
+    return null;
+  }
+  for (const file of files.sort((a, b) => revOf(b) - revOf(a))) {
+    try {
+      const stored = JSON.parse(await readFile(path.join(dir, "versions", file), "utf8"));
+      if (stored && typeof stored.rev === "number" && stored.doc && typeof stored.doc === "object") return stored;
+    } catch {
+      // That one doesn't read either: the one before it.
+    }
+  }
+  return null;
+}
+
 async function writeAtomic(file, value, raw = false) {
   const temp = `${file}.tmp`;
   const handle = await open(temp, "w");
@@ -206,15 +229,46 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         const dir = path.join(dataDir, "users", userId);
         await mkdir(dir, { recursive: true });
         const docs = {};
+        const broken = new Set();
         let seq = 0;
         for (const name of Object.keys(DOCS)) {
+          const file = path.join(dir, `${name}.json`);
           try {
-            const stored = JSON.parse(await readFile(path.join(dir, `${name}.json`), "utf8"));
+            const stored = JSON.parse(await readFile(file, "utf8"));
             docs[name] = stored;
             seq = Math.max(seq, stored.seq ?? 0);
           } catch (err) {
-            if (err.code !== "ENOENT") console.error(`[sync] unreadable ${name} of ${userId}:`, err.message);
+            if (err.code === "ENOENT") continue;
+            console.error(`[sync] unreadable ${name} of ${userId}:`, err.message);
+            // Not read as empty and written over (Codex's review): the file is kept aside, and the newest
+            // version kept of it goes on in its place, numbered past anything a device may know. Without
+            // one, a document the apps merge stays shut until it's restored; the others start afresh.
+            const aside = `${file}.unreadable-${Date.now()}`;
+            await copyFile(file, aside).catch(() => undefined);
+            const version = DOCS[name].keepVersions ? await newestVersion(dir, name) : null;
+            if (version) {
+              const recovered = { ...version, rev: version.rev + 2, updatedAt: Date.now() };
+              await writeAtomic(file, recovered);
+              docs[name] = recovered;
+              seq = Math.max(seq, recovered.seq ?? 0);
+              console.error(`[sync] ${name} of ${userId} goes on from version ${version.rev}; the unreadable file is ${path.basename(aside)}`);
+            } else if (DOCS[name].merged) {
+              broken.add(name);
+            } else {
+              await rm(file, { force: true });
+            }
           }
+        }
+        const inbox = new Map();
+        try {
+          const stored = JSON.parse(await readFile(path.join(dir, INBOX_FILE), "utf8"));
+          const now = Date.now();
+          for (const [id, list] of Object.entries(stored ?? {})) {
+            const kept = Array.isArray(list) ? list.filter((c) => c && typeof c.at === "number" && now - c.at <= COMMAND_KEPT_MS && c.command && typeof c.command === "object") : [];
+            if (kept.length) inbox.set(id, kept.slice(-MAX_COMMANDS));
+          }
+        } catch (err) {
+          if (err.code !== "ENOENT") console.error(`[sync] unreadable inbox of ${userId}:`, err.message);
         }
         let devices = {};
         let devicesRev = 0;
@@ -255,7 +309,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         } catch (err) {
           if (err.code !== "ENOENT") console.error(`[sync] unreadable listen devices of ${userId}:`, err.message);
         }
-        return { dir, docs, seq, devices, devicesRev, listens, inbox: new Map(), waiters: new Set(), writing: Promise.resolve() };
+        return { dir, docs, broken, seq, devices, devicesRev, listens, inbox, waiters: new Set(), writing: Promise.resolve(), inboxWriting: Promise.resolve() };
       })();
       users.set(userId, user);
     }
@@ -404,13 +458,53 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     return list;
   };
 
-  /** A word for one device. It isn't stored on disk: a command means now, or not at all. */
-  function postCommand(user, id, command) {
-    const list = waitingCommands(user, id);
-    list.push({ at: Date.now(), command });
-    user.inbox.set(id, list.slice(-MAX_COMMANDS));
+  /**
+   * The waiting commands on disk as well, for the minute they're kept: one taken on is still there after
+   * a restart, and one handed over isn't handed over again (Codex's review: a hand-over taken on was gone).
+   */
+  function saveInbox(user) {
+    const run = user.inboxWriting.then(() => {
+      const now = Date.now();
+      const all = {};
+      for (const [id, list] of user.inbox) {
+        const kept = list.filter((c) => now - c.at <= COMMAND_KEPT_MS);
+        if (kept.length) all[id] = kept;
+      }
+      return writeAtomic(path.join(user.dir, INBOX_FILE), all);
+    });
+    user.inboxWriting = run.catch(() => undefined);
+    return run;
+  }
+
+  /** A word for one device: taken on once it's on disk too. A command means now, or not at all: it's kept for a minute. */
+  async function postCommand(user, id, command) {
+    const entry = { at: Date.now(), command };
+    user.inbox.set(id, [...waitingCommands(user, id), entry].slice(-MAX_COMMANDS));
+    try {
+      await saveInbox(user);
+    } catch (err) {
+      // Not on disk: not taken on either.
+      const left = (user.inbox.get(id) ?? []).filter((c) => c !== entry);
+      if (left.length) user.inbox.set(id, left);
+      else user.inbox.delete(id);
+      throw err;
+    }
     user.seq += 1;
     for (const wake of [...user.waiters]) wake();
+  }
+
+  /** A device takes its commands: they're gone once that's on disk, so a restart doesn't hand them over twice. */
+  async function takeCommands(user, id) {
+    const list = waitingCommands(user, id);
+    if (!list.length) return list;
+    user.inbox.delete(id);
+    try {
+      await saveInbox(user);
+    } catch (err) {
+      user.inbox.set(id, [...list, ...(user.inbox.get(id) ?? [])].slice(-MAX_COMMANDS));
+      throw err;
+    }
+    return list;
   }
 
   const summary = (user, device) => ({
@@ -499,8 +593,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
       }
       if (commands) {
         if (req.method === "GET") {
-          const list = waitingCommands(user, id);
-          user.inbox.delete(id);
+          const list = await takeCommands(user, id);
           return send(res, 200, { commands: list.map((c) => c.command) });
         }
         if (req.method !== "POST") throw new HttpError(405, "Method not allowed");
@@ -508,7 +601,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         if (!body?.command || typeof body.command !== "object" || JSON.stringify(body.command).length > MAX_DEVICE_BYTES) {
           throw new HttpError(400, "A command is a small object");
         }
-        postCommand(user, id, body.command);
+        await postCommand(user, id, body.command);
         return send(res, 200, { ok: true });
       }
       if (req.method !== "PUT") throw new HttpError(405, "Method not allowed");
@@ -521,6 +614,9 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     }
 
     const name = docMatch[1];
+    // Its file couldn't be read and nothing kept could stand in: nothing goes out as if it were empty, and
+    // nothing is written over it, until somebody restores the file.
+    if (user.broken.has(name)) throw new HttpError(423, `The service can't read its ${name} file; nothing is written over it until it's restored`);
     if (req.method === "GET") {
       const stored = user.docs[name];
       return send(res, 200, stored ? { rev: stored.rev, updatedAt: stored.updatedAt, doc: stored.doc } : { rev: 0, updatedAt: 0, doc: null });

@@ -91,7 +91,9 @@ Everything takes the client's Jellyfin login.
 | `POST /v1/devices/:id/commands` | asks another device for something: play, pause, next, seek, take over, a new list, the volume. The service only passes these on: a new app can ask for new things without a new service |
 | `GET /v1/devices/:id/commands` | this device's waiting commands, which leave the list by being read |
 
-Commands stay for 60 seconds and live only in memory: a device that's off isn't surprised by old ones.
+Commands stay for 60 seconds, also through a restart of the service (`inbox.json`), and a command that was read isn't handed over again: a device that's off isn't surprised by old ones.
+
+A document file the service can't read is kept aside as `<name>.json.unreadable-<time>`. A merged document goes on from its newest readable version under `versions/`, numbered past what any device may know, so the apps merge their own copies back in. Without such a version it stays shut (HTTP 423) until the file is restored, and nothing is written over it. The other documents carry on, and `queue`, `position`, `likes` and `muted` simply start afresh.
 
 `GET /health` answers without a login and lists the documents this service keeps.
 

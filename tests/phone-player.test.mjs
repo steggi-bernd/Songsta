@@ -871,6 +871,17 @@ test("told to play a list from the second copy of a song in it: that copy, and w
   assert.deepEqual(ids(), ["a", "c", "d"]);
 });
 
+test("two controllers removing different songs from one queue preserve both deletions", { todo: "setUpcoming can reinsert an entry from the older snapshot" }, () => {
+  const original = many(1200);
+  player().playTracks(original, 0, "Long list", false);
+  player().removeAt(800);
+  const earlierWindow = original.slice(1, 801).filter((song) => song.id !== "s2");
+  m.runCommand({ action: "setUpcoming", tracks: earlierWindow, keepAfter: { track: t("s800"), ahead: 800 } });
+  const expected = original.filter((song) => song.id !== "s2" && song.id !== "s800").map((song) => song.id);
+  assert.equal(ids().includes("s800"), false, "the earlier removal must survive the second edit");
+  assert.deepEqual(ids(), expected);
+});
+
 test("an edit anchored to a song another controller took out meanwhile keeps what came after it", () => {
   player().playTracks(many(1200), 0, "Long list", false);
   // One controller took out s800, the last song another one knew; that one, from the earlier window, takes out s2.
