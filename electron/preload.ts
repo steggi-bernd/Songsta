@@ -38,7 +38,7 @@ const documentScope = (): Promise<string> => {
 const api = {
   platform: process.platform,
   versions: {
-    app: "1.8.0",
+    app: "1.9.0",
     electron: process.versions.electron ?? "",
     chrome: process.versions.chrome ?? "",
     node: process.versions.node ?? "",

@@ -50,7 +50,7 @@ const commandId = () => randomBytes(8).toString("hex");
  * SONGSTA_SYNC_VERSION it was built with); built from this folder, this file says it, and it goes
  * up with each release like the apps' own.
  */
-export const VERSION = process.env.SONGSTA_SYNC_VERSION || "1.8.0";
+export const VERSION = process.env.SONGSTA_SYNC_VERSION || "1.9.0";
 
 /**
  * `merged` documents are built on a revision and a write must say which; `checkedWhenSaid`: a write that
