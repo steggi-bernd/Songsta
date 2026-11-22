@@ -1,9 +1,11 @@
 /**
- * When each album, playlist and Liked Songs last played — the library
- * panel's "Recently played" order. A new queue is matched against them
+ * When each album, playlist, Liked Songs and artist last played — the library
+ * panel's "Recently played" order and Home's tiles of what played last (the
+ * panel has no artists; Home shows them). A new queue is matched against them
  * (lib/libraryOrder.ts collectionOf) and its match is touched whenever one
- * of its songs starts; a queue that plays none of them touches nothing. The
- * times start out once from the listening history (seedPlayed).
+ * of its songs starts; a queue that plays none of them touches nothing. Only
+ * real plays count: nothing is guessed from the listening history (it knows
+ * songs, not what they were played from).
  */
 import { create } from "zustand";
 import { songKey, useCatalog } from "../stores/catalog";
@@ -12,7 +14,8 @@ import { useLibraryOrder } from "../stores/libraryOrder";
 import { usePlayer } from "../stores/player";
 import { useSettings } from "../stores/settings";
 import type { Track } from "../types";
-import { collectionOf, seedPlayed, type Collection, type Shelves } from "./libraryOrder";
+import { artistRoute, leadArtist } from "./libraryCore";
+import { collectionOf, type Collection, type Shelves } from "./libraryOrder";
 
 const albumOf = (t: Track): string | null => (t.albumId?.startsWith("lib:album:") ? t.albumId : null);
 
@@ -53,7 +56,7 @@ function shelves(): Shelves {
     ...playlists.map((p) => ({ id: p.id, keys: keysOf(p.tracks) })),
     { id: "__liked__", keys: keysOf(liked) },
   ];
-  return { keyOf: (t) => songKey(t.id), albumOf, albumSize, collections };
+  return { keyOf: (t) => songKey(t.id), albumOf, albumSize, collections, artistOf: (t) => (t.artist ? artistRoute(leadArtist(t.artist)) : null) };
 }
 
 /**
@@ -107,22 +110,18 @@ export function watchRecentlyPlayed(): () => void {
     if (plays && useSettings.getState().recordListening) useLibraryOrder.getState().touch(plays);
   });
 
-  // Once, when the library, the catalog and these times are all loaded.
-  const seed = (): void => {
-    const order = useLibraryOrder.getState();
-    if (order.seeded || !useLibraryOrder.persist.hasHydrated() || !useLibrary.persist.hasHydrated() || !useCatalog.getState().loaded) return;
-    order.seed(seedPlayed(useLibrary.getState().history, shelves(), Date.now()));
+  // Once these times are loaded: from when they count (homeSince, set the first time). Nothing is guessed
+  // from the history any more (the user's wish, 2026-11-22): it knows songs, not what they were played
+  // from, and its guesses named the albums of single songs heard from a playlist.
+  const startCounting = (): void => {
+    if (useLibraryOrder.persist.hasHydrated() && useLibraryOrder.getState().homeSince === null) useLibraryOrder.setState({ homeSince: Date.now() });
   };
-  const offCatalog = useCatalog.subscribe(seed);
-  const offOrder = useLibraryOrder.persist.onFinishHydration(seed);
-  const offLibrary = useLibrary.persist.onFinishHydration(seed);
-  seed();
+  const offOrder = useLibraryOrder.persist.onFinishHydration(startCounting);
+  startCounting();
   return () => {
     offFrom();
     offFromCatalog();
     offPlayer();
-    offCatalog();
     offOrder();
-    offLibrary();
   };
 }

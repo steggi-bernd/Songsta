@@ -19,6 +19,7 @@ export function NameDialog({
   action,
   allowEmpty,
   address,
+  digits,
   message,
   onDone,
   onCancel,
@@ -33,6 +34,8 @@ export function NameDialog({
   allowEmpty?: boolean;
   /** a web address, not a name */
   address?: boolean;
+  /** a code of digits, as a computer shows for pairing */
+  digits?: boolean;
   onDone: (value: string) => void;
   onCancel: () => void;
 }) {
@@ -64,8 +67,8 @@ export function NameDialog({
               selectionColor={`${colors.accent}66`}
               cursorColor={colors.accent}
               autoCorrect={false}
-              autoCapitalize={address ? "none" : "sentences"}
-              keyboardType={address ? "url" : "default"}
+              autoCapitalize={address || digits ? "none" : "sentences"}
+              keyboardType={digits ? "number-pad" : address ? "url" : "default"}
               onSubmitEditing={() => ready && onDone(value.trim())}
               style={styles.input}
             />

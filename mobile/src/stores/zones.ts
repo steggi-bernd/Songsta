@@ -66,7 +66,12 @@ import {
   type ZoneSong,
 } from "../shared";
 import { readJson, writeJson } from "../storage";
+import { forgetHandedOut } from "../homeLink";
+import { onServingChange, servingComputer } from "../serving";
+import { useConnection } from "./connection";
+import { useDownloads } from "./downloads";
 import { useLibrary } from "./library";
+import { fileOfSong } from "./localMusic";
 import { outputChanged, setPlayHook, shuffled, switchOutput, toItem, usePlayer, zoneReport, type PlayerOutput } from "./player";
 import { dropToast, toast } from "./popups";
 import { here, useSession } from "./session";
@@ -325,7 +330,6 @@ function trackOf(id: string): Track | undefined {
   return songsKnown.get(id) ?? useLibrary.getState().byId.get(id) ?? usePlayer.getState().queue.find((t) => t.id === id);
 }
 
-/** Where a device gets a song: from the server's address at home, by itself. */
 /** A file's own extension, out of its address on the phone (a folder's songs are content:// documents). */
 function extensionOf(uri: string): string | null {
   const name = decodeURIComponent(uri).split(/[/:]/).pop() ?? "";
@@ -335,18 +339,32 @@ function extensionOf(uri: string): string | null {
 /** Songs of this phone are being handed out: once no device plays any more, that ends. */
 let sharing = false;
 
+/** This phone's own copy of a song: a file in one of its folders (a server song's too), or a kept song. */
+function ownCopy(track: Track): string | null {
+  const file = fileOfSong(track);
+  if (file) return file;
+  const kept = useDownloads.getState().kept[track.id];
+  return kept ? `file://${kept.file}` : null;
+}
+
+/**
+ * Where a device gets a song. A song only on this phone comes from here, the file itself (FileServer.kt).
+ * A server song the device fetches from the server's address at home, by itself, while this phone reaches
+ * the server there; when it doesn't (away from home, the server down, or none linked any more), this
+ * phone hands out its own copy instead, so what plays here without a server plays on a device too.
+ */
 async function whereToGet(song: ZoneSong, host: string): Promise<{ url: string; mime: string; mark: string }> {
   const track = trackOf(song.id);
   if (!track) throw new Error(`"${song.title}" can't be played there`);
-  if (track.localPath) {
-    // Only in a folder on this phone: the device fetches it from here, the file itself (FileServer.kt).
-    const ext = extensionOf(track.localPath) ?? ((track.container ?? "").split(",")[0].trim().toLowerCase() || "mp3");
+  const session = useSession.getState().session;
+  const own = track.localPath ?? (session && useConnection.getState().reach === "home" ? null : ownCopy(track));
+  if (own) {
+    const ext = extensionOf(own) ?? ((track.container ?? "").split(",")[0].trim().toLowerCase() || "mp3");
     const mime = mimeOf(`.${ext}`);
     sharing = true;
-    const url = await Player.fileShare(track.localPath, mime, ext, host);
+    const url = await Player.fileShare(own, mime, ext, host);
     return { url, mime, mark: /\/song\/([0-9a-f]{32})/.exec(url)?.[1] ?? url };
   }
-  const session = useSession.getState().session;
   if (!session) throw new Error(`"${song.title}" can't be played there`);
   const plan = jellyfinStreamPlan(track);
   const ext = plan !== "static" ? plan : (track.container ?? "").split(",")[0].trim().toLowerCase() || "flac";
@@ -715,9 +733,9 @@ function seeDevices(): void {
 
 function publish(): void {
   dropEmptyZones();
-  if (sharing && !running.size) {
+  if (sharing && !running.size && !servingComputer()) {
     sharing = false;
-    void Player.fileShareStop().catch(() => undefined);
+    stopHandingOut();
   }
   useZones.setState({ zones: [...running.values()].map(view) });
   seeDevices();
@@ -739,8 +757,33 @@ function keysSetVolume(r: Running, level: number): void {
   for (const m of r.zone.members) if (m.volume !== null) void r.zone.setVolume(m.deviceId, Math.max(0, Math.min(1, m.volume + by)));
 }
 
+/** Nothing of this phone's is played anywhere any more: the file server goes, and what it handed out with it. */
+function stopHandingOut(): void {
+  forgetHandedOut();
+  void Player.fileShareStop().catch(() => undefined);
+}
+
+/** The linked computer stopped playing this phone's songs: without zones handing out songs, the file server goes. */
+function servingChanged(): void {
+  if (!servingComputer() && !running.size) {
+    sharing = false;
+    stopHandingOut();
+  }
+  keepAlive();
+}
+
 function keepAlive(): void {
   const all = [...running.values()];
+  // No zones: the linked computer may be playing this phone's songs, and needs the phone awake for them.
+  const serving = servingComputer();
+  if (!all.length && !useZones.getState().switchingOff[0] && serving) {
+    const text = T("From this phone on {name}", { name: serving.name });
+    const key = JSON.stringify(["serving", serving.title, text, serving.playing]);
+    if (key === lastKeep) return;
+    lastKeep = key;
+    void Player.zonesWatch(false, true, serving.title, text, serving.playing, -1).catch(() => undefined);
+    return;
+  }
   // Nothing plays any more, but a receiver waits to go off: somebody has to be awake for that.
   const leaving = useZones.getState().switchingOff[0];
   if (!all.length && leaving) {
@@ -998,6 +1041,7 @@ export function watchZones(): void {
       sockets.delete(id);
     }
   });
+  onServingChange(servingChanged);
   Player.addListener("onZoneTick", () => {
     for (const r of running.values()) void r.zone.tick();
     keepAlive();
@@ -1006,7 +1050,14 @@ export function watchZones(): void {
     const lead = [...running.values()].find((r) => r.main && isOn(r)) ?? [...running.values()].find(isOn) ?? mainZone() ?? [...running.values()][0];
     // No zones: the volume keys while another device with Songsta on it is followed.
     if (!lead) {
-      if (action.startsWith("volume:")) usePlayer.getState().setRemoteVolume(Number(action.slice(7)) / 100);
+      const player = usePlayer.getState();
+      if (action.startsWith("volume:")) player.setRemoteVolume(Number(action.slice(7)) / 100);
+      // The note while the computer plays this phone's songs: its buttons are for the computer.
+      else if (servingComputer() && player.remote) {
+        if (action === "toggle") player.toggle();
+        else if (action === "next") player.next();
+        else if (action === "previous") player.previous();
+      }
       return;
     }
     if (action.startsWith("volume:")) keysSetVolume(lead, Number(action.slice(7)) / 100);

@@ -210,3 +210,62 @@ test("played together: another device playing at the same time wasn't the same s
     h.close();
   }
 });
+
+/* ------------------------------------------------------------ kept in memory, and a journal cut short at its end */
+
+/** The module, counting how often the journal is read from disk; `given` to use a folder again. */
+async function loadCounting(given) {
+  const root = given ?? fs.mkdtempSync(path.join(os.tmpdir(), "bytune-listens-"));
+  const { outputFiles } = await build({
+    entryPoints: [fileURLToPath(new URL("../electron/listens.ts", import.meta.url))],
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    external: ["electron"],
+    write: false,
+  });
+  const reads = { count: 0 };
+  const counting = {
+    ...fs,
+    readFileSync: (file, ...rest) => {
+      if (String(file).endsWith("listens.jsonl")) reads.count += 1;
+      return fs.readFileSync(file, ...rest);
+    },
+  };
+  const module = { exports: {} };
+  vm.runInNewContext(outputFiles[0].text, {
+    module, exports: module.exports, console, Buffer, setTimeout, clearTimeout,
+    require: (name) => (name === "electron" ? { app: { getPath: () => root } } : name === "fs" ? counting : require(name)),
+  });
+  return { api: module.exports, root, reads, file: path.join(root, "data", "listens.jsonl"), close: () => fs.rmSync(root, { recursive: true, force: true }) };
+}
+
+test("the journal is read from disk once a start: Replay's pages and the shared history's rounds go by what's kept, new plays included", async () => {
+  const h = await loadCounting();
+  try {
+    h.api.noteListen(track("a"), 1_000);
+    h.api.noteListen(track("b"), 2_000);
+    assert.deepEqual(ids(await h.api.readListens()), ["b", "a"]);
+    await h.api.noteRemoteListens([{ n: 1, device: "phone", at: 3_000, id: "c", title: "Song c", artist: "Band", ms: 200_000 }], { phone: { name: "Phone", kind: "phone" } });
+    h.api.noteListen(track("d"), 4_000);
+    assert.deepEqual(ids(await h.api.readListens()), ["d", "c", "b", "a"]);
+    assert.equal((await h.api.ownListensFrom(0, 10)).total, 3);
+    assert.equal(h.reads.count, 1, "read once, then kept");
+  } finally {
+    h.close();
+  }
+});
+
+test("a journal left ending in the middle of a line: the first play after it isn't glued to the broken one", async () => {
+  const h = await loadCounting();
+  try {
+    fs.mkdirSync(path.dirname(h.file), { recursive: true });
+    fs.writeFileSync(h.file, `${JSON.stringify({ at: 1_000, id: "a", title: "Song a", artist: "Band", album: "LP", duration: 200 })}\n{"at":2000,"id":"cut`);
+    h.api.noteListen(track("b"), 3_000);
+    await h.api.flushListens();
+    const again = await loadCounting(h.root);
+    assert.deepEqual(ids(await again.api.readListens()), ["b", "a"], "read again by a fresh start");
+  } finally {
+    h.close();
+  }
+});

@@ -61,8 +61,7 @@ Songs whose tags name no album gather under **Songs without an album** in the li
 
 ## Discover your music
 
-- **Home**, built only from your library: quick-access tiles, *Made for you* mixes (On Repeat, Rediscover, what you usually play at this time of day, Calm and Upbeat, one per big genre and decade, reshuffled daily), recently added albums, your top artists and recently played songs.
-- **Your Library** as a page of its own: a wall of your covers behind your library's numbers, *Jump back in*, Liked Songs, what you played most this month, and a gallery of your mixes at its foot. A setting hides its field in the side panel, for a look closer to Spotify.
+- **Home**, built only from your library: a wall of your covers behind the greeting and your library's numbers, what plays now as a cover with Play/Pause beside the albums and mixes you played last, Liked Songs, what you played most this week, Downloads and Local Music, the albums that joined last, your playlists, your library by genre, your mixes (On Repeat, Rediscover, what you usually play at this time of day, Calm and Upbeat, one per big genre and decade, reshuffled daily) and your top artists.
 - **Explore** the library as a grid with an A–Z rail to jump by letter; albums sorted by year get a timeline instead.
 - **Album and artist pages** with play and shuffle, popular songs ranked by your own plays, the artist's songs you've liked, albums, singles & EPs, "appears on", your own numbers and the Wikipedia bio.
 - **Song lists** with columns of your choice (album, date added, release date, genre, format, plays, tempo, key) beside the title and time. A click on a column's name orders the list by it, a grip widens it, dragging moves it. *Sort flowing* orders a playlist so each song leads into the next.
@@ -84,9 +83,11 @@ Songs whose tags name no album gather under **Songs without an album** in the li
 
 ### Replay
 
-*Replay* (Settings → Your data, or Your Library) tells your listening back: this month, last month, this year or all time, slide by slide, with the wheel, a swipe or Page Up/Down. Your most played albums, the album of the period, five songs you couldn't stop, your prime time, the period's pulse, your weekdays, the faces of your top artists, what was new to you, genres, sound and sources, a listening calendar, and a ticket to end on. Every listen is below. With the sync service, Replay counts what all your devices played.
+*Replay* (Settings → Your data) tells your listening back: this month, last month, this year or all time, slide by slide, with the wheel, a swipe or Page Up/Down. Your most played albums, the album of the period, five songs you couldn't stop, your prime time, the period's pulse, your weekdays, the faces of your top artists, what was new to you, genres, sound and sources, a listening calendar, and a ticket to end on. Every listen is below. With the sync service, Replay counts what all your devices played.
 
 ![Replay's opening slide: "2026 was loud." over the year's most played albums](screenshots/local/replay.jpg)
+
+*Everything you heard* on Home opens the whole listening history as a page of its own: every play by day, newest first, with its cover. A click plays the song and goes on with what you heard before it; Play and Shuffle take the songs you heard, newest first.
 
 ## Lyrics and Now Playing
 
@@ -141,7 +142,9 @@ The app is young and has run in an emulator far more than on real phones, so ple
 
 Which songs you like and how often they played go through your server's own favourites and play counts (*Server sync* in Settings). Everything else needs the small [sync service](../sync-server/README.md) next to Jellyfin: a Docker container without any music in it, signed in to with your Jellyfin login. With it, a playlist made on one device arrives on the others within moments, Liked Songs keep your order, muted songs stay muted, your library is organised the same everywhere (pins, sort, groups, album edits), Replay counts every device's plays, and the media analysis is shared.
 
-There is one stream, like Spotify Connect: a device that isn't playing shows what another one plays and steers it. *This phone* or *This computer* under Devices brings the music over. Only *Start a second stream* on a device's tile lets each go its own way, until you end it.
+**Without a sync service,** the desktop app can be one for your phones at home. Switch on *Phones at home* in Settings → Sync & devices, choose *Pair a phone*, and type the code it shows into the phone under Settings → Sync and devices → *Link to a computer*. Everything above then works between them while Songsta is open on the computer. A song only the computer has, a file of its own or one from its server, plays on the phone from the computer; one only the phone has plays on the computer from the phone, which stays awake for it with a note while it does. On Windows, Songsta offers the firewall rule for your own network that this needs.
+
+There is one stream, like Spotify Connect: a device that isn't playing shows what another one plays and steers it. *This phone* or *This computer* under Devices brings the music over. Only *Start a second stream* on a device's tile lets each go its own way, until you end it. Its queue can be edited from several devices at once: each edit names the songs it means, also a song that's in the queue twice, and edits made at the same moment all stay.
 
 ## Your devices in one place
 

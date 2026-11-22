@@ -5,7 +5,8 @@
  */
 import { create } from "zustand";
 import { blurhashColor, type Rgb } from "../color";
-import { artistPhotoUrl, fetchLibrary, isNoAnswer, markPlayed, setFavorite, type ServerLibrary, type Session } from "../jellyfin";
+import { artistPhotoUrl, fetchLibrary, isUnsure, markPlayed, playedSince, setFavorite, type ServerLibrary, type Session } from "../jellyfin";
+import { forgetLikes, keptOnFailure, owedAfter, owedLikes, oweLike, owePlay, restoreOutbox, sendOutbox, type OutboxActions } from "../outbox";
 import { allMixes, applyAlbumLooks, applyAlbumMerges, applyArtistAliases, applySongEdits, buildAlbums, buildArtists, buildGenres, likedInOrder, oneCopyEach, sameSong, songFinder, songIdentity, toWireTrack, type LibAlbum, type LibArtist, type LibGenre, type Mix, type Track, type WireTrack } from "../shared";
 import { readJson, removeJson, writeJson } from "../storage";
 import { useListens } from "./listens";
@@ -20,16 +21,7 @@ import { T } from "../shared";
 
 const FILE = "library.json";
 const LIKED_ORDER_FILE = "liked-order.json";
-const OUTBOX_FILE = "outbox.json";
 const MUTED_FILE = "muted.json";
-
-/** Likes and plays from while the server was out of reach, for when it's back. */
-interface Outbox {
-  likes: Record<string, boolean>;
-  plays: { id: string; at: number }[];
-}
-
-let outbox: Outbox = { likes: {}, plays: [] };
 
 interface LibraryState {
   loaded: boolean;
@@ -122,30 +114,47 @@ const isLocalId = (id: string): boolean => id.startsWith("local:");
 
 /** What the server hears next time; its list until then doesn't know yet. */
 function withOutbox(favorites: string[]): string[] {
-  const liked = Object.keys(outbox.likes).filter((id) => outbox.likes[id] && !favorites.includes(id));
-  return [...liked, ...favorites.filter((id) => outbox.likes[id] !== false)];
+  const owed = owedLikes(session());
+  const liked = Object.keys(owed).filter((id) => owed[id] && !favorites.includes(id));
+  return [...liked, ...favorites.filter((id) => owed[id] !== false)];
 }
 
-/** Whatever the server refuses is dropped: only no answer at all keeps a thing for later. */
-async function sendOutbox(s: Session, byId: Map<string, Track>): Promise<void> {
-  if (!Object.keys(outbox.likes).length && !outbox.plays.length) return;
-  try {
-    for (const [id, liked] of Object.entries(outbox.likes)) {
-      const track = byId.get(id);
-      if (track) await setFavorite(s, track, liked).catch((err) => { if (isNoAnswer(err)) throw err; });
-      delete outbox.likes[id];
-    }
-    while (outbox.plays.length) {
-      const { id, at } = outbox.plays[0];
-      const track = byId.get(id);
-      if (track) await markPlayed(s, track, new Date(at)).catch((err) => { if (isNoAnswer(err)) throw err; });
-      outbox.plays.shift();
-    }
-  } catch {
-    /* gone again: the rest next time */
-  }
-  writeJson(OUTBOX_FILE, outbox);
+/** What the outbox asks of the server, for this login. */
+const actionsFor = (s: Session): OutboxActions => ({
+  setFavorite: (t, liked) => setFavorite(s, t, liked),
+  markPlayed: (t, at) => markPlayed(s, t, at),
+  playedSince: (t, at) => playedSince(s, t, at),
+});
+
+/** A busy server named a time: what's owed goes again then. */
+let owedTimer: ReturnType<typeof setTimeout> | null = null;
+function owedAgainIn(ms: number): void {
+  if (owedTimer) clearTimeout(owedTimer);
+  owedTimer = setTimeout(() => {
+    owedTimer = null;
+    const s = session();
+    if (s) void sendOwed(s, useLibrary.getState().byId, true);
+  }, ms);
 }
+
+/**
+ * What's owed goes out, unless a busy server asked this account to wait (429): then once that wait is over,
+ * from the refresh and the timer alike, also after another 429 (Codex, 2026-11-21: the refresh sent it again
+ * right after the library came, 0 ms after it was told to wait 5 s).
+ */
+async function sendOwed(s: Session, byId: ReadonlyMap<string, Track>, final: boolean): Promise<void> {
+  const wait = owedAfter(s) - Date.now();
+  if (wait > 0) {
+    owedAgainIn(wait);
+    return;
+  }
+  const owed = await sendOutbox(s, byId, actionsFor(s), final).catch(() => null);
+  if (owed?.retryInMs !== undefined) owedAgainIn(owed.retryInMs);
+}
+
+/** The newest wish for each song's like: the answer to an older one doesn't undo it (plan section 5). */
+const likeWishes = new Map<string, number>();
+let likeWish = 0;
 
 /** The server lists its favorites by artist and album: what stood here keeps its place, what's new comes on top. */
 function keepPlaces(before: string[], listed: string[]): string[] {
@@ -193,16 +202,15 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   ...derive(EMPTY),
 
   async restore() {
-    const [saved, likedOrder, savedOutbox, savedMuted] = await Promise.all([
+    const [saved, likedOrder, , savedMuted] = await Promise.all([
       readJson<ServerLibrary>(FILE),
       readJson<WireTrack[]>(LIKED_ORDER_FILE),
-      readJson<Outbox>(OUTBOX_FILE),
+      restoreOutbox(),
       readJson<{ at: number; tracks: WireTrack[] }>(MUTED_FILE),
       // The albums are shown as edited from the first look.
       useAlbumEdits.getState().restore(),
     ]);
     if (likedOrder) set({ likedOrder });
-    if (savedOutbox) outbox = savedOutbox;
     if (saved?.tracks) set({ ...derive(withLocal(saved)), loaded: true });
     else set(derive(withLocal(EMPTY)));
     if (savedMuted) set({ mutedTracks: savedMuted.tracks, mutedAt: savedMuted.at, muted: mutedIds(savedMuted.tracks, saved?.tracks ?? []) });
@@ -225,8 +233,10 @@ export const useLibrary = create<LibraryState>((set, get) => ({
         set({ refreshing: false, loaded: true, error: T("Can't reach your server") });
         return;
       }
-      await sendOutbox(s, get().byId);
+      // What's owed goes first; a song the library doesn't know yet waits for the list below.
+      await sendOwed(s, get().byId, false);
       const listed = await fetchLibrary(s);
+      await sendOwed(s, new Map(listed.tracks.map((t) => [t.id, t])), true);
       // Plays of the phone's own files aren't the server's to know.
       const counts = { ...listed.counts };
       for (const [id, count] of Object.entries(get().data.counts)) if (isLocalId(id)) counts[id] = count;
@@ -264,22 +274,34 @@ export const useLibrary = create<LibraryState>((set, get) => ({
     writeJson(FILE, forFile(next));
     set({ data: next, favorites: new Set(favorites) });
     // Changed again before the server heard: the older wish must not come back after a restart.
-    if (copies.some((t) => t.id in outbox.likes)) {
-      for (const t of copies) delete outbox.likes[t.id];
-      writeJson(OUTBOX_FILE, outbox);
-    }
+    if (s) forgetLikes(s, copies.map((t) => t.id));
     for (const copy of copies) {
       // The phone's own files have no server to tell.
       if (!s || copy.localPath) continue;
+      // A busy server asked to wait: the like goes with what's owed, when the wait is over (Codex, section 17).
+      const wait = owedAfter(s) - Date.now();
+      if (wait > 0) {
+        oweLike(s, copy.id, liked);
+        owedAgainIn(wait);
+        continue;
+      }
+      const wish = ++likeWish;
+      likeWishes.set(copy.id, wish);
       void setFavorite(s, copy, liked)
-        .then(() => tellLikes?.())
+        .then(() => {
+          if (likeWishes.get(copy.id) === wish) likeWishes.delete(copy.id);
+          tellLikes?.();
+        })
         .catch((err) => {
-          if (isNoAnswer(err)) {
-            outbox.likes[copy.id] = liked;
-            writeJson(OUTBOX_FILE, outbox);
+          // Liked or unliked again since: that wish counts, not this answer.
+          if (likeWishes.get(copy.id) !== wish) return;
+          likeWishes.delete(copy.id);
+          // No answer, a login it doesn't take now, a busy server: it goes later (outbox.ts).
+          if (keptOnFailure(err)) {
+            oweLike(s, copy.id, liked);
             return;
           }
-          // The server said no: back to what it holds.
+          // The server said no for good: back to what it holds.
           const now = get().data;
           const restored = liked ? now.favorites.filter((id) => id !== copy.id) : [copy.id, ...now.favorites];
           set({ data: { ...now, favorites: restored }, favorites: new Set(restored) });
@@ -323,23 +345,29 @@ export const useLibrary = create<LibraryState>((set, get) => ({
       useListens.getState().note(track, at);
     }
     if (!s || track.localPath || !useSettings.getState().serverPlays) return;
+    // A busy server asked to wait: the play goes with what's owed, when the wait is over.
+    const wait = owedAfter(s) - Date.now();
+    if (wait > 0) {
+      owePlay(s, { id: track.id, at });
+      owedAgainIn(wait);
+      return;
+    }
     void markPlayed(s, track, new Date(at)).catch((err) => {
-      if (!isNoAnswer(err)) return;
-      outbox.plays.push({ id: track.id, at });
-      writeJson(OUTBOX_FILE, outbox);
+      if (!keptOnFailure(err)) return;
+      // Asked and no answer in time: it may be counted already, and is asked about before it goes again.
+      owePlay(s, { id: track.id, at, ...(isUnsure(err) ? { unsure: true } : {}) });
     });
   },
 
   clear() {
     removeJson(FILE);
     removeJson(LIKED_ORDER_FILE);
-    removeJson(OUTBOX_FILE);
     removeJson(MUTED_FILE);
     // The album edits belong to the account, like its playlists: the next login brings its own.
     useAlbumEdits.getState().clear();
     useLibrarySync.getState().clear();
     useSoundShare.getState().clear();
-    outbox = { likes: {}, plays: [] };
+    // What's owed to the server stays, kept with its account (outbox.ts): signed in to it again, it goes.
     set({ muted: new Set<string>(), mutedTracks: [], mutedAt: 0 });
     set({ ...derive(withLocal(EMPTY)), likedOrder: [], loaded: false, error: null });
   },

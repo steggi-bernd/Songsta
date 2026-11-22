@@ -11,8 +11,13 @@
  * the list starts scrolled a little way down, past a room of its own at the top (ROOM). Pulling at the
  * top scrolls into that room, and how far in is the pull. A fling never runs into it: it stops at the
  * page's real top.
+ *
+ * Let go, and the page snaps up like a rubber band and stops right under the lines (the user's wish,
+ * 2026-11-22). That move is a spring stepped here frame by frame: Android's own animated scroll starts
+ * slowly, so the page seemed to hang down before it went up, and a finger still moving as it let go
+ * flung the page on down first. While a pull is in the room, the list's flings stop at once.
  */
-import { useEffect, useMemo, useRef, type ComponentRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { Animated, Easing, StyleSheet, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { feel } from "../stores/settings";
@@ -47,6 +52,9 @@ const LOAD_SHAPE = SHAPE.map((share) => 0.4 + 0.6 * share);
  */
 const LOOP_MS = 2000;
 const SAMPLES = 64;
+/** The snap's spring: stiff, so it starts at once; a little under-damped, so it gives a hint of a bounce. */
+const SNAP_STIFFNESS = 520;
+const SNAP_DAMPING = 0.76;
 const WAVES: number[][] = Array.from({ length: BARS }, (_, i) => {
   const out: number[] = [];
   for (let k = 0; k <= SAMPLES; k++) {
@@ -103,7 +111,18 @@ export function PullRefreshScroll({
    */
   const loading = useRef(new Animated.Value(0)).current;
   const moves = useRef<Animated.CompositeAnimation | null>(null);
-  useEffect(() => () => moves.current?.stop(), []);
+  /** the snap's next frame, while it runs */
+  const snapFrame = useRef<number | null>(null);
+  /** in the room: the list's flings stop at once (a fling there only fought the snap) */
+  const [inRoom, setInRoom] = useState(false);
+  const inRoomRef = useRef(false);
+  useEffect(
+    () => () => {
+      moves.current?.stop();
+      if (snapFrame.current !== null) cancelAnimationFrame(snapFrame.current);
+    },
+    []
+  );
 
   const pull = useMemo(() => y.interpolate({ inputRange: [0, ROOM], outputRange: [ROOM, 0], extrapolate: "clamp" }), [y]);
   const grow = useMemo(() => pull.interpolate({ inputRange: [0, ROOM], outputRange: [0, 1], extrapolate: "clamp" }), [pull]);
@@ -130,8 +149,48 @@ export function PullRefreshScroll({
   const grownAt = (offset: number): number => Math.max(0, Math.min(1, (ROOM - offset) / ROOM));
 
   const settle = (to: number): void => {
+    stopSnap();
     settling.current = true;
     list.current?.scrollTo({ y: to, animated: true });
+  };
+
+  const stopSnap = (): void => {
+    if (snapFrame.current !== null) cancelAnimationFrame(snapFrame.current);
+    snapFrame.current = null;
+  };
+
+  /**
+   * The page from where it is to `to` on a spring, a frame at a time: it moves off at once and comes to
+   * rest exactly there. `bounce` lets it swing a hair past and back, as a rubber band does.
+   */
+  const snap = (to: number, bounce: boolean, then?: () => void): void => {
+    stopSnap();
+    settling.current = true;
+    const damping = 2 * (bounce ? SNAP_DAMPING : 1) * Math.sqrt(SNAP_STIFFNESS);
+    let place = at.current;
+    let speed = 0;
+    let last: number | null = null;
+    const frame = (now: number): void => {
+      // (The first step's clock and a frame's may differ: whatever comes out, a step stays within reason.)
+      const dt = last === null ? 1 / 60 : Math.max(1 / 240, Math.min(0.05, (now - last) / 1000));
+      last = now;
+      // A few small steps per frame keep the spring steady whatever the frame rate.
+      for (let i = 0; i < 4; i++) {
+        const h = dt / 4;
+        speed += (-SNAP_STIFFNESS * (place - to) - damping * speed) * h;
+        place += speed * h;
+      }
+      const resting = Math.abs(place - to) < 0.5 && Math.abs(speed) < 20;
+      list.current?.scrollTo({ y: resting ? to : place, animated: false });
+      if (resting) {
+        snapFrame.current = null;
+        then?.();
+        return;
+      }
+      snapFrame.current = requestAnimationFrame(frame);
+    };
+    // The first step at once, not a frame later: the page is already on its way when the finger is off.
+    frame(performance.now());
   };
 
   /**
@@ -170,11 +229,19 @@ export function PullRefreshScroll({
     feel("press");
     play(grownAt(at.current));
     loading.setValue(1);
-    settle(ROOM - HOLD);
-    const began = Date.now();
-    void onRefresh()
-      .catch(() => undefined)
-      .finally(() => setTimeout(done, Math.max(0, MIN_LOADING_MS - (Date.now() - began))));
+    // Reading starts once the page has snapped up (or soon in any case): its work on this thread
+    // mustn't make the snap stutter.
+    let begun = false;
+    const begin = (): void => {
+      if (begun) return;
+      begun = true;
+      const began = Date.now();
+      void onRefresh()
+        .catch(() => undefined)
+        .finally(() => setTimeout(done, Math.max(0, MIN_LOADING_MS - (Date.now() - began))));
+    };
+    snap(ROOM - HOLD, true, begin);
+    setTimeout(begin, 450);
   };
 
   const onScroll = useMemo(
@@ -185,6 +252,11 @@ export function PullRefreshScroll({
           const now = e.nativeEvent.contentOffset.y;
           at.current = now;
           if (now >= ROOM - 0.5) settling.current = false;
+          const room = now < ROOM - 2;
+          if (room !== inRoomRef.current) {
+            inRoomRef.current = room;
+            setInRoom(room);
+          }
           if (dragging.current) {
             const nowArmed = ROOM - now >= ARM;
             if (nowArmed !== armed.current) {
@@ -215,6 +287,7 @@ export function PullRefreshScroll({
         contentOffset={{ x: 0, y: ROOM }}
         contentContainerStyle={contentContainerStyle}
         overScrollMode="never"
+        decelerationRate={inRoom ? 0 : "normal"}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={onScroll}
@@ -226,6 +299,7 @@ export function PullRefreshScroll({
           }
         }}
         onScrollBeginDrag={() => {
+          stopSnap();
           dragging.current = true;
           settling.current = false;
         }}
@@ -236,9 +310,9 @@ export function PullRefreshScroll({
           // or the visualizer started from a stale place, with no lines for a frame.
           at.current = now;
           if (loadingRef.current) {
-            if (now < ROOM - HOLD) settle(ROOM - HOLD);
+            if (now < ROOM - HOLD) snap(ROOM - HOLD, true);
           } else if (ROOM - now >= ARM) start();
-          else if (now < ROOM - 1) settle(ROOM);
+          else if (now < ROOM - 1) snap(ROOM, false);
         }}
         onMomentumScrollEnd={(e) => {
           const now = e.nativeEvent.contentOffset.y;

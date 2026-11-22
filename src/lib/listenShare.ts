@@ -17,6 +17,8 @@ interface Cursor {
   readUpTo: number;
   /** this computer's plays before this place were taken off the service on asking: never sent again */
   floor?: number;
+  /** the version (generation) of the service's history read to its end: another one is read afresh */
+  generation?: string;
 }
 
 interface ListenCursorsState {
@@ -56,13 +58,16 @@ export function computerListenHost(serverKey: () => string | null, name: () => s
   const cursor = (): Cursor => {
     const c = useListenCursors.getState().byServer[key()];
     const floor = Number.isFinite(c?.floor) ? (c as Cursor).floor ?? 0 : 0;
-    return { sent: Math.max(floor, Number.isFinite(c?.sent) ? (c as Cursor).sent : 0), readUpTo: Number.isFinite(c?.readUpTo) ? (c as Cursor).readUpTo : 0, floor };
+    const generation = typeof c?.generation === "string" && c.generation ? c.generation : undefined;
+    return { sent: Math.max(floor, Number.isFinite(c?.sent) ? (c as Cursor).sent : 0), readUpTo: Number.isFinite(c?.readUpTo) ? (c as Cursor).readUpTo : 0, floor, ...(generation ? { generation } : {}) };
   };
   const save = (patch: Partial<Cursor>): void => {
     useListenCursors.setState((s) => ({ byServer: { ...s.byServer, [key()]: { ...cursor(), ...patch } } }));
   };
   // The stretch handed out last: once the service has it, that far is sent.
   let batch: { from: number; count: number } | null = null;
+  /** the version of the history being read afresh, from its start */
+  let afresh: string | null = null;
   return {
     device: () => ({ name: name() || "Computer", kind: "computer" }),
     async pending(max) {
@@ -105,6 +110,18 @@ export function computerListenHost(serverKey: () => string | null, name: () => s
     },
     missing() {
       if (!useListenCursors.getState().missing) useListenCursors.setState({ missing: true });
+    },
+    generation: () => ({ read: cursor().generation ?? null, afresh }),
+    // Another version of the service's history: read from its start, and this computer's plays go again
+    // (the service keeps each once), apart from the ones taken off on asking. What came in stays, as the
+    // privacy settings promise: the others keep what they have.
+    readAfresh(generation) {
+      afresh = generation;
+      save({ readUpTo: 0, sent: cursor().floor ?? 0 });
+    },
+    readThrough(generation) {
+      if (afresh === generation) afresh = null;
+      save({ generation });
     },
   };
 }

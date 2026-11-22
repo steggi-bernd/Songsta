@@ -334,6 +334,6 @@ test("an older app's look at the changes isn't disturbed by the new documents", 
   for (const name of ["playlists", "queue", "position", "likes", "muted", "devices"]) assert.equal(typeof body.revs[name], "number", name);
   const health = await (await fetch(`${base}/health`)).json();
   assert.deepEqual(health.docs.slice(-6), ["order", "groups", "albumedits", "albumpictures", "sounds", "keys"]);
-  assert.deepEqual(health.features, ["listens", "listens-remove"], "and the shared listening history, since 1.8, from which a device's plays can be taken out");
+  assert.deepEqual(health.features, ["listens", "listens-remove", "listens-generation", "commands-kept", "commands-started", "command-results", "lists"], "the shared listening history (1.8) and its generation, and commands kept until done, marked started, with what came of them, and lists of their own");
   assert.equal(typeof body.revs.listens, "number");
 });

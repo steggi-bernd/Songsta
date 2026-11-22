@@ -83,6 +83,7 @@ const service = {
   async request(method, path, body) {
     if (this.down) throw new TypeError("Network request failed");
     const url = new URL(path, "http://service");
+    if (url.pathname === "/health") return { status: 200, body: { service: "songsta-sync" } };
     const doc = /^\/v1\/docs\/(\w+)$/.exec(url.pathname)?.[1];
     const deviceMatch = /^\/v1\/devices(?:\/([^/]+)(\/commands)?)?$/.exec(url.pathname);
     if (url.pathname === "/v1/changes") {
@@ -375,6 +376,21 @@ test("sent a song this computer doesn't have: the next one it does, from its sta
   assert.equal(player().playing, false, "what it had before isn't what was asked for");
 });
 
+test("sent a song only the phone has, with where the phone hands it out: it stays and plays from the phone", async () => {
+  await playingHere();
+  usePlayer.setState({ playing: false });
+  await wait(30);
+  const src = "http://192.168.178.50:41234/song/0123456789abcdef0123456789abcdef.flac";
+  const fromPhone = { id: "phone-file", title: "From The Phone", artist: "Nobody", duration: 10, src };
+  service.docs.queue = { id: "q-phone", from: 0, tracks: [fromPhone, wire("c")] };
+  service.docs.position = { device: { id: "phone", name: "Phone" }, at: Date.now() + 10, playing: true, positionMs: 5000, track: fromPhone, queueId: "q-phone", place: 0 };
+  phone.tell({ action: "takeOver" });
+  await until(() => player().playing && player().queue[player().index]?.title === "From The Phone", "the phone's song plays here");
+  assert.deepEqual(player().queue.map((t) => t.title), ["From The Phone", "C"], "nothing skipped");
+  assert.ok(player().position > 0, "from where it was");
+  assert.equal(player().queue[0].src, undefined, "the address isn't part of the song");
+});
+
 test("told to go to a song by the phone's copy of it: the song, in this computer's own list", async () => {
   await playingHere(0);
   phone.tell({ action: "jump", trackId: "jf:c", by: 2, track: wire("c") });
@@ -551,5 +567,92 @@ test("an edit anchored to a song taken out here meanwhile keeps what came after 
   player().removeAt(2);
   phone.tell({ action: "setUpcoming", line: 0, tracks: [wire("c")], keepAfter: { track: wire("c"), ahead: 2 } });
   await until(() => !player().queue.some((t) => t.title === "B"), "the edit arrives");
-  assert.deepEqual(player().queue.map((t) => t.title), ["A", "C", "D"], "D, after the anchor, stays");
+  // Lined up with the queue as that controller saw it (part 3 of the protocol rework, 2026-11-21): it took
+  // out B and nothing else, so C, taken out here meanwhile, stays out as well.
+  assert.deepEqual(player().queue.map((t) => t.title), ["A", "D"], "D, after the anchor, stays");
+});
+
+/* ------------------------------------------------------------ edits by entry (part 3 of the protocol rework) */
+
+test("following a phone that takes edits by entry: an edit made here goes out as edits of its entries", async () => {
+  const abilities = ["lists", "kept", "edits", "handover"];
+  await followingPhone("b", { abilities });
+  phone.note("b", { queueId: "q-entries", doc: { entries: ["e1", "e2", "e3", "e4", "e5"], session: "s-phone" } }, [...WIRE, wire("c")]);
+  phone.say("b", { queueId: "q-entries", abilities });
+  await until(() => player().queue.length === 5, "the phone's queue, with its entries");
+  service.sent.length = 0;
+  player().removeAt(4);
+  await until(() => service.sent.some((c) => c.action === "editQueue"), "the edit goes out");
+  assert.deepEqual(service.sent.find((c) => c.action === "editQueue"), { action: "editQueue", session: "s-phone", ops: [{ op: "remove", entry: "e5" }], playing: "e2", target: "phone" });
+  player().moveInQueue(3, 2);
+  await until(() => service.sent.filter((c) => c.action === "editQueue").length === 2, "the move goes out");
+  assert.deepEqual(service.sent.filter((c) => c.action === "editQueue")[1].ops, [{ op: "move", entry: "e4", after: ["e2", "e1"] }]);
+  assert.equal(service.sent.some((c) => c.action === "setUpcoming"), false, "never the whole list");
+});
+
+test("an edit by entry from the phone lands where its entries stand here, also after an edit here meanwhile", async () => {
+  await playingHere(0);
+  await until(() => service.docs.queue?.entries?.length === 4, "this computer's queue said with its entries");
+  const doc = service.docs.queue;
+  const id = (title) => doc.entries[doc.tracks.findIndex((w) => w.title === title)];
+  // D taken out here meanwhile; the phone takes out B, by its entry.
+  player().removeAt(3);
+  phone.tell({ action: "editQueue", session: doc.session, ops: [{ op: "remove", entry: id("B") }], playing: id("A") });
+  await until(() => !player().queue.some((t) => t.title === "B"), "the edit arrives");
+  assert.deepEqual(player().queue.map((t) => t.title), ["A", "C"]);
+  // An edit of another list changes nothing.
+  phone.tell({ action: "editQueue", session: "another list", ops: [{ op: "remove", entry: id("C") }] });
+  await wait(150);
+  assert.deepEqual(player().queue.map((t) => t.title), ["A", "C"]);
+});
+test("desktop sends the selected entry ID for adjacent copies", async () => {
+  const abilities = ["lists", "kept", "edits", "handover"];
+  await followingPhone("a", { abilities });
+  phone.note("a", { queueId: "q-adj", place: 0, doc: { entries: ["a1", "c1", "c2", "d1"], session: "s-adj" } }, ["a", "c", "c", "d"].map((id) => wire(id)));
+  phone.say("a", { queueId: "q-adj", abilities });
+  await until(() => player().queue.map((track) => track.title).join() === "A,C,C,D", "both copies are visible");
+  service.sent.length = 0;
+  player().removeAt(1);
+  await until(() => service.sent.some((command) => command.action === "editQueue"), "the edit reaches the transport");
+  assert.deepEqual(service.sent.find((command) => command.action === "editQueue").ops, [{ op: "remove", entry: "c1" }]);
+});
+
+test("starting a playlist again invalidates an old clear even with identical tracks", async () => {
+  await playingHere(0);
+  const previous = service.docs.queue?.session;
+  player().playQueue([...LIST], 0);
+  await until(() => service.docs.queue?.entries?.length === LIST.length && service.docs.queue.session !== previous, "first session published");
+  const first = service.docs.queue;
+  player().playQueue([...LIST], 0);
+  await until(() => service.docs.queue.session !== first.session, "new session published");
+  const current = service.docs.queue;
+  const clear = (doc) => phone.tell({ action: "editQueue", session: doc.session, playing: doc.entries[0], ops: [{ op: "clear" }] });
+  clear(first);
+  await wait(150);
+  assert.equal(player().queue.length, LIST.length);
+  clear(current);
+  await until(() => player().queue.length === 1, "current clear applied");
+});
+
+/* ------------------------------------------------------------- a step from an entry, a list from elsewhere (Codex, section 17) */
+
+test("on to the next song from a named entry: the phone's word coming twice moves this computer on once", async () => {
+  await playingHere(0);
+  await until(() => service.docs.queue?.entries?.length === 4, "this computer's queue said with its entries");
+  const first = service.docs.queue.entries[0];
+  phone.tell({ action: "next", from: first });
+  await until(() => player().index === 1, "on to B");
+  phone.tell({ action: "next", from: first });
+  await wait(150);
+  assert.equal(player().index, 1, "the same word again: still at B");
+});
+
+test("a list the phone starts here with its order kept is a new list, though it shares songs with the last one", async () => {
+  await playingHere(0);
+  await until(() => service.docs.queue?.entries?.length === 4, "this computer's queue said with its entries");
+  const before = service.docs.queue.session;
+  phone.tell({ action: "playList", tracks: [wire("a"), wire("c"), wire("d")], start: 0, keepOrder: true });
+  await until(() => player().queue.length === 3, "the new list");
+  await until(() => service.docs.queue?.entries?.length === 3, "said with its entries");
+  assert.notEqual(service.docs.queue.session, before);
 });

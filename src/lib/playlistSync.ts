@@ -23,7 +23,10 @@ import type { Track } from "../types";
 
 /** A song as it is on any device: no covers or paths, those belong to one machine. */
 export type WireTrack = Pick<Track, "id" | "title" | "artist" | "duration"> &
-  Partial<Pick<Track, "album" | "albumId" | "albumArtist" | "source" | "year" | "trackNo" | "discNo" | "genre" | "albumTag">>;
+  Partial<Pick<Track, "album" | "albumId" | "albumArtist" | "source" | "year" | "trackNo" | "discNo" | "genre" | "albumTag">> & {
+    /** in a queue or a list from a phone linked to a computer: where the phone hands out a song only it has */
+    src?: string;
+  };
 
 export interface WirePlaylist {
   id: string;

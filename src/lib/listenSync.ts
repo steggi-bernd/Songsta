@@ -34,6 +34,12 @@ export interface ListenDevice {
 export interface ListenPage {
   /** how many listens the service keeps in all */
   count: number;
+  /**
+   * which version of the history this is: within one it only grows at its end; plays taken out, or a
+   * service put back from a backup, make a new one (part 2 of the protocol rework). A service from
+   * before them says none.
+   */
+  generation?: string;
   listens: SharedListen[];
   devices: Record<string, ListenDevice>;
   /** more after these */
@@ -79,7 +85,7 @@ export const listenKey = (device: string, l: { at: number; id: string }): string
 
 /** What the service answers to "since", read safely; null when it isn't such an answer. */
 export function readListenPage(body: unknown, now = Date.now()): ListenPage | null {
-  const b = body as { count?: unknown; listens?: unknown; devices?: unknown; more?: unknown } | null;
+  const b = body as { count?: unknown; generation?: unknown; listens?: unknown; devices?: unknown; more?: unknown } | null;
   if (!b || typeof b !== "object" || typeof b.count !== "number" || !Array.isArray(b.listens)) return null;
   const listens: SharedListen[] = [];
   for (const raw of b.listens) {
@@ -97,5 +103,6 @@ export function readListenPage(body: unknown, now = Date.now()): ListenPage | nu
       devices[id] = { name: text(entry.name, 80) || "?", ...(entry.kind === "computer" || entry.kind === "phone" ? { kind: entry.kind } : {}) };
     }
   }
-  return { count: Math.max(0, Math.round(b.count)), listens, devices, more: b.more === true };
+  const generation = typeof b.generation === "string" && b.generation ? b.generation.slice(0, 64) : undefined;
+  return { count: Math.max(0, Math.round(b.count)), ...(generation ? { generation } : {}), listens, devices, more: b.more === true };
 }

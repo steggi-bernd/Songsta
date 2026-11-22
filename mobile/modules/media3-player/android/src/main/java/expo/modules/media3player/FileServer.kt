@@ -164,7 +164,8 @@ internal class FileServer(private val context: Context) {
   internal companion object {
     private const val PORT = 8188
     private const val BACKLOG = 16
-    private const val KEEP = 64
+    // A long queue's songs for a linked computer stay reachable (a few bytes each).
+    private const val KEEP = 2048
     private const val CHUNK = 64 * 1024
     private const val MAX_HEAD = 8 * 1024
     private const val READ_TIMEOUT_MS = 15_000

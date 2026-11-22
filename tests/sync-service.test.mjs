@@ -746,7 +746,7 @@ test("a long list goes ahead as the queue document, and its command brings the s
   assert.equal(heard.tracks[399].id, "jf:399");
 });
 
-test("two pending enqueue lists keep their own songs when both senders have the same time", { todo: "sendList still shares one queue document: needs a list store of its own" }, async (t) => {
+test("two pending enqueue lists keep their own songs when both senders have the same time", async (t) => {
   const token = freshLogin();
   const target = deviceEngine("target", token);
   t.after(() => target.engine.stop());
@@ -1146,3 +1146,469 @@ test("a command taken on is still there after a restart, and one taken isn't han
   await restartService();
   assert.deepEqual((await call("GET", "/v1/devices/receiver/commands", { token })).body.commands, [], "taken once, not again");
 });
+
+test("a list the service stumbles on is asked for again, and the word behind it still arrives", async (t) => {
+  const token = freshLogin();
+  const source = deviceEngine("source", token);
+  let stumbles = 1;
+  const target = deviceEngine("target", token, {
+    // The list in its own place (the list store) or, from an older app, the queue document.
+    request: (method, url) => (method === "GET" && (url === "/v1/docs/queue" || url.startsWith("/v1/lists/")) && stumbles-- > 0 ? Promise.resolve({ status: 503, body: { error: "busy" } }) : undefined),
+  });
+  t.after(() => {
+    target.engine.stop();
+    source.engine.stop();
+  });
+  const tracks = [{ id: "jf:l1", title: "L1", artist: "Band", duration: 100 }];
+  assert.equal(await source.engine.sendList("target", tracks, undefined, { action: "enqueue", next: true }), true);
+  assert.equal(await source.engine.sendCommand("target", { action: "pause" }), true);
+  target.engine.start();
+  await until(() => target.heard.commands.some((command) => command.action === "pause"), "the pause behind it");
+  await until(() => target.heard.commands.some((command) => command.action === "enqueue" && command.tracks?.length === 1), "the list, on the second try");
+  assert.equal(stumbles, -1, "the list was asked for twice");
+});
+
+/* ------------------------------------------------------------- words with ids, kept until done; lists of their own */
+
+/** A device engine whose player can't take what it's handed (none of the songs). */
+function declining(id, token) {
+  const heard = { devices: [], commands: [] };
+  const engine = createSyncEngine({
+    deviceId: id,
+    request: (method, url, body) => call(method, url, { token, body }),
+    readPlaylists: () => toPlaylistDoc({ playlists: [], folders: [], deletionSync: undefined }),
+    applyPlaylists: () => undefined,
+    readPlayback: () => null,
+    wantsPlayback: () => false,
+    adoptPlayback: () => false,
+    readPresence: () => ({ name: id, kind: "computer", playing: false, positionMs: 0, durationMs: 0, track: null }),
+    applyDevices: (list) => (heard.devices = list),
+    onCommand: (command) => heard.commands.push(command),
+    readMuted: () => ({ at: 0, tracks: [] }),
+    applyMuted: () => undefined,
+  });
+  return { engine, heard };
+}
+
+test("a word sent again with the same id is there once; kept until the device says it's done, and what came of it stays a while", async () => {
+  const token = freshLogin();
+  const post = (id) => call("POST", "/v1/devices/kept/commands", { token, body: { command: { action: "pause" }, id } });
+  assert.equal((await post("w1")).body.id, "w1");
+  await post("w1");
+  assert.deepEqual((await call("GET", "/v1/devices/kept/commands?keep=1", { token })).body.ids, ["w1"], "sent twice, there once");
+  assert.deepEqual((await call("GET", "/v1/devices/kept/commands?keep=1", { token })).body.ids, ["w1"], "taken, still there until said done");
+  assert.deepEqual((await call("GET", "/v1/devices/kept/commands/w1", { token })).body, { state: "waiting" });
+  await call("POST", "/v1/devices/kept/commands/done", { token, body: { ids: ["w1"], results: { w1: "declined" } } });
+  assert.deepEqual((await call("GET", "/v1/devices/kept/commands?keep=1", { token })).body.ids, []);
+  assert.deepEqual((await call("GET", "/v1/devices/kept/commands/w1", { token })).body, { state: "done", result: "declined" });
+  await post("w1");
+  assert.deepEqual((await call("GET", "/v1/devices/kept/commands?keep=1", { token })).body.ids, [], "sent once more after it was done: not again");
+  assert.equal((await call("GET", "/v1/devices/kept/commands/nope", { token })).status, 404);
+  // An older app takes its words the old way: handed over once, gone.
+  await call("POST", "/v1/devices/old/commands", { token, body: { command: { action: "play" } } });
+  assert.equal((await call("GET", "/v1/devices/old/commands", { token })).body.commands.length, 1);
+  assert.equal((await call("GET", "/v1/devices/old/commands", { token })).body.commands.length, 0);
+});
+
+test("a list of songs in a place of its own: there for a while, its id and its songs checked", async () => {
+  const token = freshLogin();
+  const doc = { id: "list-1", tracks: [{ id: "jf:1", title: "One", artist: "Band", duration: 100 }] };
+  assert.equal((await call("PUT", "/v1/lists/list-1", { token, body: { doc } })).status, 200);
+  assert.deepEqual((await call("GET", "/v1/lists/list-1", { token })).body.doc, doc);
+  assert.equal((await call("GET", "/v1/lists/list-2", { token })).status, 404);
+  assert.equal((await call("PUT", "/v1/lists/bad%20id", { token, body: { doc } })).status, 400);
+  assert.equal((await call("PUT", "/v1/lists/list-3", { token, body: { doc: { id: "list-3" } } })).status, 400, "a list has songs");
+  assert.equal((await call("GET", "/v1/lists/list-1", { token: freshLogin() })).status, 404, "another person's lists aren't one's own");
+});
+
+test("an answer lost on the way to the device taking its words loses nothing: it takes them again and does each once", async (t) => {
+  const token = freshLogin();
+  const source = deviceEngine("source", token);
+  let lost = 1;
+  const target = deviceEngine("target", token, {
+    request: (method, url, body) =>
+      method === "GET" && url === "/v1/devices/target/commands?keep=1" && lost-- > 0
+        ? call(method, url, { token, body }).then(() => Promise.reject(new Error("the answer got lost")))
+        : undefined,
+  });
+  t.after(() => {
+    target.engine.stop();
+    source.engine.stop();
+  });
+  source.engine.start();
+  target.engine.start();
+  await until(() => target.heard.devices.some((d) => d.id === "source") && source.heard.devices.some((d) => d.id === "target"), "both to be around");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.equal(await source.engine.sendCommand("target", { action: "pause" }), true);
+  await until(() => target.heard.commands.some((command) => command.action === "pause"), "the word, after all", 12000);
+  await until(async () => (await call("GET", "/v1/devices/target/commands?keep=1", { token })).body.ids.length === 0, "said done");
+  assert.equal(lost, -1, "the first answer was lost");
+  assert.equal(target.heard.commands.filter((command) => command.action === "pause").length, 1, "done once");
+});
+
+test("a word whose answer got lost on the way is sent again: the sender knows it arrived, and it arrives once", async (t) => {
+  const token = freshLogin();
+  let lost = 1;
+  const source = deviceEngine("source", token, {
+    request: (method, url, body) =>
+      method === "POST" && url === "/v1/devices/target/commands" && lost-- > 0
+        ? call(method, url, { token, body }).then(() => Promise.reject(new Error("the answer got lost")))
+        : undefined,
+  });
+  const target = deviceEngine("target", token);
+  t.after(() => {
+    target.engine.stop();
+    source.engine.stop();
+  });
+  assert.equal(await source.engine.sendCommand("target", { action: "pause" }), true, "sent again with its id: it's there");
+  target.engine.start();
+  await until(() => target.heard.commands.some((command) => command.action === "pause"), "the word");
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(target.heard.commands.filter((command) => command.action === "pause").length, 1, "there once");
+});
+
+test("a hand-over the other device can't play is declined, and the device that handed over hears so", async (t) => {
+  const token = freshLogin();
+  const source = playing(token, "source", "Nowhere");
+  const target = declining("target", token);
+  t.after(() => {
+    target.engine.stop();
+    source.engine.stop();
+  });
+  source.engine.start();
+  target.engine.start();
+  await until(() => source.heard.devices.some((d) => d.id === "target" && d.presence.abilities?.includes("kept")), "the target and what its app can take");
+  assert.equal(await source.engine.handOver("target"), false, "declined: the music stays where it was");
+});
+
+test("a list for an app not known to take lists of their own goes where it always looked as well; for one that does, only to its own place", async (t) => {
+  const token = freshLogin();
+  const source = deviceEngine("source", token);
+  const newer = deviceEngine("newer", token);
+  t.after(() => {
+    newer.engine.stop();
+    source.engine.stop();
+  });
+  const tracks = (id) => [{ id: `jf:${id}`, title: id, artist: "Band", duration: 100 }];
+  assert.equal(await source.engine.sendList("older", tracks("x"), undefined, { action: "enqueue" }), true);
+  const word = (await call("GET", "/v1/devices/older/commands", { token })).body.commands[0];
+  assert.equal(word.listStore, true);
+  assert.equal((await call("GET", "/v1/docs/queue", { token })).body.doc.id, word.listId, "an older app finds the songs in the queue document");
+  assert.deepEqual((await call("GET", `/v1/lists/${word.listId}`, { token })).body.doc.tracks, tracks("x"));
+  source.engine.start();
+  newer.engine.start();
+  await until(() => source.heard.devices.some((d) => d.id === "newer" && d.presence.abilities?.includes("lists")), "the newer app to say what it takes");
+  assert.equal(await source.engine.sendList("newer", tracks("y"), undefined, { action: "enqueue" }), true);
+  await until(() => newer.heard.commands.some((command) => command.tracks?.[0]?.id === "jf:y"), "the songs, from their own place");
+  assert.equal((await call("GET", "/v1/docs/queue", { token })).body.doc.id, word.listId, "the queue document stays as it was");
+});
+
+/* ------------------------------------------------------------- a hand-over with the state it was made in (part 3) */
+
+/** The target's inbox looks empty while `held()` says so: the hand-over waits there meanwhile. */
+const holding = (held) => (method, url) => (method === "GET" && url.startsWith("/v1/devices/target/commands") && held() ? Promise.resolve({ status: 200, body: { commands: [], ids: [] } }) : undefined);
+
+test("a hand-over goes on from the very queue it was made with, whatever another device writes to the queue document meanwhile", async (t) => {
+  const token = freshLogin();
+  const list = ["One", "Two", "Three"].map((title) => ({ id: `jf:${title}`, title, artist: "Band", duration: 180 }));
+  const source = deviceEngine("source", token, {
+    readPlayback: () => ({
+      note: { device: { id: "source", name: "Source" }, track: list[1], playing: true, at: 1000, positionMs: 9000, queueId: "q-src", place: 1 },
+      queue: () => ({ id: "q-src", from: 0, tracks: list, entries: ["e1", "e2", "e3"], session: "s-src" }),
+    }),
+  });
+  let held = true;
+  const target = deviceEngine("target", token, { request: holding(() => held) });
+  t.after(() => {
+    target.engine.stop();
+    source.engine.stop();
+  });
+  source.engine.start();
+  target.engine.start();
+  await until(() => source.heard.devices.some((d) => d.id === "target" && d.presence.abilities?.includes("handover")), "the target and what its app can take");
+  const handing = source.engine.handOver("target");
+  await until(async () => (await call("GET", "/v1/devices/target/commands?keep=1", { token })).body.ids.length === 1, "the hand-over waiting");
+  // Another device's list goes over the queue document before the target looks.
+  await call("PUT", "/v1/docs/queue", { token, body: { doc: { id: "list-other", tracks: [{ id: "jf:x", title: "X", artist: "Band", duration: 100 }] } } });
+  held = false;
+  assert.equal(await handing, true);
+  await until(() => target.heard.adopted.length > 0, "the target takes over");
+  const { note, queue } = target.heard.adopted.at(-1);
+  assert.equal(note.track.title, "Two");
+  assert.deepEqual(queue?.tracks.map((x) => x.title), ["One", "Two", "Three"], "the queue handed over, not the list written since");
+  assert.deepEqual(queue?.entries, ["e1", "e2", "e3"], "with its entries");
+});
+
+test("the device that handed over moved on to another song meanwhile: the target goes on from where it is now, not from the song it left", async (t) => {
+  const token = freshLogin();
+  const list = ["One", "Two", "Three"].map((title) => ({ id: `jf:${title}`, title, artist: "Band", duration: 180 }));
+  let current = list[0];
+  let at = 1000;
+  const source = deviceEngine("source", token, {
+    readPlayback: () => ({
+      note: { device: { id: "source", name: "Source" }, track: current, playing: true, at, positionMs: 0, queueId: "q-src" },
+      queue: () => ({ id: "q-src", from: 0, tracks: list }),
+    }),
+  });
+  let held = true;
+  const target = deviceEngine("target", token, { request: holding(() => held) });
+  t.after(() => {
+    target.engine.stop();
+    source.engine.stop();
+  });
+  source.engine.start();
+  target.engine.start();
+  await until(() => source.heard.devices.some((d) => d.id === "target" && d.presence.abilities?.includes("handover")), "the target and what its app can take");
+  const handing = source.engine.handOver("target");
+  await until(async () => (await call("GET", "/v1/devices/target/commands?keep=1", { token })).body.ids.length === 1, "the hand-over waiting");
+  // Skipped to the third song there, and said so, before the target looked.
+  current = list[2];
+  at = 2000;
+  await source.engine.flushPlayback();
+  held = false;
+  await handing;
+  await until(() => target.heard.adopted.length > 0, "the target takes over");
+  assert.equal(target.heard.adopted.at(-1).note.track.title, "Three");
+  assert.equal(target.heard.adopted.some((p) => p.note.track.title === "One"), false, "not the song it already left");
+});
+
+/* ------------------------------------------------------------- plan section 5: Liked Songs' order, a position and its list */
+
+/** A computer that arranges Liked Songs and takes the order put together with another one's. */
+function arranging(id, token, ids, base) {
+  const song = (x) => ({ id: `jf:${x}`, title: x, artist: "Band", duration: 100 });
+  const me = { mine: ids.map(song), base, adopted: 0 };
+  me.engine = createSyncEngine({
+    deviceId: id,
+    request: (method, url, body) => call(method, url, { token, body }),
+    readPlaylists: () => toPlaylistDoc({ playlists: [], folders: [], deletionSync: undefined }),
+    applyPlaylists: () => undefined,
+    readPlayback: () => null,
+    wantsPlayback: () => false,
+    adoptPlayback: () => undefined,
+    readLikes: () => me.mine,
+    adoptLikes(tracks) {
+      me.mine = tracks;
+      me.adopted += 1;
+    },
+    likesBase: () => me.base,
+    keepLikesBase(next) {
+      me.base = next;
+    },
+  });
+  me.order = () => me.mine.map((t) => t.title).join("");
+  return me;
+}
+
+test("two computers change Liked Songs' order on the same revision: both changes stay, and each takes the order put together", async (t) => {
+  const token = freshLogin();
+  const start = ["A", "B", "C", "D"].map((x) => ({ id: `jf:${x}`, title: x, artist: "Band", duration: 100 }));
+  const first = await call("PUT", "/v1/docs/likes", { token, body: { doc: { tracks: start } } });
+  const base = { rev: first.body.rev, ids: start.map((x) => x.id) };
+  const one = arranging("pc-one", token, ["B", "A", "C", "D"], base);
+  const two = arranging("pc-two", token, ["A", "B", "D", "C"], base);
+  t.after(() => {
+    one.engine.stop();
+    two.engine.stop();
+  });
+  const order = async () => (await call("GET", "/v1/docs/likes", { token })).body.doc.tracks.map((x) => x.title).join("");
+  one.engine.start();
+  await until(async () => (await order()) === "BACD", "the first computer's order there");
+  two.engine.start();
+  await until(async () => (await order()) === "BADC", "both changes put together");
+  await until(() => one.order() === "BADC" && two.order() === "BADC", "each computer takes that order");
+  // An older app, which names no revision, still just writes.
+  const old = await call("PUT", "/v1/docs/likes", { token, body: { doc: { tracks: start } } });
+  assert.equal(old.status, 200);
+  assert.equal((await call("PUT", "/v1/docs/likes", { token, body: { rev: 1, doc: { tracks: start } } })).status, 409, "a newer one naming an old revision is told");
+});
+
+test("a word on where the music stands that came with another list in the queue document waits for its own list, and isn't taken with only its song", async (t) => {
+  const token = freshLogin();
+  const songs = (prefix) => [1, 2, 3].map((n) => ({ id: `jf:${prefix}${n}`, title: `${prefix}${n}`, artist: "Band", duration: 100 }));
+  const list = songs("a");
+  const note = (at) => ({ device: { id: "player-a", name: "A" }, at, playing: true, positionMs: 1000, track: list[1], queueId: "q-a", place: 1 });
+  await call("PUT", "/v1/docs/queue", { token, body: { doc: { id: "q-a", from: 0, tracks: list } } });
+  await call("PUT", "/v1/docs/position", { token, body: { doc: note(Date.now()) } });
+  // Another device's list goes over the queue document before anybody read A's word.
+  await call("PUT", "/v1/docs/queue", { token, body: { doc: { id: "list-b", tracks: songs("b") } } });
+  const reader = deviceEngine("reader", token, { wantsPlayback: () => true });
+  t.after(() => reader.engine.stop());
+  reader.engine.start();
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  assert.equal(reader.heard.adopted.length, 0, "not taken with only its song");
+  // A's list goes there again: taken, with its list.
+  await call("PUT", "/v1/docs/queue", { token, body: { doc: { id: "q-a", from: 0, tracks: list } } });
+  await until(() => reader.heard.adopted.length === 1, "taken once its list is there");
+  assert.deepEqual(reader.heard.adopted[0].queue?.tracks.map((x) => x.title), ["a1", "a2", "a3"]);
+});
+
+test("a word whose list doesn't come back while the word moves on is taken as before, so nothing hangs", async (t) => {
+  const token = freshLogin();
+  const list = [{ id: "jf:z1", title: "z1", artist: "Band", duration: 100 }];
+  const note = (at) => ({ device: { id: "player-z", name: "Z" }, at, playing: true, positionMs: 1000, track: list[0], queueId: "q-z", place: 0 });
+  await call("PUT", "/v1/docs/position", { token, body: { doc: note(Date.now()) } });
+  await call("PUT", "/v1/docs/queue", { token, body: { doc: { id: "list-other", tracks: [] } } });
+  const reader = deviceEngine("reader-z", token, { wantsPlayback: () => true });
+  t.after(() => reader.engine.stop());
+  reader.engine.start();
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(reader.heard.adopted.length, 0);
+  // The word moves on, the queue document doesn't: its list isn't coming.
+  await call("PUT", "/v1/docs/position", { token, body: { doc: note(Date.now() + 1000) } });
+  await until(() => reader.heard.adopted.length === 1, "taken as before");
+  assert.equal(reader.heard.adopted[0].queue, null);
+});
+test("three controllers converge on three independent favorite swaps from one revision", async (t) => {
+  const token = freshLogin();
+  const tracks = Array.from("ABCDEF", (title) => ({ id: "jf:" + title, title, artist: "Band", duration: 100 }));
+  const first = await call("PUT", "/v1/docs/likes", { token, body: { doc: { tracks } } });
+  const base = { rev: first.body.rev, ids: tracks.map((track) => track.id) };
+  const clients = ["BACDEF", "ABDCEF", "ABCDFE"].map((order, index) =>
+    arranging("controller-" + index, token, Array.from(order), base));
+  t.after(() => clients.forEach((client) => client.engine.stop()));
+  clients.forEach((client) => client.engine.start());
+  await until(async () => {
+    const shared = await call("GET", "/v1/docs/likes", { token });
+    return shared.body.doc.tracks.map((track) => track.title).join("") === "BADCFE"
+      && clients.every((client) => client.order() === "BADCFE");
+  }, "the server and all three clients agree on all three changes");
+});
+
+test("a restarted target executes a next command only once across a missing receipt", async (t) => {
+  const token = freshLogin();
+  const route = "/v1/devices/restart-target/commands";
+  let blocked = 0;
+  const first = deviceEngine("restart-target", token, {
+    request(method, url) {
+      if (method === "POST" && url === route + "/done") {
+        blocked++;
+        return Promise.resolve({ status: 503, body: {} });
+      }
+    },
+  });
+  const sender = deviceEngine("restart-source", token);
+  const restarted = deviceEngine("restart-target", token);
+  t.after(() => [first, sender, restarted].forEach((device) => device.engine.stop()));
+  first.engine.start();
+  sender.engine.start();
+  await until(() => sender.heard.devices.some((device) => device.id === "restart-target"), "target online");
+  await call("POST", route, { token, body: { id: "next-once", command: { action: "next" } } });
+  await until(() => blocked > 0, "first execution reached acknowledgement");
+  first.engine.stop();
+  assert.equal(first.heard.commands.filter((command) => command.action === "next").length, 1);
+  const status = async () => (await call("GET", route + "/next-once", { token })).body.state;
+  assert.equal(await status(), "waiting");
+  restarted.engine.start();
+  await until(async () => restarted.heard.commands.length > 0 || (await status()) === "done", "redelivery resolved");
+  assert.equal(restarted.heard.commands.length, 0, "already executed before restart");
+  await until(async () => (await status()) === "done", "sender can retrieve the receipt");
+});
+
+/* ------------------------------------------------------------- a started word that does the same however often (Codex, section 17) */
+
+test("a started word that comes out the same however often it's done (a step from a named entry) runs again after a restart; the receipt follows", async (t) => {
+  const token = freshLogin();
+  const route = "/v1/devices/again-target/commands";
+  let blocked = 0;
+  const first = deviceEngine("again-target", token, {
+    request(method, url) {
+      if (method === "POST" && url === route + "/done") {
+        blocked++;
+        return Promise.resolve({ status: 503, body: {} });
+      }
+    },
+  });
+  const restarted = deviceEngine("again-target", token);
+  t.after(() => [first, restarted].forEach((device) => device.engine.stop()));
+  first.engine.start();
+  await until(async () => (await call("GET", "/v1/devices", { token })).body.devices.some((d) => d.id === "again-target"), "target online");
+  await call("POST", route, { token, body: { id: "step-1", command: { action: "next", from: "e1" } } });
+  await until(() => blocked > 0, "done once, its receipt lost");
+  first.engine.stop();
+  restarted.engine.start();
+  await until(() => restarted.heard.commands.some((c) => c.action === "next"), "run again: the player decides it's done already");
+  await until(async () => (await call("GET", route + "/step-1", { token })).body.state === "done", "the receipt");
+});
+
+test("losing the first start response keeps the next queued command executable", async (t) => {
+  const token = freshLogin();
+  const route = "/v1/devices/start-window/commands";
+  let lose = true;
+  const target = deviceEngine("start-window", token, {
+    request(method, url, body) {
+      if (url === route + "/start" && lose) {
+        lose = false;
+        return call(method, url, { token, body }).then(() => { throw new Error("lost start response"); });
+      }
+    },
+  });
+  t.after(() => target.engine.stop());
+  for (const [id, action] of [["advance", "next"], ["back", "previous"]]) {
+    await call("POST", route, { token, body: { id, command: { action } } });
+  }
+  target.engine.start();
+  const receipt = async (id) => (await call("GET", route + "/" + id, { token })).body;
+  await until(async () => (await receipt("back")).state === "done", "second command settled", 12000);
+  assert.deepEqual(target.heard.commands.map((command) => command.action), ["previous"]);
+  assert.equal((await receipt("advance")).result, "unknown");
+  assert.equal((await receipt("back")).result, "done");
+});
+
+test("a guarded step whose start response was lost still reaches the player once", async (t) => {
+  const token = freshLogin();
+  const route = "/v1/devices/guarded-start/commands";
+  let lose = true;
+  const target = deviceEngine("guarded-start", token, {
+    request(method, url, body) {
+      if (url === route + "/start" && lose) {
+        lose = false;
+        return call(method, url, { token, body }).then(() => { throw new Error("lost start response"); });
+      }
+    },
+  });
+  t.after(() => target.engine.stop());
+  const command = { action: "next", from: "entry-a" };
+  await call("POST", route, { token, body: { id: "guarded", command } });
+  target.engine.start();
+  const receipt = async () => (await call("GET", route + "/guarded", { token })).body;
+  await until(async () => (await receipt()).state === "done", "guarded step settled", 12000);
+  assert.deepEqual(target.heard.commands, [command]);
+  assert.equal((await receipt()).result, "done");
+});
+
+for (const restart of [false, true]) {
+  test("a cold target retains its pending step until health recovers" + (restart ? " across a restart" : ""), async (t) => {
+    const token = freshLogin();
+    const route = "/v1/devices/cold-target/commands";
+    const command = { action: "next", from: "entry-a" };
+    let available = false;
+    const inboxReads = [];
+    const createTarget = () => deviceEngine("cold-target", token, {
+      request(method, url) {
+        if (url === "/health" && !available) return Promise.resolve({ status: 503, body: {} });
+        if (method === "GET" && url.startsWith(route)) inboxReads.push(url);
+      },
+    });
+    const targets = [createTarget()];
+    t.after(() => targets.forEach((target) => target.engine.stop()));
+    await call("POST", route, { token, body: { id: "step", command } });
+    const receipt = async () => (await call("GET", route + "/step", { token })).body;
+    for (let i = 0; i <= Number(restart); i++) {
+      if (i) {
+        targets[0].engine.stop();
+        targets.push(createTarget());
+      }
+      const target = targets[i];
+      target.engine.start();
+      await until(() => target.engine.status() === "unreachable" || inboxReads.length > 0, "health failure observed");
+      assert.deepEqual(inboxReads, [], "outage must not consume the command");
+      assert.deepEqual(await receipt(), { state: "waiting" });
+    }
+    available = true;
+    await until(async () => (await receipt()).state === "done", "step acknowledged after automatic retry", 15000);
+    assert.deepEqual(await receipt(), { state: "done", result: "done" });
+    assert.deepEqual(targets.flatMap((target) => target.heard.commands), [command]);
+    assert.ok(inboxReads.length > 0 && inboxReads.every((url) => url === route + "?keep=1"));
+  });
+}

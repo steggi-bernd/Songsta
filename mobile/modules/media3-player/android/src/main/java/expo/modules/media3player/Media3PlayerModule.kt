@@ -422,6 +422,14 @@ class Media3PlayerModule : Module() {
       }
     }
 
+    // This phone's address on its Wi-Fi or cable, for finding a computer at home on the same network.
+    AsyncFunction("lanAddress") {
+      val network = LocalNet.lan(context) ?: return@AsyncFunction null
+      val link = context.getSystemService(ConnectivityManager::class.java).getLinkProperties(network) ?: return@AsyncFunction null
+      val v4 = link.linkAddresses.firstOrNull { it.address is java.net.Inet4Address && !it.address.isLoopbackAddress } ?: return@AsyncFunction null
+      mapOf("address" to (v4.address.hostAddress ?: ""), "prefix" to v4.prefixLength)
+    }
+
     AsyncFunction("socketOpen") { host: String, port: Int, asThisApp: Boolean, promise: Promise ->
       thread(isDaemon = true) {
         runCatching { sockets?.connect(host, port, asThisApp) ?: error("The app is closing") }
@@ -448,6 +456,18 @@ class Media3PlayerModule : Module() {
         runCatching { files?.share(uri, mime, ext, deviceHost) ?: error("The app is closing") }
           .onSuccess { promise.resolve(it) }
           .onFailure { promise.reject("ERR_FILE_SHARE", it.message ?: "Can't hand that song out", it) }
+      }
+    }
+
+    // A queue's worth of this phone's songs for the computer it's linked to, in one go: an address each, "" for one that can't go.
+    AsyncFunction("fileShareMany") { uris: List<String>, mimes: List<String>, exts: List<String>, deviceHost: String, promise: Promise ->
+      thread(isDaemon = true) {
+        runCatching {
+          val server = files ?: error("The app is closing")
+          uris.indices.map { i -> runCatching { server.share(uris[i], mimes.getOrElse(i) { "audio/mpeg" }, exts.getOrElse(i) { "mp3" }, deviceHost) }.getOrDefault("") }
+        }
+          .onSuccess { promise.resolve(it) }
+          .onFailure { promise.reject("ERR_FILE_SHARE", it.message ?: "Can't hand those songs out", it) }
       }
     }
 

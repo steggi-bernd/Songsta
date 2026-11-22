@@ -9,6 +9,8 @@
  * A login here is a Jellyfin login: the header a client sends to Jellyfin is
  * asked of Jellyfin, and each Jellyfin user has their own documents. An API
  * key belongs to no user, so it names the user it acts for (X-Songsta-User).
+ * The desktop app runs this same service for phones at home without one
+ * (electron/home-link-server.ts); there its own check says who's paired.
  *
  *   GET  /health                  { ok, service, api, version, docs }: no login needed; the apps look here once they're linked
  *   GET  /v1/docs/:name           { rev, updatedAt, doc }   (rev 0: nothing yet)
@@ -16,20 +18,32 @@
  *   GET  /v1/changes?since&wait&device   { seq, revs, inbox }: answers at once when seq differs, else within `wait` seconds
  *   GET  /v1/devices              { now, rev, devices: [{ id, updatedAt, doc }] }: who is around and what they play
  *   PUT  /v1/devices/:id          { doc }: what this device says about itself
- *   POST /v1/devices/:id/commands { command }: a word for that device, kept for a minute (on disk, through a restart)
+ *   POST /v1/devices/:id/commands { command, id? } → { ok, id }: a word for that device, kept for a minute (on disk,
+ *                                 through a restart); sent again with the same id, it's there once
  *   GET  /v1/devices/:id/commands { commands }: that device's words, handed over once
- *   POST /v1/listens              { device: { id, name, kind }, listens } → { added, count }: plays a device counted
- *   GET  /v1/listens?since&limit  { count, listens, devices, more }: everybody's plays after the first `since`
- *   DELETE /v1/listens?device     { removed, count }: one device's plays taken out (the rest numbered again)
+ *   GET  /v1/devices/:id/commands?keep=1 { commands, ids, started }: its words, kept until it says it's done with them
+ *   POST /v1/devices/:id/commands/start { ids }: about to do those; started ones aren't done twice after a restart
+ *   POST /v1/devices/:id/commands/done { ids, results? }: done with those; what it made of each, for the sender
+ *   GET  /v1/devices/:id/commands/:cid { state, result? }: a word's way: waiting, or done and what came of it
+ *   PUT  /v1/lists/:id { doc } · GET /v1/lists/:id { doc }: a list of songs a command points to, kept a while
+ *   POST /v1/listens              { device: { id, name, kind }, listens } → { added, count, generation }: plays a device counted
+ *   GET  /v1/listens?since&limit  { count, generation, listens, devices, more }: everybody's plays after the first `since`
+ *   DELETE /v1/listens?device     { removed, count, generation }: one device's plays taken out (the rest numbered again)
  *
  * The listens are the one thing here that isn't a document: a history every device adds to and reads
  * from (src/lib/listenSync.ts), kept in order, one line each, so Replay counts every play everywhere.
+ * Within one generation it only grows at its end; plays taken out, or a history that isn't what this
+ * service last wrote (put back from a backup), make a new generation, and a device that read another
+ * one reads it again from the start (part 2 of the protocol rework, 2026-11-21).
  */
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { appendFile, copyFile, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+
+/** An id for a word its sender didn't name. */
+const commandId = () => randomBytes(8).toString("hex");
 
 /**
  * This service's version: the release it came with. The image says it from its tag (the
@@ -38,12 +52,16 @@ import { pathToFileURL } from "node:url";
  */
 export const VERSION = process.env.SONGSTA_SYNC_VERSION || "1.8.0";
 
-/** `merged` documents are built on a revision and a write must say which; the rest is last writer wins. */
+/**
+ * `merged` documents are built on a revision and a write must say which; `checkedWhenSaid`: a write that
+ * says one is checked too (newer apps), one that doesn't still wins (older apps); the rest is last writer wins.
+ */
 const DOCS = {
   playlists: { merged: true, keepVersions: 20 },
   queue: {},
   position: {},
-  likes: {},
+  // Liked Songs' order: two computers' changes put together on a revision (plan section 5).
+  likes: { checkedWhenSaid: true },
   muted: {},
   // How the library is organised: pins, its sort and when things played; the groups; the album edits and their pictures.
   order: { merged: true, keepVersions: 10 },
@@ -59,6 +77,8 @@ const DEVICES_FILE = "devices.json";
 const INBOX_FILE = "inbox.json";
 const LISTENS_FILE = "listens.jsonl";
 const LISTEN_DEVICES_FILE = "listen-devices.json";
+/** The history's generation, and how long it was and its last play when this service last wrote it. */
+const LISTENS_META_FILE = "listens-meta.json";
 const MAX_LISTENS_PER_POST = 1000;
 const MAX_LISTENS_PER_PAGE = 2000;
 const EARLIEST_LISTEN = Date.UTC(2000, 0, 1);
@@ -67,6 +87,14 @@ const DEVICE_KEPT_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_DEVICE_BYTES = 64 * 1024;
 const COMMAND_KEPT_MS = 60_000;
 const MAX_COMMANDS = 20;
+/** A word's id, from its sender or given here; "done" is the path for saying so. */
+const COMMAND_ID = /^(?!(?:done|start)$)[A-Za-z0-9._:-]{1,80}$/;
+/** Words a device said it's done with, remembered a while: sent again after a lost answer, they aren't taken twice. */
+const DONE_KEPT = 200;
+/** Lists of songs commands point to: one file each, kept this long. */
+const LISTS_DIR = "lists";
+const LIST_ID = /^[A-Za-z0-9._:-]{1,80}$/;
+const LIST_KEPT_MS = 10 * 60_000;
 const DEVICE_ID = "[A-Za-z0-9._:-]{1,80}";
 const MAX_BODY_BYTES = 16 * 1024 * 1024;
 const IDENTITY_TTL_MS = 5 * 60_000;
@@ -152,6 +180,26 @@ async function newestVersion(dir, name) {
   return null;
 }
 
+/** A new generation of the shared listening history. */
+const newGeneration = () => randomBytes(9).toString("base64url");
+
+/** How the last play of a history is known: who played it, when, what. */
+const lastListenKey = (items) => {
+  const last = items[items.length - 1];
+  return last ? `${last.device}|${last.at}|${last.id}` : "";
+};
+
+/** The history's generation with its length and last play, so the next start can tell it's still the same. */
+async function writeListensMeta(dir, log) {
+  try {
+    await writeAtomic(path.join(dir, LISTENS_META_FILE), { generation: log.generation, count: log.items.length, last: lastListenKey(log.items) });
+  } catch (err) {
+    // Not written: the next start sees a history it can't vouch for and makes a new generation, so
+    // devices read it again once. Nothing is lost.
+    console.error("[sync] the listening history's generation wasn't written:", err.message);
+  }
+}
+
 async function writeAtomic(file, value, raw = false) {
   const temp = `${file}.tmp`;
   const handle = await open(temp, "w");
@@ -164,7 +212,12 @@ async function writeAtomic(file, value, raw = false) {
   await rename(temp, file);
 }
 
-export function createSyncServer({ dataDir, jellyfinUrl }) {
+/**
+ * The service's requests, for a server of its own or one that answers some paths itself first.
+ * `authenticate(req)`, when given, says whose documents a request is about instead of Jellyfin: a
+ * 32-hex user id, or nothing for a request it doesn't let in.
+ */
+export function createSyncHandler({ dataDir, jellyfinUrl = "", authenticate: ownCheck }) {
   const jellyfin = String(jellyfinUrl).replace(/\/+$/, "");
   /** sha256 of the login → who it is; the login itself is never kept. */
   const identities = new Map();
@@ -210,6 +263,11 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
   }
 
   async function authenticate(req) {
+    if (ownCheck) {
+      const userId = await ownCheck(req);
+      if (typeof userId !== "string" || !USER_ID.test(userId)) throw new HttpError(401, "Not paired with this service");
+      return userId;
+    }
     const authorization = req.headers.authorization;
     if (typeof authorization !== "string" || authorization.length > 2048 || !/Token="[^"]+"/.test(authorization)) {
       throw new HttpError(401, "No login");
@@ -265,7 +323,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
           const now = Date.now();
           for (const [id, list] of Object.entries(stored ?? {})) {
             const kept = Array.isArray(list) ? list.filter((c) => c && typeof c.at === "number" && now - c.at <= COMMAND_KEPT_MS && c.command && typeof c.command === "object") : [];
-            if (kept.length) inbox.set(id, kept.slice(-MAX_COMMANDS));
+            if (kept.length) inbox.set(id, kept.slice(-MAX_COMMANDS).map((c) => (typeof c.id === "string" && COMMAND_ID.test(c.id) ? c : { ...c, id: commandId() })));
           }
         } catch (err) {
           if (err.code !== "ENOENT") console.error(`[sync] unreadable inbox of ${userId}:`, err.message);
@@ -309,7 +367,21 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         } catch (err) {
           if (err.code !== "ENOENT") console.error(`[sync] unreadable listen devices of ${userId}:`, err.message);
         }
-        return { dir, docs, broken, seq, devices, devicesRev, listens, inbox, waiters: new Set(), writing: Promise.resolve(), inboxWriting: Promise.resolve() };
+        // Its generation: kept while the history is exactly what this service last wrote. Another length or
+        // another last play (a backup put back, a file changed by hand, a write cut short) is a new one.
+        let meta = null;
+        try {
+          meta = JSON.parse(await readFile(path.join(dir, LISTENS_META_FILE), "utf8"));
+        } catch (err) {
+          if (err.code !== "ENOENT") console.error(`[sync] unreadable listening history generation of ${userId}:`, err.message);
+        }
+        if (meta && typeof meta.generation === "string" && meta.generation && meta.count === listens.items.length && meta.last === lastListenKey(listens.items)) {
+          listens.generation = meta.generation;
+        } else {
+          listens.generation = newGeneration();
+          await writeListensMeta(dir, listens);
+        }
+        return { dir, docs, broken, seq, devices, devicesRev, listens, inbox, done: new Map(), waiters: new Set(), writing: Promise.resolve(), inboxWriting: Promise.resolve() };
       })();
       users.set(userId, user);
     }
@@ -336,7 +408,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
       const spec = DOCS[name];
       const current = user.docs[name];
       const rev = current?.rev ?? 0;
-      if (spec.merged && expected !== rev) return { conflict: true, current: current ?? { rev: 0, updatedAt: 0, doc: null } };
+      if ((spec.merged || (spec.checkedWhenSaid && typeof expected === "number")) && expected !== rev) return { conflict: true, current: current ?? { rev: 0, updatedAt: 0, doc: null } };
       const next = { rev: rev + 1, seq: user.seq + 1, updatedAt: Date.now(), doc };
       if (spec.keepVersions && current) await keepVersion(user, name, current, spec.keepVersions);
       await writeAtomic(path.join(user.dir, `${name}.json`), next);
@@ -408,6 +480,7 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
       log.cutShort = false;
       for (const key of fresh) log.keys.add(key);
       log.items.push(...added);
+      await writeListensMeta(user.dir, log);
       user.seq += 1;
       for (const wake of [...user.waiters]) wake();
       return added.length;
@@ -435,6 +508,9 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         log.items = items;
         log.keys = new Set(items.map((l) => `${l.device}|${l.at}|${l.id}`));
         log.cutShort = false;
+        // Numbered again: a device's place in it means nothing now, so it's a new generation.
+        log.generation = newGeneration();
+        await writeListensMeta(user.dir, log);
         user.seq += 1;
         for (const wake of [...user.waiters]) wake();
       }
@@ -476,10 +552,29 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     return run;
   }
 
-  /** A word for one device: taken on once it's on disk too. A command means now, or not at all: it's kept for a minute. */
-  async function postCommand(user, id, command) {
-    const entry = { at: Date.now(), command };
-    user.inbox.set(id, [...waitingCommands(user, id), entry].slice(-MAX_COMMANDS));
+  /** What a device said it's done with, lately, by word id: { at, result }. */
+  function doneOf(user, id) {
+    let done = user.done.get(id);
+    if (!done) {
+      done = new Map();
+      user.done.set(id, done);
+    }
+    const now = Date.now();
+    for (const [key, entry] of done) if (now - entry.at > COMMAND_KEPT_MS) done.delete(key);
+    return done;
+  }
+
+  /**
+   * A word for one device: taken on once it's on disk too. A command means now, or not at all: it's kept
+   * for a minute. Sent again with the same id (its answer got lost on the way), it's there once: still
+   * waiting, or done already (Codex, 2026-11-21: a lost answer said "failed" though the word arrived).
+   */
+  async function postCommand(user, id, command, given) {
+    const key = typeof given === "string" && COMMAND_ID.test(given) ? given : commandId();
+    const waiting = waitingCommands(user, id);
+    if (waiting.some((c) => c.id === key) || doneOf(user, id).has(key)) return key;
+    const entry = { at: Date.now(), id: key, command };
+    user.inbox.set(id, [...waiting, entry].slice(-MAX_COMMANDS));
     try {
       await saveInbox(user);
     } catch (err) {
@@ -491,6 +586,85 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     }
     user.seq += 1;
     for (const wake of [...user.waiters]) wake();
+    return key;
+  }
+
+  /**
+   * A device done with some of its words (it took them with keep=1): they go, and what it made of each
+   * stays a while for the sender. A word taken but never said done comes again at the next take, so an
+   * answer lost on the way loses nothing (Codex, 2026-11-21).
+   */
+  async function doneCommands(user, id, ids, results) {
+    const gone = new Set(ids.filter((key) => typeof key === "string" && COMMAND_ID.test(key)));
+    if (!gone.size) return 0;
+    const done = doneOf(user, id);
+    const now = Date.now();
+    for (const key of gone) {
+      const result = typeof results?.[key] === "string" ? results[key].slice(0, 20) : "done";
+      done.set(key, { at: now, result });
+    }
+    while (done.size > DONE_KEPT) done.delete(done.keys().next().value);
+    const list = waitingCommands(user, id);
+    const left = list.filter((c) => !gone.has(c.id));
+    if (left.length === list.length) return 0;
+    if (left.length) user.inbox.set(id, left);
+    else user.inbox.delete(id);
+    await saveInbox(user);
+    return list.length - left.length;
+  }
+
+  /**
+   * A device about to do some of its words (taken with keep=1): marked started, on disk too. Started and
+   * taken again (the device started anew, and the word that it was done got lost), it isn't done twice:
+   * the device says it done (Codex, 2026-11-21: a "next" ran twice).
+   */
+  async function startCommands(user, id, ids) {
+    const wanted = new Set(ids.filter((key) => typeof key === "string" && COMMAND_ID.test(key)));
+    const now = Date.now();
+    let marked = 0;
+    const list = waitingCommands(user, id).map((c) => {
+      if (!wanted.has(c.id) || c.started) return c;
+      marked += 1;
+      return { ...c, started: now };
+    });
+    if (!marked) return 0;
+    user.inbox.set(id, list);
+    await saveInbox(user);
+    return marked;
+  }
+
+  /** A word's way, for its sender: still waiting, or done and what came of it; nothing for one unknown or gone. */
+  function commandState(user, id, key) {
+    if (waitingCommands(user, id).some((c) => c.id === key)) return { state: "waiting" };
+    const done = doneOf(user, id).get(key);
+    return done ? { state: "done", result: done.result } : null;
+  }
+
+  /** A list of songs a command points to, in a file of its own: two lists sent at once each keep their songs. */
+  async function putList(user, listId, doc) {
+    const dir = path.join(user.dir, LISTS_DIR);
+    await mkdir(dir, { recursive: true });
+    await writeAtomic(path.join(dir, `${listId}.json`), { at: Date.now(), doc });
+    // Lists from a while ago go: their commands are long gone.
+    const now = Date.now();
+    for (const name of await readdir(dir).catch(() => [])) {
+      if (!name.endsWith(".json")) continue;
+      try {
+        const stored = JSON.parse(await readFile(path.join(dir, name), "utf8"));
+        if (!(now - stored.at <= LIST_KEPT_MS)) await rm(path.join(dir, name), { force: true });
+      } catch {
+        await rm(path.join(dir, name), { force: true });
+      }
+    }
+  }
+
+  async function getList(user, listId) {
+    try {
+      const stored = JSON.parse(await readFile(path.join(user.dir, LISTS_DIR, `${listId}.json`), "utf8"));
+      return Date.now() - stored.at <= LIST_KEPT_MS ? stored.doc : null;
+    } catch {
+      return null;
+    }
   }
 
   /** A device takes its commands: they're gone once that's on disk, so a restart doesn't hand them over twice. */
@@ -514,6 +688,8 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
       devices: user.devicesRev,
       listens: user.listens.items.length,
     },
+    // Changed also when the length didn't: a play taken out and another one added while a device was away.
+    listensGeneration: user.listens.generation,
     inbox: device ? waitingCommands(user, device).length : 0,
   });
 
@@ -538,12 +714,13 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     // Behind a proxy or tunnel it shares Jellyfin's name, under this path.
     const pathname = url.pathname.replace(/^\/songsta-sync(?=\/)/, "");
     if (req.method === "GET" && pathname === "/health") {
-      return send(res, 200, { ok: true, service: "songsta-sync", api: 1, version: VERSION, docs: Object.keys(DOCS), features: ["listens", "listens-remove"] });
+      return send(res, 200, { ok: true, service: "songsta-sync", api: 1, version: VERSION, docs: Object.keys(DOCS), features: ["listens", "listens-remove", "listens-generation", "commands-kept", "commands-started", "command-results", "lists"] });
     }
 
     const docMatch = /^\/v1\/docs\/([a-z]+)$/.exec(pathname);
-    const deviceMatch = new RegExp(`^/v1/devices(?:/(${DEVICE_ID})(/commands)?)?$`).exec(pathname);
-    if (pathname !== "/v1/changes" && pathname !== "/v1/listens" && !docMatch && !deviceMatch) throw new HttpError(404, "Not found");
+    const deviceMatch = new RegExp(`^/v1/devices(?:/(${DEVICE_ID})(/commands(?:/([A-Za-z0-9._:-]{1,80}))?)?)?$`).exec(pathname);
+    const listMatch = /^\/v1\/lists\/([^/]+)$/.exec(pathname);
+    if (pathname !== "/v1/changes" && pathname !== "/v1/listens" && !docMatch && !deviceMatch && !listMatch) throw new HttpError(404, "Not found");
     if (docMatch && !Object.hasOwn(DOCS, docMatch[1])) throw new HttpError(404, "No such document");
 
     const user = await userState(await authenticate(req));
@@ -562,13 +739,13 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         const since = Math.min(all.length, Math.max(0, Math.floor(Number(url.searchParams.get("since")) || 0)));
         const limit = Math.min(MAX_LISTENS_PER_PAGE, Math.max(1, Math.floor(Number(url.searchParams.get("limit")) || MAX_LISTENS_PER_PAGE)));
         const page = all.slice(since, since + limit);
-        return send(res, 200, { count: all.length, listens: page, devices: user.listens.devices, more: since + page.length < all.length });
+        return send(res, 200, { count: all.length, generation: user.listens.generation, listens: page, devices: user.listens.devices, more: since + page.length < all.length });
       }
       if (req.method === "DELETE") {
         const device = url.searchParams.get("device") ?? "";
         if (!new RegExp(`^${DEVICE_ID}$`).test(device)) throw new HttpError(400, "Whose plays?");
         const removed = await removeListens(user, device);
-        return send(res, 200, { ok: true, removed, count: user.listens.items.length });
+        return send(res, 200, { ok: true, removed, count: user.listens.items.length, generation: user.listens.generation });
       }
       if (req.method !== "POST") throw new HttpError(405, "Method not allowed");
       const body = await readBody(req);
@@ -577,11 +754,26 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
       if (!Array.isArray(body.listens) || body.listens.length > MAX_LISTENS_PER_POST) throw new HttpError(400, `Up to ${MAX_LISTENS_PER_POST} listens at a time`);
       const from = { id: String(device.id), name: text(device.name, 80) || "?", kind: device.kind === "phone" || device.kind === "computer" ? device.kind : undefined };
       const added = await appendListens(user, from, body.listens);
-      return send(res, 200, { ok: true, added, count: user.listens.items.length });
+      return send(res, 200, { ok: true, added, count: user.listens.items.length, generation: user.listens.generation });
+    }
+
+    if (listMatch) {
+      const listId = listMatch[1];
+      if (!LIST_ID.test(listId)) throw new HttpError(400, "Not a list's id");
+      if (req.method === "GET") {
+        const doc = await getList(user, listId);
+        if (!doc) throw new HttpError(404, "No such list now");
+        return send(res, 200, { doc });
+      }
+      if (req.method !== "PUT") throw new HttpError(405, "Method not allowed");
+      const body = await readBody(req);
+      if (!body?.doc || typeof body.doc !== "object" || Array.isArray(body.doc) || !Array.isArray(body.doc.tracks)) throw new HttpError(400, "A list has songs");
+      await putList(user, listId, body.doc);
+      return send(res, 200, { ok: true });
     }
 
     if (deviceMatch) {
-      const [, id, commands] = deviceMatch;
+      const [, id, commands, sub] = deviceMatch;
       if (!id) {
         if (req.method !== "GET") throw new HttpError(405, "Method not allowed");
         const now = Date.now();
@@ -591,8 +783,33 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         // The count of the list described: an answer arriving after a newer one is known to be older.
         return send(res, 200, { now, rev: user.devicesRev, devices });
       }
+      if (commands && sub === "start") {
+        if (req.method !== "POST") throw new HttpError(405, "Method not allowed");
+        const body = await readBody(req);
+        if (!Array.isArray(body?.ids) || body.ids.length > MAX_COMMANDS * 2) throw new HttpError(400, "Starting which?");
+        const marked = await startCommands(user, id, body.ids);
+        return send(res, 200, { ok: true, marked });
+      }
+      if (commands && sub === "done") {
+        if (req.method !== "POST") throw new HttpError(405, "Method not allowed");
+        const body = await readBody(req);
+        if (!Array.isArray(body?.ids) || body.ids.length > MAX_COMMANDS * 2) throw new HttpError(400, "Done with which?");
+        const removed = await doneCommands(user, id, body.ids, body.results && typeof body.results === "object" ? body.results : null);
+        return send(res, 200, { ok: true, removed });
+      }
+      if (commands && sub) {
+        if (req.method !== "GET") throw new HttpError(405, "Method not allowed");
+        const state = COMMAND_ID.test(sub) ? commandState(user, id, sub) : null;
+        if (!state) throw new HttpError(404, "No such word now");
+        return send(res, 200, state);
+      }
       if (commands) {
         if (req.method === "GET") {
+          // Kept until it says it's done with them: an answer lost on the way loses nothing.
+          if (url.searchParams.get("keep") === "1") {
+            const list = waitingCommands(user, id);
+            return send(res, 200, { commands: list.map((c) => c.command), ids: list.map((c) => c.id), started: list.filter((c) => c.started).map((c) => c.id) });
+          }
           const list = await takeCommands(user, id);
           return send(res, 200, { commands: list.map((c) => c.command) });
         }
@@ -601,8 +818,8 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
         if (!body?.command || typeof body.command !== "object" || JSON.stringify(body.command).length > MAX_DEVICE_BYTES) {
           throw new HttpError(400, "A command is a small object");
         }
-        await postCommand(user, id, body.command);
-        return send(res, 200, { ok: true });
+        const key = await postCommand(user, id, body.command, body.id);
+        return send(res, 200, { ok: true, id: key });
       }
       if (req.method !== "PUT") throw new HttpError(405, "Method not allowed");
       const body = await readBody(req);
@@ -634,13 +851,17 @@ export function createSyncServer({ dataDir, jellyfinUrl }) {
     return send(res, 200, { rev: result.next.rev, seq: result.next.seq, updatedAt: result.next.updatedAt });
   }
 
-  return createServer((req, res) => {
+  return (req, res) => {
     handle(req, res).catch((err) => {
       if (!(err instanceof HttpError)) console.error("[sync] request failed:", err);
       if (res.headersSent) return res.destroy();
       send(res, err instanceof HttpError ? err.status : 500, { error: err instanceof HttpError ? err.message : "Something went wrong" });
     });
-  });
+  };
+}
+
+export function createSyncServer(options) {
+  return createServer(createSyncHandler(options));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

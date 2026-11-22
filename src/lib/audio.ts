@@ -37,6 +37,7 @@
  * play(), so `ended` usually lands first — so both funnel through one
  * idempotent completion, and the deck that is already playing wins either way.
  */
+import { phoneAddressOf } from "./peerSongs";
 import { useLibrary } from "../stores/library";
 import { setQueueRanOut, usePlayer } from "../stores/player";
 import { placeOf } from "./queueSections";
@@ -1483,7 +1484,7 @@ async function loadUrl(track: Track, autoplay: boolean): Promise<void> {
   loadingId = track.id;
   try {
     // A song from before this was a local player: it has no place to play from.
-    if (!isLibraryTrack(track)) throw new LibrarySourceError("missing");
+    if (!isLibraryTrack(track) && !phoneAddressOf(track.id)) throw new LibrarySourceError("missing");
     // Local files stream through the main-process proxy (a file:// src is
     // blocked from the http renderer origin). Always resolve fresh — the
     // proxy port changes between launches, so cached URLs would go stale,

@@ -14,14 +14,15 @@ import { Artwork, EmptyState, Pills, ShelfScroller } from "../components/primiti
 import { useLibraryIndex } from "../lib/catalogIndex";
 import { fmtTime } from "../lib/format";
 import { matchesQuery } from "../lib/libraryTracks";
-import { songKey } from "../stores/catalog";
+import { scopeLibrary, type SearchScope } from "../lib/searchScope";
+import { songKey, useCatalog } from "../stores/catalog";
 import { usePlayer } from "../stores/player";
 import { useUI } from "../stores/ui";
 import type { Track } from "../types";
 import type { LyricMatch } from "../../electron/lyrics-index";
 import { T } from "../lib/i18n";
 
-type Scope = "all" | "local" | "jellyfin" | "subsonic";
+type Scope = SearchScope;
 
 const MAX_RESULTS = 300;
 const fold = (s: string): string => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
@@ -32,16 +33,18 @@ export function LibrarySearchView() {
   const [scope, setScope] = useState<Scope>("all");
   const q = query.trim();
 
-  const sources = useMemo(() => new Set(tracks.map((t) => t.source ?? "local")), [tracks]);
-  const pool = useMemo(() => (scope === "all" ? tracks : tracks.filter((t) => (t.source ?? "local") === scope)), [scope, tracks]);
+  const versions = useCatalog((s) => s.versions);
+  // Every copy of a song counts, and the albums and artists come from the same songs (lib/searchScope.ts).
+  const scoped = useMemo(() => scopeLibrary({ tracks, albums, artists }, versions, scope), [tracks, albums, artists, versions, scope]);
+  const { sources, tracks: pool } = scoped;
   const songs = useMemo(() => (q ? pool.filter((t) => matchesQuery(t, q)) : []), [pool, q]);
   const matchingArtists = useMemo(
-    () => (q ? artists.filter((a) => fold(a.name).includes(fold(q))).slice(0, 12) : []),
-    [artists, q]
+    () => (q ? scoped.artists.filter((a) => fold(a.name).includes(fold(q))).slice(0, 12) : []),
+    [scoped, q]
   );
   const matchingAlbums = useMemo(
-    () => (q ? albums.filter((a) => fold(`${a.title} ${a.artist}`).includes(fold(q))).slice(0, 18) : []),
-    [albums, q]
+    () => (q ? scoped.albums.filter((a) => fold(`${a.title} ${a.artist}`).includes(fold(q))).slice(0, 18) : []),
+    [scoped, q]
   );
 
   // Lyrics are searched in the main process, a moment after typing stops.

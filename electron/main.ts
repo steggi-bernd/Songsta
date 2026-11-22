@@ -18,6 +18,7 @@ import * as folderWatch from "./folder-watch";
 import * as archive from "./archive-import";
 import * as cast from "./cast";
 import { samePath } from "./local-paths";
+import * as homeLink from "./home-link";
 import * as homeSync from "./home-sync";
 import * as jellyfin from "./jellyfin";
 import * as subsonic from "./subsonic";
@@ -36,7 +37,7 @@ import * as locallib from "./local-library";
 import * as persist from "./persist";
 import * as pip from "./pip";
 import * as stats from "./stats";
-import { proxyUrlForJellyfin, proxyUrlForLocalTrack, proxyUrlForSubsonic, startStreamProxy } from "./stream-proxy";
+import { isPeerAddress, proxyUrlForJellyfin, proxyUrlForLocalTrack, proxyUrlForPeer, proxyUrlForSubsonic, startStreamProxy } from "./stream-proxy";
 import * as transcode from "./transcode";
 import * as transition from "./data-transition";
 import { buildAppMenu, type MenuCommand, type MenuPlaybackState, type MenuWiring } from "./mac-menu";
@@ -678,6 +679,12 @@ function registerIpc(): void {
     return proxyUrlForLocalTrack(key) ?? pathToFileURL(served).toString();
   });
   ipc.handle("library:trackerror", (_e, id: string) => trackUrlErrors.get(String(id ?? "")) ?? null);
+  // A song only a phone linked to this computer has: from its file server at home, through the proxy.
+  ipc.handle("library:peerurl", async (_e, address: unknown) => {
+    if (typeof address !== "string" || !isPeerAddress(address)) return null;
+    await startStreamProxy();
+    return proxyUrlForPeer(address);
+  });
   ipc.handle("ffmpeg:status", (_e, recheck?: boolean) => transcode.ffmpegStatus(recheck === true));
   ipc.handle("library:artbytes", async (_e, thumb: string) => {
     if (String(thumb ?? "").startsWith("jfart://")) return (await jellyfin.artBytes(String(thumb)))?.data ?? null;
@@ -770,6 +777,13 @@ function registerIpc(): void {
   ipc.handle("homeSync:request", (_e, method: unknown, path: unknown, body: unknown, timeoutMs: unknown) =>
     homeSync.request(method, path, body, timeoutMs)
   );
+
+  // Phones at home without a sync service: this computer is theirs (home-link.ts).
+  ipc.handle("homeLink:status", () => homeLink.status());
+  ipc.handle("homeLink:setEnabled", (_e, on: unknown) => homeLink.setEnabled(on === true));
+  ipc.handle("homeLink:openPairing", () => homeLink.openPairing());
+  ipc.handle("homeLink:closePairing", () => homeLink.closePairing());
+  ipc.handle("homeLink:remove", (_e, id: unknown) => homeLink.removeDevice(String(id ?? "").slice(0, 80)));
 
   // Server sync: Liked Songs ↔ the servers' favorites, plays counted there too.
   // The renderer decides what changes (lib/serverSync.ts); these only talk to the servers.
@@ -1365,6 +1379,7 @@ if (!gotLock) {
       pip.savePipRect();
       discord.stopDiscord();
       void cast.stopAll();
+      homeLink.stop();
       // Close-time durability: the renderer's last coalesced writes may still
       // be in flight when the window dies.
       // Hold quit for a bounded drain — the final player write lands unless
@@ -1398,6 +1413,15 @@ if (!gotLock) {
     registerIpc();
     stats.initStats();
     void startStreamProxy().catch((err) => console.warn("[bytune] stream proxy failed:", err));
+    // Switched on for phones at home: it runs while Songsta is open, and the page hears when a phone pairs.
+    homeLink.onHomeLinkChange(() => {
+      try {
+        mainWindow?.webContents.send("homeLink:changed");
+      } catch {
+        /* the window is going */
+      }
+    });
+    homeLink.start();
     createWindow();
     app.on("activate", () => {
       // macOS Dock re-open: bring the hidden main window back, recreate it

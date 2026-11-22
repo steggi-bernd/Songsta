@@ -57,13 +57,15 @@ import { SmartPlaylistView } from "./views/SmartPlaylistView";
 import { SubsonicView } from "./views/SubsonicView";
 import { SpotifyImportView } from "./views/SpotifyImportView";
 import { LibrarySearchView } from "./views/LibrarySearchView";
-import { LibraryView } from "./views/LibraryView";
+import { ClassicLibraryPage, isLibraryPage, LibraryView } from "./views/LibraryView";
+import { ClassicHomeView } from "./views/ClassicHomeView";
 import { LocalMusicView } from "./views/LocalMusicView";
 import { ExploreView } from "./views/ExploreView";
 import { LibraryCheckView } from "./views/LibraryCheckView";
 import { GenreView } from "./views/GenreView";
 import { PlaylistView } from "./views/PlaylistView";
 import { ReplayView } from "./views/ReplayView";
+import { HeardView } from "./views/HeardView";
 import { SoundsLikeView } from "./views/SoundsLikeView";
 import { SetupPages } from "./components/SetupPages";
 import { SettingsView } from "./views/SettingsView";
@@ -100,7 +102,7 @@ function TintWash() {
     });
   }, [color]);
 
-  if (viewName === "artist" || viewName === "playlist" || viewName === "artistliked" || viewName === "settings" || likedPage) return null;
+  if (viewName === "artist" || viewName === "playlist" || viewName === "artistliked" || viewName === "heard" || viewName === "settings" || likedPage) return null;
   return (
     <>
       {([0, 1] as const).map((i) => (
@@ -275,9 +277,11 @@ function useAppearance(): void {
  */
 function CurrentView(): ReactNode {
   const view = useUI((s) => s.view);
+  // Settings → Home with your library, off: the earlier Home and the Your Library page.
+  const homeWithLibrary = useSettings((s) => s.homeWithLibrary);
   switch (view.name) {
     case "home":
-      return <LibraryHomeView />;
+      return homeWithLibrary ? <LibraryHomeView /> : <ClassicHomeView />;
     case "local":
       return <LocalMusicView />;
     case "explore":
@@ -304,13 +308,16 @@ function CurrentView(): ReactNode {
       return <LibrarySearchView />;
     case "library":
     case "playlists":
-      return <LibraryView />;
+      // Liked Songs and the downloads; the rest of what was Your Library is on Home now.
+      return isLibraryPage(view.param) ? <LibraryView /> : homeWithLibrary ? <LibraryHomeView /> : <ClassicLibraryPage />;
     case "playlist":
       return <PlaylistView playlistId={view.param ?? ""} />;
     case "jellyfin":
       return <JellyfinView />;
     case "replay":
       return <ReplayView />;
+    case "heard":
+      return <HeardView />;
     case "soundslike":
       return <SoundsLikeView key={view.param ?? "now"} id={view.param} />;
     case "spotify":
@@ -318,7 +325,7 @@ function CurrentView(): ReactNode {
     case "settings":
       return <SettingsView />;
     default:
-      return <LibraryHomeView />;
+      return homeWithLibrary ? <LibraryHomeView /> : <ClassicHomeView />;
   }
 }
 

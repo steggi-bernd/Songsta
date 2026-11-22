@@ -61,9 +61,36 @@ export function noteListen(track: Track, startedAt: number): void {
 
 /** The file may end in the middle of a line (a write broke off): the next lines start on one of their own. */
 let cutShort = false;
+/** Whether the end of the journal on disk was looked at since the start. */
+let endChecked = false;
+
+/**
+ * A journal left ending in the middle of a line (the app stopped while writing) is noticed before the
+ * first line goes on: that line used to be glued to the broken one and was lost at the next reading.
+ */
+async function checkEnd(): Promise<void> {
+  if (endChecked) return;
+  endChecked = true;
+  try {
+    const handle = await fs.promises.open(file(), "r");
+    try {
+      const { size } = await handle.stat();
+      if (size > 0) {
+        const last = Buffer.alloc(1);
+        await handle.read(last, 0, 1, size - 1);
+        if (last[0] !== 0x0a) cutShort = true;
+      }
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    /* no journal yet */
+  }
+}
 
 /** Lines onto the end of the journal; a failure reaches the caller. */
 async function append(lines: string[]): Promise<void> {
+  await checkEnd();
   const text = `${lines.join("\n")}\n`;
   try {
     await fs.promises.appendFile(file(), cutShort ? `\n${text}` : text, "utf8");
@@ -72,6 +99,7 @@ async function append(lines: string[]): Promise<void> {
     cutShort = true;
     throw err;
   }
+  remember(lines);
 }
 
 /**
@@ -101,47 +129,77 @@ export function flushListensSync(): void {
   try {
     const text = `${pending.join("\n")}\n`;
     fs.appendFileSync(file(), cutShort ? `\n${text}` : text, "utf8");
+    remember(pending);
   } catch {
     /* a read-only profile keeps nothing */
   }
   pending = [];
 }
 
+/** A line of the journal, read safely; null when it isn't a listen (a line cut short by a crash). */
+function readLine(line: string): Listen | null {
+  if (!line.trim()) return null;
+  try {
+    const l = JSON.parse(line) as Partial<Listen>;
+    if (typeof l.at !== "number" || typeof l.title !== "string" || typeof l.id !== "string") return null;
+    return {
+      at: l.at,
+      id: l.id,
+      title: l.title,
+      artist: String(l.artist ?? ""),
+      album: String(l.album ?? ""),
+      duration: Number(l.duration) || 0,
+      ...(typeof l.device === "string" && l.device
+        ? { device: l.device, deviceName: String(l.deviceName ?? ""), ...(l.deviceKind === "phone" || l.deviceKind === "computer" ? { deviceKind: l.deviceKind } : {}) }
+        : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Who played a listen, when, what: a listen standing twice (a write broke off and went again) counts once. */
+const lineKey = (l: Listen): string => `${l.device ?? ""}|${l.at}|${l.id}`;
+
+/**
+ * The journal as read, kept while the app runs; every write here keeps it up to date. It used to be read
+ * from disk and parsed whole for every page of Replay and every round of the shared history, which grows
+ * with years of listening (2026-11-21). Callers don't change what they're given.
+ */
+let cache: { listens: Listen[]; keys: Set<string> } | null = null;
+
 function readAll(): Listen[] {
+  if (cache) return cache.listens;
   let text = "";
   try {
     text = fs.readFileSync(file(), "utf8");
-  } catch {
+  } catch (err) {
+    // No journal yet is an empty one; one that can't be read now is read again next time.
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") cache = { listens: [], keys: new Set() };
     return [];
   }
-  const out: Listen[] = [];
-  // A listen can stand twice when a write broke off after some lines and they were written again: once counts.
-  const seen = new Set<string>();
+  if (text && !text.endsWith("\n")) cutShort = true;
+  const listens: Listen[] = [];
+  const keys = new Set<string>();
   for (const line of text.split("\n")) {
-    if (!line.trim()) continue;
-    try {
-      const l = JSON.parse(line) as Partial<Listen>;
-      if (typeof l.at === "number" && typeof l.title === "string" && typeof l.id === "string") {
-        const key = `${typeof l.device === "string" ? l.device : ""}|${l.at}|${l.id}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        out.push({
-          at: l.at,
-          id: l.id,
-          title: l.title,
-          artist: String(l.artist ?? ""),
-          album: String(l.album ?? ""),
-          duration: Number(l.duration) || 0,
-          ...(typeof l.device === "string" && l.device
-            ? { device: l.device, deviceName: String(l.deviceName ?? ""), ...(l.deviceKind === "phone" || l.deviceKind === "computer" ? { deviceKind: l.deviceKind } : {}) }
-            : {}),
-        });
-      }
-    } catch {
-      /* a line cut by a crash — the rest stands */
-    }
+    const l = readLine(line);
+    if (!l || keys.has(lineKey(l))) continue;
+    keys.add(lineKey(l));
+    listens.push(l);
   }
-  return out;
+  cache = { listens, keys };
+  return listens;
+}
+
+/** Lines just written, into what's kept, the way they'd be read back. */
+function remember(lines: string[]): void {
+  if (!cache) return;
+  for (const line of lines) {
+    const l = readLine(line);
+    if (!l || cache.keys.has(lineKey(l))) continue;
+    cache.keys.add(lineKey(l));
+    cache.listens.push(l);
+  }
 }
 
 /**
@@ -201,7 +259,7 @@ export async function noteRemoteListens(listens: SharedListen[], devices: Record
 /** Newest first, a page at a time: the listens before `before` (ms), and whether older ones exist. */
 export async function readListens(before?: number, limit = 100): Promise<{ listens: Listen[]; more: boolean; total: number }> {
   await flushListens();
-  const all = readAll().sort((a, b) => b.at - a.at);
+  const all = [...readAll()].sort((a, b) => b.at - a.at);
   const from = typeof before === "number" && Number.isFinite(before) ? all.filter((l) => l.at < before) : all;
   const n = Math.max(1, Math.min(MAX_PAGE, Math.floor(limit) || 100));
   return { listens: from.slice(0, n), more: from.length > n, total: all.length };
@@ -312,7 +370,7 @@ export async function listensCsv(): Promise<{ csv: string; count: number }> {
     const safe = /^[=+\-@]/.test(s) ? `'${s}` : s;
     return /[",\n\r;]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
   };
-  const rows = readAll().sort((a, b) => a.at - b.at);
+  const rows = [...readAll()].sort((a, b) => a.at - b.at);
   const lines = ["Listened at (UTC),Title,Artist,Album,Length (s),Device"];
   for (const l of rows) lines.push([new Date(l.at).toISOString(), l.title, l.artist, l.album, l.duration, l.device ? l.deviceName || l.device : ""].map((v) => cell(v)).join(","));
   return { csv: `\ufeff${lines.join("\r\n")}\r\n`, count: rows.length };
@@ -333,4 +391,6 @@ export async function clearListens(): Promise<void> {
   remoteKeys = null;
   await writing;
   await fs.promises.rm(file(), { force: true });
+  cache = null;
+  cutShort = false;
 }

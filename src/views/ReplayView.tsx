@@ -12,13 +12,11 @@
  * a little in its place instead of pulling it to the front.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from "react";
-import { Clock3, FileDown, ListPlus, Monitor, MonitorSmartphone, Pause, Play, Smartphone } from "lucide-react";
-import type { Listen } from "../../electron/listens";
+import { Clock3, FileDown, ListPlus, Pause, Play } from "lucide-react";
 import { Artwork, Btn, EmptyState, ErrorState, Pills } from "../components/primitives";
 import { genresOfTrack } from "../lib/albumGenres";
 import { useLibraryIndex } from "../lib/catalogIndex";
 import { plural } from "../lib/format";
-import { ipcErrorText } from "../lib/ipcError";
 import { artistRoute, leadArtist } from "../lib/libraryCore";
 import { useCatalog } from "../stores/catalog";
 import { usePlayer } from "../stores/player";
@@ -27,8 +25,9 @@ import { resolveArtistAbout } from "../lib/artistAbout";
 import { useLibrary } from "../stores/library";
 import type { Track } from "../types";
 import { T, textLocale } from "../lib/i18n";
-import { readListensNow, useHomeSync } from "../lib/homeSync";
-import { LISTENS_UPDATED, useListenCursors } from "../lib/listenShare";
+import { readListensNow } from "../lib/homeSync";
+import { LISTENS_UPDATED } from "../lib/listenShare";
+import { HistoryList, exportListeningHistory, useListeningHistory } from "../components/ListeningHistory";
 import { pageSlides } from "../lib/slidePaging";
 import { useSettings } from "../stores/settings";
 import { ListeningCalendar } from "../components/ListeningCalendar";
@@ -918,71 +917,14 @@ export function ReplayView() {
 }
 
 
-/** "Today", "Yesterday", else the weekday and date (the year only when it isn't this one). */
-function dayTitle(ms: number): string {
-  const d = new Date(ms);
-  const today = new Date();
-  const days = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86_400_000);
-  if (days === 0) return T("Today");
-  if (days === 1) return T("Yesterday");
-  return d.toLocaleDateString(textLocale(), { weekday: "long", day: "numeric", month: "long", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
-}
 
 /**
- * Every listen, newest first and by day — scrobbling that never leaves this
- * computer (electron/listens.ts), a page at a time. A song still in the
- * library plays from its row; "Export…" saves the whole history as a
- * spreadsheet.
+ * Every listen, newest first and by day (components/ListeningHistory.tsx): a song still in the
+ * library plays from its row; "Export…" saves the whole history as a spreadsheet.
  */
 function ListeningHistory() {
-  const [listens, setListens] = useState<Listen[]>([]);
-  const [more, setMore] = useState(false);
-  const [total, setTotal] = useState(0);
-  const toast = useUI((s) => s.toast);
-  // With a sync service that keeps the shared history, this computer's plays go to the other devices too.
-  const linked = useHomeSync((s) => s.linked);
-  const serviceMissing = useListenCursors((s) => s.missing);
-  const shareListens = useSettings((s) => s.shareListens && s.syncPlaylists && s.recordListening);
-  const shared = linked && !serviceMissing && shareListens;
-
-  const load = (before?: number): void => {
-    void window.bytune
-      ?.listensPage(before, 100)
-      .then((page) => {
-        setListens((prev) => (before ? [...prev, ...page.listens] : page.listens));
-        setMore(page.more);
-        setTotal(page.total);
-      })
-      .catch(() => undefined);
-  };
-  useEffect(() => {
-    load();
-    const again = (): void => load();
-    window.addEventListener(LISTENS_UPDATED, again);
-    return () => window.removeEventListener(LISTENS_UPDATED, again);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const exportCsv = async (): Promise<void> => {
-    try {
-      const res = await window.bytune?.listensExport();
-      if (res) toast(T("Saved {count} to {pop}", { count: plural(res.count, T("listen"), T("listens")), pop: res.path.split(/[\\/]/).pop() }), "success");
-    } catch (err) {
-      toast(ipcErrorText(err, T("Couldn't save the listening history")), "error");
-    }
-  };
-
+  const { listens, more, total, shared, loadMore } = useListeningHistory();
   if (!listens.length) return null;
-  // Another device's plays carry its name at the row's end; every row keeps that place, so the columns line up.
-  const anyRemote = listens.some((l) => l.device);
-  const days: { title: string; items: Listen[] }[] = [];
-  for (const l of listens) {
-    const title = dayTitle(l.at);
-    const last = days[days.length - 1];
-    if (last?.title === title) last.items.push(l);
-    else days.push({ title, items: [l] });
-  }
-
   return (
     <section>
       <div className="flex items-end justify-between gap-4 mb-4">
@@ -995,76 +937,10 @@ function ListeningHistory() {
           </p>
         </div>
         <div className="shrink-0 whitespace-nowrap">
-          <Btn variant="glass" size="sm" icon={FileDown} onClick={() => void exportCsv()}>{T("Export…")}</Btn>
+          <Btn variant="glass" size="sm" icon={FileDown} onClick={() => void exportListeningHistory()}>{T("Export…")}</Btn>
         </div>
       </div>
-      <HistoryList days={days} anyRemote={anyRemote} more={more} onMore={() => load(listens[listens.length - 1].at)} />
+      <HistoryList listens={listens} more={more} onMore={loadMore} />
     </section>
-  );
-}
-
-/**
- * The history's rows, laid out for the room they have (a half-screen window with both side panels
- * leaves little): the artist where it fits; another device's name, or where that doesn't fit its
- * sign; and the song's title always.
- */
-function HistoryList({ days, anyRemote, more, onMore }: { days: { title: string; items: Listen[] }[]; anyRemote: boolean; more: boolean; onMore: () => void }) {
-  const byId = useCatalog((s) => s.byId);
-  const [ref, width] = useWidth<HTMLDivElement>();
-  const withArtist = width === 0 || width >= 420;
-  const deviceNames = width === 0 || width >= 600;
-  return (
-    <div ref={ref} className="glass-pill rounded-2xl p-2">
-      {days.map((d) => (
-        <div key={d.title}>
-          <div className="px-3 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">{d.title}</div>
-          {d.items.map((l, i) => {
-            const track = byId.get(l.id);
-            const said = T("Played on {device}", { device: l.deviceName || T("Other device") });
-            const DeviceSign = l.deviceKind === "phone" ? Smartphone : l.deviceKind === "computer" ? Monitor : MonitorSmartphone;
-            return (
-              <div
-                key={`${l.at}-${i}`}
-                onClick={track ? () => usePlayer.getState().playTrack(track) : undefined}
-                title={track ? T("Play {title}", { title: l.title }) : undefined}
-                className={`flex items-center gap-3 px-3 h-11 rounded-lg transition-colors hover:bg-ink-hi/[0.05] ${track ? "cursor-pointer" : ""}`}
-              >
-                <span className="min-w-12 shrink-0 whitespace-nowrap text-[12.5px] tabular-nums text-ink-faint">
-                  {new Date(l.at).toLocaleTimeString(textLocale(), { hour: "2-digit", minute: "2-digit" })}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink-hi">{l.title}</span>
-                {withArtist && (
-                  <span className={`${deviceNames ? "w-[40%]" : "w-[34%]"} min-w-0 truncate text-[13px] text-ink-dim`}>
-                    {l.artist}
-                    {l.album ? ` · ${l.album}` : ""}
-                  </span>
-                )}
-                {/* Another device's play, from the shared history: every row keeps the place, so the columns line up. */}
-                {anyRemote &&
-                  (deviceNames ? (
-                    <span className="w-[96px] shrink-0 flex justify-end">
-                      {l.device && (
-                        <span className="max-w-full truncate rounded-full bg-ink-hi/[0.07] px-2 py-0.5 text-[11px] font-semibold text-ink-dim" title={said}>
-                          {l.deviceName || T("Other device")}
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="w-5 shrink-0 grid place-items-center text-ink-dim" title={l.device ? said : undefined}>
-                      {l.device && <DeviceSign className="w-4 h-4" aria-label={said} />}
-                    </span>
-                  ))}
-              </div>
-            );
-          })}
-        </div>
-      ))}
-      {more && (
-        <button
-          onClick={onMore}
-          className="w-full h-10 mt-1 rounded-lg text-[13px] font-semibold text-ink-hi/70 hover:text-ink-hi hover:bg-ink-hi/[0.05] transition-colors"
-        >{T("Show more")}</button>
-      )}
-    </div>
   );
 }

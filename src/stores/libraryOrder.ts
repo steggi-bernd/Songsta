@@ -22,8 +22,12 @@ interface LibraryOrderState {
   pins: string[];
   /** the pinned rows' order, top first, by row id */
   pinOrder: string[];
-  /** the played times were started from the listening history (once) */
-  seeded: boolean;
+  /**
+   * From when the played times count (set once, 2026-11-22): Home's "played last" tiles and the panel's
+   * Recently played take only what was really played from since then, not the times guessed from the
+   * history (those named the albums of single songs heard from a playlist).
+   */
+  homeSince: number | null;
   /** albums and playlists put together in groups that fold, in the library panel */
   groups: Group[];
   setGroups(groups: Group[]): void;
@@ -31,8 +35,6 @@ interface LibraryOrderState {
   exploreGroups: ExploreGroups;
   setExploreGroups(tab: keyof ExploreGroups, groups: Group[]): void;
   touch(id: string, at?: number): void;
-  /** the history's played times, under any kept since */
-  seed(played: Record<string, number>): void;
   /** your plays deleted (Settings → Network & privacy): when anything played is forgotten too */
   forgetPlayed(): void;
   togglePin(id: string): void;
@@ -51,7 +53,7 @@ export const useLibraryOrder = create<LibraryOrderState>()(
       played: {},
       pins: [],
       pinOrder: [],
-      seeded: false,
+      homeSince: null,
       groups: [],
       setGroups(groups) {
         set({ groups });
@@ -63,11 +65,8 @@ export const useLibraryOrder = create<LibraryOrderState>()(
       touch(id, at = Date.now()) {
         set({ played: newest({ ...get().played, [id]: at }) });
       },
-      seed(played) {
-        set({ played: newest({ ...played, ...get().played }), seeded: true });
-      },
       forgetPlayed() {
-        set({ played: {}, seeded: true });
+        set({ played: {} });
       },
       togglePin(id) {
         const { pins, pinOrder } = get();
@@ -84,7 +83,7 @@ export const useLibraryOrder = create<LibraryOrderState>()(
     {
       name: "library-order",
       storage: lazyJSONStorage(),
-      partialize: (s) => ({ played: s.played, pins: s.pins, pinOrder: s.pinOrder, seeded: s.seeded, groups: s.groups, exploreGroups: s.exploreGroups }),
+      partialize: (s) => ({ played: s.played, pins: s.pins, pinOrder: s.pinOrder, homeSince: s.homeSince, groups: s.groups, exploreGroups: s.exploreGroups }),
       // Groups read with care: the test builds' albums-only groups come along (lib/libraryGroups.ts).
       merge: (saved, current) => {
         const s = (saved ?? {}) as Partial<LibraryOrderState>;

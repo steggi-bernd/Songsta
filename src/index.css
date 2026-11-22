@@ -1002,6 +1002,14 @@ html.noglass .chrome-glass {
 .animate-rise-in {
   animation: rise-in var(--motion-small) var(--ease-enter);
 }
+/* A page whose head reaches up to the panel's top edge (.page-bleed pulled up over the view's top
+   padding: Home, playlists, artists, Replay) comes without an entrance: it's there at once. Rising, it
+   opened a strip of the panel above the head; fading, the page became one translucent layer for those
+   180 ms, and a hairline could open at the head's foot where its layers meet (the user saw it on Home,
+   2026-11-22). */
+.animate-rise-in:has(> .page-bleed:first-child, > :first-child > .page-bleed:first-child) {
+  animation: none;
+}
 
 /* ---------- fullscreen (NowPlaying) cinematic transition ----------
    One continuous move, staged by delay — artwork/background first, then

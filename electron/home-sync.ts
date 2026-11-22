@@ -1,16 +1,20 @@
 /**
  * The desktop's line to the sync service (sync-server/). What to say is decided
  * in the page (lib/homeSync.ts, lib/syncEngine.ts); this side holds the Jellyfin
- * login and makes the requests, so the token never reaches the page.
+ * login and makes the requests, so the token never reaches the page. With phones
+ * at home linked to this computer (home-link.ts), the service is this computer's
+ * own, asked with its own token, and no Jellyfin login is needed.
  */
 import * as os from "os";
 import { defaultSyncAddress } from "../src/lib/syncEngine";
+import { homeLinkLogin } from "./home-link-login";
 import * as jellyfin from "./jellyfin";
 import * as persist from "./persist";
 
 const STORE = "home-sync";
 const MAX_TIMEOUT_MS = 60_000;
-const ALLOWED_PATH = /^\/v1\/(docs\/[a-z]+|changes\?since=-?\d+&wait=\d+(&device=[A-Za-z0-9._%:-]+)?|devices(\/[A-Za-z0-9._%:-]+(\/commands)?)?|listens(\?since=\d+&limit=\d+)?)$/;
+// Commands taken with keep=1, said done, asked after (…/commands/:id), and lists of their own (2026-11-21).
+const ALLOWED_PATH = /^\/v1\/(docs\/[a-z]+|changes\?since=-?\d+&wait=\d+(&device=[A-Za-z0-9._%:-]+)?|devices(\/[A-Za-z0-9._%:-]+(\/commands(\?keep=1|\/[A-Za-z0-9._%:-]+)?)?)?|lists\/[A-Za-z0-9._%:-]+|listens(\?since=\d+&limit=\d+)?)$/;
 /** A device's plays taken out of the shared history (DELETE only). */
 const REMOVE_PATH = /^\/v1\/listens\?device=[A-Za-z0-9._%:-]+$/;
 /** What the service says about itself: its version and documents, asked once it's linked. */
@@ -27,6 +31,8 @@ export interface HomeSyncInfo {
   customAddress: string;
   /** which server this is, whatever address it's reached at: another server is looked for afresh */
   serverKey: string | null;
+  /** the service is this computer's own, for phones at home (Settings → Phones at home) */
+  home: boolean;
 }
 
 function customAddress(): string {
@@ -39,6 +45,10 @@ function addressFor(server: string | undefined): string | null {
 }
 
 export function info(): HomeSyncInfo {
+  const home = homeLinkLogin();
+  if (home) {
+    return { ready: true, needsUser: false, deviceId: home.deviceId, deviceName: os.hostname(), address: home.address, customAddress: customAddress(), serverKey: `home|${home.serviceId}`, home: true };
+  }
   const login = jellyfin.syncLogin();
   return {
     ready: !!login?.userId,
@@ -48,13 +58,14 @@ export function info(): HomeSyncInfo {
     address: addressFor(login?.server),
     customAddress: customAddress(),
     serverKey: login ? `${login.serverId || login.server}|${customAddress()}` : null,
+    home: false,
   };
 }
 
 /** The sync service's addresses: yours, always reachable (net-gate.ts). */
 export function syncAddresses(): string[] {
   const login = jellyfin.syncLogin();
-  return [customAddress(), login?.server ? defaultSyncAddress(login.server) : null].filter((a): a is string => !!a);
+  return [customAddress(), login?.server ? defaultSyncAddress(login.server) : null, homeLinkLogin()?.address].filter((a): a is string => !!a);
 }
 
 export async function setAddress(value: string): Promise<HomeSyncInfo> {
@@ -70,14 +81,14 @@ export async function request(method: unknown, path: unknown, body: unknown, tim
   if (typeof path !== "string" || !(removal || ALLOWED_PATH.test(path) || (method === "GET" && path === HEALTH_PATH))) {
     throw new Error("Not a request for the sync service");
   }
-  const login = jellyfin.syncLogin();
-  const base = addressFor(login?.server);
-  if (!login?.userId || !base) throw new Error("No login to sync with");
+  const home = homeLinkLogin();
+  const login = home ? null : jellyfin.syncLogin();
+  const base = home ? home.address : addressFor(login?.server);
+  if (!base || (!home && !login?.userId)) throw new Error("No login to sync with");
   const res = await fetch(`${base}${path}`, {
     method,
     headers: {
-      Authorization: login.authorization,
-      "X-Songsta-User": login.userId,
+      ...(home ? { Authorization: home.authorization } : { Authorization: login!.authorization, "X-Songsta-User": login!.userId! }),
       Accept: "application/json",
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
     },

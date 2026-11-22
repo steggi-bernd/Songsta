@@ -44,6 +44,8 @@ interface SharedSaved {
   sentFloor?: number;
   /** how far the shared history was read (the service's count) */
   readUpTo: number;
+  /** the version (generation) of the service's history read to its end: another one is read afresh */
+  generation?: string;
   listens: PhoneListen[];
 }
 
@@ -61,6 +63,8 @@ interface ListensState {
   /** this phone's plays before this place were taken off the service on asking (sync.ts removeSharedListens): never sent again */
   sentFloor: number;
   readUpTo: number;
+  /** the version (generation) of the service's history read to its end */
+  generation: string | null;
   /** the sync service keeps no shared history (one from before 1.8) */
   missing: boolean;
   loaded: boolean;
@@ -79,17 +83,25 @@ interface ListensState {
   /** The other devices' plays from the service, and how far that reads; with startOver, read it all again and send this phone's plays again. */
   take(listens: SharedListen[], devices: Record<string, ListenDevice>, upTo: number, startOver?: boolean): void;
   setMissing(missing: boolean): void;
+  /** The version of the history read to its end, and the one being read afresh right now. */
+  versionRead(): { read: string | null; afresh: string | null };
+  /** Another version of the service's history: read it from its start; this phone's plays go again. What came in stays. */
+  readAfresh(generation: string): void;
+  /** That version read to its end. */
+  readThrough(generation: string): void;
 }
 
 let sharedKeys: Set<string> | null = null;
+/** the version of the shared history being read afresh, from its start */
+let afresh: string | null = null;
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
 
 function saveShared(): void {
   if (writeTimer) return;
   writeTimer = setTimeout(() => {
     writeTimer = null;
-    const { server, sentCount, sentFloor, readUpTo, shared } = useListens.getState();
-    writeJson(SHARED_FILE, { server, sentCount, sentFloor, readUpTo, listens: shared } satisfies SharedSaved);
+    const { server, sentCount, sentFloor, readUpTo, generation, shared } = useListens.getState();
+    writeJson(SHARED_FILE, { server, sentCount, sentFloor, readUpTo, ...(generation ? { generation } : {}), listens: shared } satisfies SharedSaved);
   }, WRITE_AFTER_MS);
 }
 
@@ -106,6 +118,7 @@ export const useListens = create<ListensState>((set, get) => ({
   sentCount: 0,
   sentFloor: 0,
   readUpTo: 0,
+  generation: null,
   missing: false,
   loaded: false,
   async load() {
@@ -125,6 +138,7 @@ export const useListens = create<ListensState>((set, get) => ({
         sentCount: lost ? 0 : sentCount,
         sentFloor: lost ? 0 : sentFloor,
         readUpTo: typeof shared?.readUpTo === "number" ? shared.readUpTo : 0,
+        generation: typeof shared?.generation === "string" && shared.generation ? shared.generation : null,
         loaded: true,
       };
     });
@@ -159,7 +173,8 @@ export const useListens = create<ListensState>((set, get) => ({
     if (get().server === server) return;
     // Another service: it hasn't got this phone's plays, and it's read from the start. What came from
     // the old one stays; the same plays coming again are left out.
-    set({ server, sentCount: 0, sentFloor: 0, readUpTo: 0 });
+    set({ server, sentCount: 0, sentFloor: 0, readUpTo: 0, generation: null });
+    afresh = null;
     saveShared();
   },
   pending(max) {
@@ -201,6 +216,17 @@ export const useListens = create<ListensState>((set, get) => ({
   },
   setMissing(missing) {
     if (get().missing !== missing) set({ missing });
+  },
+  versionRead: () => ({ read: get().generation, afresh }),
+  readAfresh(generation) {
+    afresh = generation;
+    set((s) => ({ readUpTo: 0, sentCount: s.sentFloor, missing: false }));
+    saveShared();
+  },
+  readThrough(generation) {
+    if (afresh === generation) afresh = null;
+    set({ generation });
+    saveShared();
   },
 }));
 

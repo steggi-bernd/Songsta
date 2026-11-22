@@ -197,7 +197,11 @@ export function LibraryScreen() {
   const mixes = useLibrary((s) => s.mixes);
   const playingAlbum = usePlayer((s) => s.queue[s.index]?.albumId);
   const kept = useDownloads((s) => s.kept);
-  const played = usePlayed((s) => s.at);
+  // Recently played counts real plays only (the user's wish, 2026-11-22): what was played from since the
+  // play times count that way (stores/played.ts homeSince), not the times once guessed from past plays.
+  const allPlayed = usePlayed((s) => s.at);
+  const homeSince = usePlayed((s) => s.homeSince ?? Number.MAX_SAFE_INTEGER);
+  const played = useMemo(() => Object.fromEntries(Object.entries(allPlayed).filter(([, at]) => at >= homeSince)), [allPlayed, homeSince]);
   const loadingCount = useDownloads((s) => Object.values(s.loading).filter((song) => !song.failed).length);
   const wifiCount = useDownloads((s) => Object.values(s.loading).filter((song) => song.wantsWifi).length);
 

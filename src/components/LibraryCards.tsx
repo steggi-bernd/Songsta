@@ -300,7 +300,8 @@ export function BigPlayButton({
 }
 
 /** Compact quick-access tile (the home page's top grid, Spotify-style). */
-export function QuickTile({ title, thumb, art, onOpen, onPlay }: { title: string; thumb?: string; art?: ReactNode; onOpen: () => void; onPlay: () => void }) {
+/** `className`: its own background, as over the cover wall at the head of Home. */
+export function QuickTile({ title, thumb, art, onOpen, onPlay, className }: { title: string; thumb?: string; art?: ReactNode; onOpen: () => void; onPlay: () => void; className?: string }) {
   return (
     <div
       role="button"
@@ -308,7 +309,7 @@ export function QuickTile({ title, thumb, art, onOpen, onPlay }: { title: string
       onClick={onOpen}
       onKeyDown={activateOnKey(onOpen)}
       {...tintHoverHandlers(thumb ?? null)}
-      className="group flex items-center gap-3 h-16 rounded-md bg-ink-hi/[0.07] hover:bg-ink-hi/[0.14] transition-colors overflow-hidden pr-3 cursor-pointer select-none"
+      className={`group flex items-center gap-3 h-16 rounded-md ${className ?? "bg-ink-hi/[0.07] hover:bg-ink-hi/[0.14]"} transition-colors overflow-hidden pr-3 cursor-pointer select-none`}
     >
       <div className="w-16 h-16 shrink-0 overflow-hidden">{art ?? <Artwork src={thumb} rounded="rounded-none" className="w-16 h-16" iconClassName="w-5 h-5" />}</div>
       <span className="flex-1 min-w-0 text-[14px] font-bold text-ink-hi truncate">{title}</span>

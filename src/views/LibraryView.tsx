@@ -1,19 +1,17 @@
 /**
- * Your Library — the full-page counterpart of the sidebar pill, Spotify-style.
- * Three pages under one route: the playlists (grouped into the same folders
- * as the sidebar, with Liked Songs, Downloads and Local Music as pinned
- * shortcut cards; unpin from the card menu or the sidebar row), Liked Songs
- * (views/LikedSongsView.tsx: nothing but the liked songs) and the downloads.
- * Listening history is deliberately absent — it lives in the queue panel's
- * "Recently played" tab, not in the library.
+ * What was the Your Library page: Home holds its front and its playlists now (views/LibraryHomeView.tsx,
+ * the user's wish of 2026-11-21), so this route keeps two pages of its own, Liked Songs
+ * (views/LikedSongsView.tsx: nothing but the liked songs) and the downloads; without either, App shows
+ * Home. PlaylistsSection is the playlists, grouped into the same folders as the sidebar, for Home.
  */
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Download, Folder, ListMusic, Music2, Pin, Play, RotateCw, Shuffle, Trash2, Pencil } from "lucide-react";
 import { TrackList } from "../components/TrackList";
 import { Btn, EmptyState } from "../components/primitives";
-import { LibraryFront, LibraryShelves } from "../components/LibraryFront";
-import { MixGallery } from "../components/MixGallery";
 import { LikedSongsView } from "./LikedSongsView";
+import { LibraryHead, LibraryShelves } from "../components/LibraryClassic";
+import { LibraryTiles } from "../components/LibraryFront";
+import { MixGallery } from "../components/MixGallery";
 import { CreateMenu } from "../components/CreateMenu";
 import { downloadForOffline } from "../lib/downloads";
 import { useLibrary, type DownloadStatus, type LibraryFolder, type Playlist } from "../stores/library";
@@ -33,6 +31,9 @@ type LibTab = "playlists" | "liked" | "downloaded";
 
 /** Empty-cover fill for a playlist with no artwork yet. */
 const COVER_FALLBACK = "from-panel to-surface";
+
+/** Liked Songs or the downloads: the pages this route still has (App shows Home for the rest). */
+export const isLibraryPage = (param: string | undefined): boolean => param === "liked" || param === "downloaded";
 
 function tabFromParam(param: string | undefined): LibTab {
   if (param === "liked") return "liked";
@@ -227,17 +228,86 @@ function FolderSection({
   );
 }
 
+/** The playlists, in the sidebar's folders, with the create menu: a section of Home. */
+export function PlaylistsSection({ className = "mt-12" }: { className?: string }) {
+  const playlists = useLibrary((s) => s.playlists);
+  const folders = useLibrary((s) => s.folders);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const unfiled = playlists.filter((p) => !p.folderId);
+  const pinnedFirst = [...unfiled.filter((p) => p.pinned), ...unfiled.filter((p) => !p.pinned)];
+  return (
+    <section className={className}>
+      <div className="flex items-end justify-between gap-4">
+        <h2 className="text-[30px] font-black tracking-[-0.03em] text-ink-hi">{T("Your playlists")}</h2>
+        <CreateMenu onFolderCreated={(f) => setExpandedFolders((prev) => new Set(prev).add(f.id))} />
+      </div>
+      <div className="mt-6 space-y-7">
+        {folders.length === 0 && unfiled.length === 0 ? (
+          <EmptyState
+            icon={ListMusic}
+            title={T("No playlists yet")}
+            body={T("Use the + button above to create a playlist or a folder — or right-click any track and choose \"New playlist…\" to start one from a song you like.")}
+          />
+        ) : (
+          <>
+            {folders.map((f) => (
+              <FolderSection
+                key={f.id}
+                folder={f}
+                playlists={playlists.filter((p) => p.folderId === f.id)}
+                expanded={expandedFolders.has(f.id)}
+                onToggle={() =>
+                  setExpandedFolders((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(f.id)) next.delete(f.id);
+                    else next.add(f.id);
+                    return next;
+                  })
+                }
+              />
+            ))}
+            {unfiled.length > 0 && (
+              <section>
+                {folders.length > 0 && <h2 className="text-[15px] font-semibold text-ink-hi mb-3">{T("Playlists")}</h2>}
+                <div className="grid gap-[18px] grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
+                  {pinnedFirst.map((p) => (
+                    <LibraryPlaylistCard key={p.id} playlist={p} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** The Your Library page as it was, for Settings → Home with your library off. */
+export function ClassicLibraryPage() {
+  const downloaded = useDownloadedCount();
+  return (
+    <div className="pb-12">
+      <LibraryHead />
+      <LibraryTiles downloaded={downloaded} classic />
+      {/* What joined last and the genres come first, the playlists under them (the user's wish, 2026-11-16). */}
+      <LibraryShelves />
+      <PlaylistsSection className="mt-10" />
+      {/* The mixes stand at the foot of the page, as wide cards (the user's pick, 2026-11-16). */}
+      <MixGallery />
+    </div>
+  );
+}
+
+/** How many songs are kept offline, for Home's Downloads box. */
+export function useDownloadedCount(): number {
+  return useLibrary((s) => Object.values(s.downloads).filter((d) => d.status === "done").length);
+}
+
 export function LibraryView() {
   const view = useUI((s) => s.view);
   const navigate = useUI((s) => s.navigate);
-  const playlists = useLibrary((s) => s.playlists);
-  const folders = useLibrary((s) => s.folders);
   const downloads = useLibrary((s) => s.downloads);
-
-  // Which of the three pages: the route says (the sidebar's Liked Songs row leads to `liked`).
-  const tab = tabFromParam(view.param);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  // Dropping songs on the open Liked page is handled panel-wide in App.
 
   // The computer sends no notifications: the list says how each download stands — what's on its
   // way first, then what failed, then what's here.
@@ -253,9 +323,6 @@ export function LibraryView() {
     .filter(Boolean)
     .join(" · ");
 
-  const unfiled = playlists.filter((p) => !p.folderId);
-  const pinnedFirst = [...unfiled.filter((p) => p.pinned), ...unfiled.filter((p) => !p.pinned)];
-
   const shufflePlay = (tracks: Track[]): void => {
     if (!tracks.length) return;
     usePlayer.setState({ shuffle: true });
@@ -263,107 +330,47 @@ export function LibraryView() {
   };
 
   // Liked Songs has a page to itself.
-  if (tab === "liked") return <LikedSongsView />;
+  if (tabFromParam(view.param) === "liked") return <LikedSongsView />;
 
   return (
     <div className="pb-12">
-      {tab === "playlists" && <LibraryFront downloaded={downloadedTracks.length} />}
-      {/* What joined last and the genres come first, the playlists under them (the user's wish, 2026-11-16). */}
-      {tab === "playlists" && <LibraryShelves />}
-      {/* Header — the shared create dropdown (Playlist / Folder) */}
-      <div className={tab === "playlists" ? "mt-10" : ""}>
-        <div className="flex items-end justify-between gap-4 animate-slide-up">
-          {tab === "downloaded" ? (
-            <div>
-              <div className="micro-label text-ink-faint mb-1.5">{T("Offline")}</div>
-              <h1 className="font-display text-[28px] font-bold tracking-tight text-ink-hi">{T("Downloads")}</h1>
-              <p className="text-sm text-ink-dim mt-1">{plural(downloadedTracks.length, T("song"), T("songs"))}</p>
-            </div>
-          ) : (
-            <h2 className="text-[30px] font-black tracking-[-0.03em] text-ink-hi">{T("Your playlists")}</h2>
-          )}
-          {tab === "playlists" && <CreateMenu onFolderCreated={(f) => setExpandedFolders((prev) => new Set(prev).add(f.id))} />}
+      <div className="flex items-end justify-between gap-4 animate-slide-up">
+        <div>
+          <div className="micro-label text-ink-faint mb-1.5">{T("Offline")}</div>
+          <h1 className="font-display text-[28px] font-bold tracking-tight text-ink-hi">{T("Downloads")}</h1>
+          <p className="text-sm text-ink-dim mt-1">{plural(downloadedTracks.length, T("song"), T("songs"))}</p>
         </div>
       </div>
-
-      {tab === "playlists" && (
-        <div className="mt-6 space-y-7">
-          {folders.length === 0 && unfiled.length === 0 ? (
-            <EmptyState
-              icon={ListMusic}
-              title={T("No playlists yet")}
-              body={T("Use the + button above to create a playlist or a folder — or right-click any track and choose \"New playlist…\" to start one from a song you like.")}
-            />
-          ) : (
-            <>
-              {folders.map((f) => (
-                <FolderSection
-                  key={f.id}
-                  folder={f}
-                  playlists={playlists.filter((p) => p.folderId === f.id)}
-                  expanded={expandedFolders.has(f.id)}
-                  onToggle={() =>
-                    setExpandedFolders((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(f.id)) next.delete(f.id);
-                      else next.add(f.id);
-                      return next;
-                    })
-                  }
-                />
-              ))}
-              {unfiled.length > 0 && (
-                <section>
-                  {folders.length > 0 && (
-                    <h2 className="text-[15px] font-semibold text-ink-hi mb-3">{T("Playlists")}</h2>
-                  )}
-                  <div className="grid gap-[18px] grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
-                    {pinnedFirst.map((p) => (
-                      <LibraryPlaylistCard key={p.id} playlist={p} />
-                    ))}
-                  </div>
-                </section>
+      <div className="mt-6">
+        {listedDownloads.length ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              {downloadedTracks.length > 0 && (
+                <>
+                  <Btn variant="white" size="md" icon={Play} onClick={() => usePlayer.getState().playAll(downloadedTracks)}>{T("Play all")}</Btn>
+                  <Btn variant="glass" size="md" icon={Shuffle} onClick={() => shufflePlay(downloadedTracks)}>{T("Shuffle")}</Btn>
+                </>
               )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* The mixes stand at the foot of the page, as wide cards (the user's pick, 2026-11-16). */}
-      {tab === "playlists" && <MixGallery />}
-
-      {tab === "downloaded" && (
-        <div className="mt-6">
-          {listedDownloads.length ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                {downloadedTracks.length > 0 && (
-                  <>
-                    <Btn variant="white" size="md" icon={Play} onClick={() => usePlayer.getState().playAll(downloadedTracks)}>{T("Play all")}</Btn>
-                    <Btn variant="glass" size="md" icon={Shuffle} onClick={() => shufflePlay(downloadedTracks)}>{T("Shuffle")}</Btn>
-                  </>
-                )}
-                {failedDownloads.length > 0 && (
-                  <Btn variant="glass" size="md" icon={RotateCw} onClick={() => downloadForOffline(failedDownloads)}>{T("Try again")}</Btn>
-                )}
-                {downloadStand && <p className="ml-2 text-[13px] text-ink-dim">{downloadStand}</p>}
-              </div>
-              <div className="mt-5">
-                <TrackList tracks={listedDownloads} showAlbum emptyTitle={T("Nothing downloaded yet")} />
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              icon={Download}
-              title={T("No downloads yet")}
-              body={T("Right-click any track and choose Download — it lands here for offline playback.")}
-              action={
-                <Btn variant="white" onClick={() => navigate({ name: "search" })}>{T("Find something to download")}</Btn>
-              }
-            />
-          )}
-        </div>
-      )}
+              {failedDownloads.length > 0 && (
+                <Btn variant="glass" size="md" icon={RotateCw} onClick={() => downloadForOffline(failedDownloads)}>{T("Try again")}</Btn>
+              )}
+              {downloadStand && <p className="ml-2 text-[13px] text-ink-dim">{downloadStand}</p>}
+            </div>
+            <div className="mt-5">
+              <TrackList tracks={listedDownloads} showAlbum emptyTitle={T("Nothing downloaded yet")} />
+            </div>
+          </>
+        ) : (
+          <EmptyState
+            icon={Download}
+            title={T("No downloads yet")}
+            body={T("Right-click any track and choose Download — it lands here for offline playback.")}
+            action={
+              <Btn variant="white" onClick={() => navigate({ name: "search" })}>{T("Find something to download")}</Btn>
+            }
+          />
+        )}
+      </div>
     </div>
   );
 }

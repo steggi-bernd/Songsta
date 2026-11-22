@@ -209,7 +209,9 @@ export function restoreFiles(backup: PhoneBackup, here: RestoreTarget): Obj {
     for (const times of [obj(now.at), obj(played.at)]) {
       for (const [key, t] of Object.entries(times)) if (num(t) > (at[key] ?? 0)) at[key] = num(t);
     }
-    out["played.json"] = { at, seeded: !!played.seeded || !!now.seeded };
+    // From when the played times count stays this phone's (else the backup's): what's restored from before doesn't show.
+    const since = num(now.homeSince) || num(played.homeSince);
+    out["played.json"] = { at, seeded: !!played.seeded || !!now.seeded, ...(since ? { homeSince: since } : {}) };
   }
 
   const settings = files["settings.json"];

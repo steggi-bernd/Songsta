@@ -135,6 +135,8 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   chooseOutput(): Promise<void>;
   /** One question (base64) to the local network and its answers within the time; null without Wi-Fi or a cable. */
   netAsk(address: string, port: number, question: string, waitMs: number): Promise<{ from: string; data: string }[] | null>;
+  /** This phone's IPv4 address on its Wi-Fi or cable and the network's prefix length; null without either. */
+  lanAddress(): Promise<{ address: string; prefix: number } | null>;
   /** An encrypted connection to a device on the local network. */
   socketOpen(host: string, port: number, asThisApp: boolean): Promise<number>;
   socketWrite(id: number, data: string): Promise<void>;
@@ -145,6 +147,8 @@ declare class Media3PlayerModule extends NativeModule<Events> {
   tvOwnKey(): Promise<{ modulus: string; exponent: string } | null>;
   /** A song from this phone's folders, for a device on the network: the address it fetches it from, on this phone (FileServer.kt). */
   fileShare(uri: string, mime: string, ext: string, deviceHost: string): Promise<string>;
+  /** Several of this phone's songs for one device at once: an address each, "" for one that couldn't be handed out. */
+  fileShareMany(uris: string[], mimes: string[], exts: string[], deviceHost: string): Promise<string[]>;
   /** Nothing is handed out from here any more: devices stopped playing from this phone. */
   fileShareStop(): Promise<void>;
   /** `volume` is the lead device's, 0–100; below 0 when it can't be set from here. */

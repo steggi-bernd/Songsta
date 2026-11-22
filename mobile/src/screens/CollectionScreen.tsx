@@ -46,7 +46,8 @@ export function CollectionScreen() {
 
   const playlistId = params.kind === "playlist" ? params.id : null;
   /** What Your Library counts as played when this list is started (stores/played.ts). */
-  const source = params.kind === "playlist" ? `playlist:${params.id}` : params.kind === "mix" ? `mix:${params.id}` : null;
+  // What a play from here counts for (stores/played.ts): Liked Songs too, as the documents name it ("liked").
+  const source = params.kind === "playlist" ? `playlist:${params.id}` : params.kind === "mix" ? `mix:${params.id}` : params.kind === "liked" ? "liked" : null;
   const playlist = usePlaylists((s) => (playlistId ? s.playlists.find((p) => p.id === playlistId) : undefined));
   const [menu, setMenu] = useState(false);
   const [renaming, setRenaming] = useState(false);

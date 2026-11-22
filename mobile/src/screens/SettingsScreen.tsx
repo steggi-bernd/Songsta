@@ -1,8 +1,8 @@
 /** Everything that can be chosen: the music on this phone, the server, how it plays and feels, downloads, sync. */
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { BarChart3, AudioLines, Check, ChevronLeft, ChevronRight, CircleAlert, CircleArrowDown, CirclePlay, CloudOff, FileDown, FileUp, Heart, FolderPlus, Hand, Info, Link2, LogOut, MicVocal, MonitorSmartphone, Palette, RefreshCw, Server, ShieldCheck, SlidersHorizontal, Trash2, X, type LucideIcon } from "lucide-react-native";
-import { useState, type ReactNode } from "react";
+import { BarChart3, AudioLines, Check, ChevronLeft, ChevronRight, CircleAlert, CircleArrowDown, CirclePlay, CloudOff, FileDown, FileUp, Heart, FolderPlus, Hand, Info, Laptop, Link2, LogOut, MicVocal, MonitorSmartphone, Palette, RefreshCw, Server, ShieldCheck, SlidersHorizontal, Trash2, Unlink, X, type LucideIcon } from "lucide-react-native";
+import { useEffect, useState, type ReactNode } from "react";
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { APP_VERSION, installPhoneUpdate, lookNow, openReleasePage, updatePhone, useNewerVersion, usePhoneUpdate } from "../newVersion";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,7 +25,8 @@ import { showDialog, toast } from "../stores/popups";
 import { useSession } from "../stores/session";
 import { ACCENTS, useSettings, type Accent, feel } from "../stores/settings";
 import { LANGUAGES, type LanguageChoice } from "../shared";
-import { removeSharedListens, searchSyncAgain, syncAddress, useSync } from "../sync";
+import { removeSharedListens, restartSync, searchSyncAgain, syncAddress, useSync } from "../sync";
+import { findComputers, forgetHomeLink, homeLink, loadHomeLink, pairWith, type FoundComputer, type HomeLink } from "../homeLink";
 import { useListens } from "../stores/listens";
 import { usePlayed } from "../stores/played";
 import { colors, PAGE_END } from "../theme";
@@ -203,7 +204,7 @@ const SECTIONS: { key: SettingsSection; title: string; Icon: LucideIcon; server?
   { key: "appearance", title: T("Appearance"), Icon: Palette },
   { key: "gestures", title: T("Gestures"), Icon: Hand },
   { key: "downloads", title: T("Downloads"), Icon: CircleArrowDown, server: true },
-  { key: "sync", title: T("Sync and devices"), Icon: MonitorSmartphone, server: true },
+  { key: "sync", title: T("Sync and devices"), Icon: MonitorSmartphone },
   { key: "privacy", title: T("Network & privacy"), Icon: ShieldCheck },
   { key: "app", title: T("This app"), Icon: Info },
 ];
@@ -277,6 +278,51 @@ export function SettingsScreen() {
   const [lookingForUpdates, setLookingForUpdates] = useState(false);
   const [editingSync, setEditingSync] = useState(false);
   const [editingServer, setEditingServer] = useState<"home" | "away" | null>(null);
+  // A computer at home in place of a sync service (homeLink.ts): which one, and the ones found to pair with.
+  const [linkedTo, setLinkedTo] = useState<HomeLink | null>(homeLink());
+  const [computers, setComputers] = useState<FoundComputer[] | null>(null);
+  const [lookingForComputers, setLookingForComputers] = useState(false);
+  const [pairingWith, setPairingWith] = useState<FoundComputer | null>(null);
+  // Read from storage at the start; a page opened before that shows it once it's read.
+  useEffect(() => {
+    void loadHomeLink().then(() => setLinkedTo(homeLink()));
+  }, []);
+  // Your own sync service links the devices already: the computer is for homes without one.
+  const externalSync = !!session && syncLinked && !linkedTo;
+  const lookForComputers = async (): Promise<void> => {
+    setLookingForComputers(true);
+    setComputers(await findComputers().catch(() => []));
+    setLookingForComputers(false);
+  };
+  const finishPairing = async (code: string): Promise<void> => {
+    const computer = pairingWith;
+    setPairingWith(null);
+    if (!computer) return;
+    const result = await pairWith(computer, code, { name: String((Platform.constants as { Model?: string }).Model ?? "Phone") });
+    if (result === "paired") {
+      setLinkedTo(homeLink());
+      setComputers(null);
+      restartSync();
+      toast(T("Linked to {name}", { name: computer.name }));
+    } else if (result === "wrong") showDialog(T("That code doesn't fit"), T("Look at the code on the computer and try again."));
+    else if (result === "closed") showDialog(T("The code has run out"), T("Show a new one on the computer: Settings → Sync & devices → Phones at home → Pair a phone."));
+    else showDialog(T("{name} didn't answer", { name: computer.name }), T("Is Songsta open on it, and this phone on the same Wi-Fi?"));
+  };
+  const unlink = (): void => {
+    if (!linkedTo) return;
+    showDialog(T("Unlink from {name}?", { name: linkedTo.name }), T("Playlists and your library stay on this phone as they are; the computer keeps what it has."), [
+      { text: T("Cancel"), style: "cancel" },
+      {
+        text: T("Unlink"),
+        style: "destructive",
+        onPress: () => {
+          forgetHomeLink();
+          setLinkedTo(null);
+          restartSync();
+        },
+      },
+    ]);
+  };
 
   const keptSongs = Object.values(kept);
   const keptBytes = keptSongs.reduce((sum, song) => sum + song.bytes, 0);
@@ -292,7 +338,13 @@ export function SettingsScreen() {
     appearance: [ACCENTS[settings.accent].label, settings.language === "auto" ? T("Automatic language") : LANGUAGES.find((l) => l.id === settings.language)?.name].filter(Boolean).join(" · "),
     gestures: [settings.swipeFeel === "rubber" ? T("Rubber band") : T("Taut"), settings.haptics ? T("Vibration") : ""].filter(Boolean).join(" · "),
     downloads: keptSongs.length ? `${plural(keptSongs.length, T("song"), T("songs"))} · ${sizeLine(keptBytes)}` : T("Nothing downloaded yet"),
-    sync: syncNotFound ? T("No sync service found") : SYNC_LINE[syncStatus],
+    sync: linkedTo
+      ? [T("Linked to {name}", { name: linkedTo.name }), SYNC_LINE[syncStatus]].join(" · ")
+      : !session
+        ? T("Not linked to a computer")
+        : syncNotFound
+          ? T("No sync service found")
+          : SYNC_LINE[syncStatus],
     privacy: settings.netOwnOnly
       ? T("Only my own server")
       : T("{on} of {count} services on the internet on", { on: PHONE_SERVICES.filter((s) => !settings.netOff.includes(s.id)).length, count: PHONE_SERVICES.length }),
@@ -770,7 +822,11 @@ export function SettingsScreen() {
     ),
     sync: (
           <>
+          {session && (
           <View style={styles.group}>
+            {/* Linked to a computer at home, that's the service: the one on the Jellyfin server sits out. */}
+            {!linkedTo && (
+            <>
             <View style={styles.row}>
               <Text style={styles.rowTitle}>{T("Playlists and where you stopped")}</Text>
               <Text style={[styles.rowSub, syncStatus === "connected" && { color: colors.accent }]}>
@@ -814,7 +870,60 @@ export function SettingsScreen() {
               <Text style={styles.actionText}>{customAddress ? T("Change the address") : T("Enter another address")}</Text>
             </Pressable>
             <View style={styles.divider} />
+            </>
+            )}
             <SwitchRow title={T("Count plays on the server")} line={T("Songs you hear here count on Jellyfin too")} value={settings.serverPlays} onChange={(serverPlays) => change({ serverPlays })} />
+          </View>
+          )}
+          <Text style={styles.section}>{T("COMPUTER AT HOME")}</Text>
+          <View style={styles.group}>
+            {linkedTo ? (
+              <>
+                <View style={styles.row}>
+                  <Text style={styles.rowTitle}>{T("Linked to {name}", { name: linkedTo.name })}</Text>
+                  <Text style={[styles.rowSub, syncStatus === "connected" && { color: colors.accent }]}>
+                    {syncStatus === "connected" ? T("Playlists, your library and what plays stay in step with it, and a song only it has plays here from it") : T("It answers while Songsta is open on it")}
+                  </Text>
+                </View>
+                <View style={styles.divider} />
+                <Pressable onPress={unlink} style={styles.action}>
+                  <Unlink size={20} color="#FF9D9D" />
+                  <Text style={[styles.actionText, { color: "#FF9D9D" }]}>{T("Unlink")}</Text>
+                </Pressable>
+              </>
+            ) : externalSync ? (
+              <View style={styles.row}>
+                <Text style={styles.rowTitle}>{T("Link to a computer")}</Text>
+                <Text style={styles.rowSub}>{T("Your sync service already links your devices. This is for homes without one.")}</Text>
+              </View>
+            ) : (
+              <>
+                <Pressable onPress={() => void lookForComputers()} disabled={lookingForComputers} style={styles.notice}>
+                  <Laptop size={20} color={colors.ink} />
+                  <View style={styles.noticeText}>
+                    <Text style={styles.rowTitle}>{lookingForComputers ? T("Looking for computers…") : T("Link to a computer")}</Text>
+                    <Text style={styles.rowSub}>{T("Without a sync service, a computer with Songsta keeps this phone's playlists, library and what plays in step. On the computer: Settings → Sync & devices → Phones at home.")}</Text>
+                  </View>
+                </Pressable>
+                {computers && computers.length === 0 && !lookingForComputers && (
+                  <>
+                    <View style={styles.divider} />
+                    <View style={styles.row}>
+                      <Text style={styles.rowSub}>{T("No computer found. Is Songsta open on it with Phones at home switched on, and this phone on the same Wi-Fi?")}</Text>
+                    </View>
+                  </>
+                )}
+                {computers?.map((c) => (
+                  <View key={c.id}>
+                    <View style={styles.divider} />
+                    <Pressable onPress={() => setPairingWith(c)} style={styles.action}>
+                      <MonitorSmartphone size={20} color={colors.ink} />
+                      <Text style={styles.actionText}>{c.name}</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </>
+            )}
           </View>
           <Text style={styles.section}>{T("RECEIVERS AND TVS")}</Text>
           <View style={styles.group}>
@@ -954,6 +1063,16 @@ export function SettingsScreen() {
 
       {section ? pages[section] : overview}
 
+      <NameDialog
+        visible={!!pairingWith}
+        title={T("The code on {name}", { name: pairingWith?.name ?? "" })}
+        message={T("On the computer: Settings → Sync & devices → Phones at home → Pair a phone.")}
+        placeholder="123 456"
+        action={T("Link")}
+        digits
+        onCancel={() => setPairingWith(null)}
+        onDone={(code) => void finishPairing(code)}
+      />
       <NameDialog
         visible={editingSync}
         title={T("Sync service")}

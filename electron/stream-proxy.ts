@@ -59,6 +59,14 @@ export function startStreamProxy(): Promise<number> {
   });
 }
 
+/** Closes the proxy (the tests; the app keeps it until it quits). */
+export function stopStreamProxy(): void {
+  server?.closeAllConnections();
+  server?.close();
+  server = null;
+  proxyPort = 0;
+}
+
 /* Local library files travel through the proxy too: the renderer runs on an
  * http origin (dev server / packaged build), and Chromium refuses to load
  * file:// media from a non-file origin. The route only ever serves files the
@@ -82,6 +90,33 @@ export function proxyUrlForJellyfin(trackId: string): string | null {
 export function proxyUrlForSubsonic(trackId: string): string | null {
   if (!proxyPort) return null;
   return `http://127.0.0.1:${proxyPort}/?ss=${encodeURIComponent(trackId.replace(/^ss:/, ""))}`;
+}
+
+/**
+ * A phone's file server at home (mobile FileServer.kt) hands out a song only that phone has: plain http to
+ * a private address, /song/<token>.<ext>, nothing else. Only such an address goes through here, so the
+ * route can't become a way out to anywhere.
+ */
+export function isPeerAddress(address: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(address);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "http:" || u.username || u.password || u.search || u.hash) return false;
+  if (!/^\/song\/[0-9a-f]{32}\.[a-z0-9]{1,5}$/.test(u.pathname)) return false;
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(u.hostname);
+  if (!v4 || v4.slice(1).some((n) => Number(n) > 255)) return false;
+  const [a, b] = [Number(v4[1]), Number(v4[2])];
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254);
+}
+
+/* A song only a phone linked to this computer has: through the proxy, as the page may load media only
+ * from this computer itself (its CSP), and a phone's address is checked here, not in the page. */
+export function proxyUrlForPeer(address: string): string | null {
+  if (!proxyPort || !isPeerAddress(address)) return null;
+  return `http://127.0.0.1:${proxyPort}/?peer=${encodeURIComponent(address)}`;
 }
 
 const LOCAL_MIME: Record<string, string> = {
@@ -165,6 +200,17 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const localId = url.searchParams.get("lid");
     const jellyfinId = url.searchParams.get("jf");
     const subsonicId = url.searchParams.get("ss");
+    const peer = url.searchParams.get("peer");
+    if (peer !== null) {
+      if (!isPeerAddress(peer)) {
+        res.writeHead(400);
+        res.end("not a phone's song");
+        return;
+      }
+      const range = req.headers.range;
+      await pipeUpstream(await fetch(peer, { headers: range ? { Range: range } : {} }), "a phone's song", req, res);
+      return;
+    }
     if (!localId && !jellyfinId && !subsonicId) {
       res.writeHead(400);
       res.end("missing id");

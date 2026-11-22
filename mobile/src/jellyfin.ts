@@ -52,11 +52,42 @@ const query = (params: Record<string, string | number | undefined>): string =>
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
     .join("&");
 
-/** No answer at all, as opposed to the server saying no. */
-function noAnswer(message: string): Error {
-  const err = new Error(message);
+/** No answer at all, as opposed to the server saying no; `unsure`: it was asked and may have done it (timed out). */
+function noAnswer(message: string, unsure = false): Error {
+  const err = new Error(message) as Error & { unsure?: boolean };
   err.name = "NoAnswer";
+  if (unsure) err.unsure = true;
   return err;
+}
+
+/** The server said no, with its HTTP status, and for "too many" (429) when to ask again. */
+function refusal(message: string, status: number, retryAfterMs?: number): Error {
+  const err = new Error(message) as Error & { status?: number; retryAfterMs?: number };
+  err.status = status;
+  if (retryAfterMs !== undefined) err.retryAfterMs = retryAfterMs;
+  return err;
+}
+
+/** The HTTP status a refusal came with, if it was one. */
+export const statusOf = (err: unknown): number | undefined => {
+  const status = err instanceof Error ? (err as Error & { status?: unknown }).status : undefined;
+  return typeof status === "number" ? status : undefined;
+};
+/** When the server asked to be asked again (429), ms. */
+export const retryAfterOf = (err: unknown): number | undefined => {
+  const ms = err instanceof Error ? (err as Error & { retryAfterMs?: unknown }).retryAfterMs : undefined;
+  return typeof ms === "number" ? ms : undefined;
+};
+/** Asked, and no answer in time: it may have been done all the same. */
+export const isUnsure = (err: unknown): boolean => err instanceof Error && (err as { unsure?: unknown }).unsure === true;
+
+/** "Retry-After": seconds, or a date. */
+function retryAfter(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : undefined;
 }
 
 export const isNoAnswer = (err: unknown): boolean => err instanceof Error && err.name === "NoAnswer";
@@ -84,14 +115,14 @@ async function request(
     text = await res.text();
   } catch {
     // Whatever went wrong on the way, this fetch has its own words for it: no answer came.
-    throw noAnswer(ctrl.signal.aborted ? T("The server did not answer in time") : T("Can't reach the server: check the address"));
+    throw noAnswer(ctrl.signal.aborted ? T("The server did not answer in time") : T("Can't reach the server: check the address"), ctrl.signal.aborted);
   } finally {
     clearTimeout(timer);
   }
-  if (res.status === 401) throw new Error("The server rejected the login: check the user name and password");
+  if (res.status === 401) throw refusal("The server rejected the login: check the user name and password", 401);
   // A tunnel or proxy answering for a server that's down.
   if (res.status >= 500) throw noAnswer(T("The server answered HTTP {status}", { status: res.status }));
-  if (!res.ok) throw new Error(T("The server answered HTTP {status}", { status: res.status }));
+  if (!res.ok) throw refusal(T("The server answered HTTP {status}", { status: res.status }), res.status, res.status === 429 ? retryAfter(res.headers.get("Retry-After")) : undefined);
   return text ? JSON.parse(text) : null;
 }
 
@@ -251,6 +282,16 @@ export const markPlayed = (s: Session, t: Track, at: Date): Promise<void> =>
     method: "POST",
     token: s.token,
   });
+
+/**
+ * Whether the server has a play of this song from that moment on already: a play sent once without an
+ * answer in time may have been counted, and sending it again would count it twice (plan section 5).
+ */
+export async function playedSince(s: Session, t: Track, at: number): Promise<boolean> {
+  const item = await request(s.server, `/Items/${itemIdOf(t)}?${query({ userId: s.userId })}`, s.deviceId, { token: s.token });
+  const last = Date.parse(String(item?.UserData?.LastPlayedDate ?? ""));
+  return Number.isFinite(last) && last >= at - 1000;
+}
 
 export interface LyricLine {
   /** ms from the song's start; absent on lyrics that aren't timed */

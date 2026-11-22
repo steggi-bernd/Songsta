@@ -25,6 +25,7 @@ import { useSession } from "./src/stores/session";
 import { useSettings } from "./src/stores/settings";
 import { useStatusScrim } from "./src/stores/statusScrim";
 import { startSync, stopSync } from "./src/sync";
+import { homeLink } from "./src/homeLink";
 import { colors } from "./src/theme";
 
 watchPlayer();
@@ -92,7 +93,8 @@ export default function App() {
   }, [inside, loaded]);
 
   useEffect(() => {
-    if (!signedIn) stopSync();
+    // Signed out: the sync with that server ends; one with a computer at home goes on.
+    if (!signedIn && !homeLink()) stopSync();
   }, [signedIn]);
 
   return (

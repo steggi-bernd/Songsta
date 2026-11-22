@@ -44,6 +44,20 @@ function save(): void {
   writeJson(FILE, { folders, files, withoutServer });
 }
 
+/**
+ * Each pick of a folder, by its uri: picked anew (also one taken out a moment ago), it's another pick.
+ * A scan writes what it read only for the pick it read, into the files as they are by then; a folder
+ * taken out or picked anew meanwhile keeps what's there now (plan section 4: a folder taken out during
+ * its scan came back with the scan's old list, and one added meanwhile wasn't read at all).
+ */
+const picks = new Map<string, number>();
+let pickCount = 0;
+const pick = (uri: string): void => {
+  picks.set(uri, ++pickCount);
+};
+/** A scan asked for while one runs: it runs again after, for what changed meanwhile. */
+let scanAgain = false;
+
 export const useLocalMusic = create<LocalMusicState>((set, get) => ({
   restored: false,
   folders: [],
@@ -54,6 +68,7 @@ export const useLocalMusic = create<LocalMusicState>((set, get) => ({
 
   async restore() {
     const saved = await readJson<{ folders?: LocalFolder[]; files?: LocalFile[]; withoutServer?: boolean }>(FILE).catch(() => null);
+    for (const folder of saved?.folders ?? []) pick(folder.uri);
     set({ folders: saved?.folders ?? [], files: saved?.files ?? [], withoutServer: !!saved?.withoutServer, restored: true });
     // New and changed files since last time, in the background.
     if (saved?.folders?.length) void get().rescan();
@@ -62,6 +77,7 @@ export const useLocalMusic = create<LocalMusicState>((set, get) => ({
   async addFolder() {
     const picked = await Player.pickFolder().catch(() => null);
     if (!picked) return false;
+    pick(picked.uri);
     if (!get().folders.some((f) => f.uri === picked.uri)) set({ folders: [...get().folders, picked] });
     save();
     void get().rescan();
@@ -70,33 +86,41 @@ export const useLocalMusic = create<LocalMusicState>((set, get) => ({
 
   removeFolder(uri) {
     void Player.localForget(uri).catch(() => undefined);
+    picks.delete(uri);
     set({ folders: get().folders.filter((f) => f.uri !== uri), files: get().files.filter((f) => f.folder !== uri) });
     save();
   },
 
   async rescan() {
-    if (get().scanning) return;
+    if (get().scanning) {
+      scanAgain = true;
+      return;
+    }
     set({ scanning: { read: 0, total: 0 } });
     const progress = Player.addListener("onLocalScan", ({ read, total }) => set({ scanning: { read, total } }));
-    let files = get().files;
     try {
-      for (const folder of get().folders) {
-        const before = files.filter((f) => f.folder === folder.uri);
-        const known: Record<string, number> = {};
-        for (const f of before) known[f.uri] = f.modified;
-        const byUri = new Map(before.map((f) => [f.uri, f]));
-        const found = await Player.localScan(folder.uri, known);
-        const now: LocalFile[] = [];
-        for (const f of found) {
-          if (f.unchanged) {
-            const old = byUri.get(f.uri);
-            if (old) now.push(old);
-          } else now.push({ ...f, folder: folder.uri });
+      do {
+        scanAgain = false;
+        for (const folder of [...get().folders]) {
+          const reading = picks.get(folder.uri);
+          const before = get().files.filter((f) => f.folder === folder.uri);
+          const known: Record<string, number> = {};
+          for (const f of before) known[f.uri] = f.modified;
+          const byUri = new Map(before.map((f) => [f.uri, f]));
+          const found = await Player.localScan(folder.uri, known);
+          // Taken out, or picked anew, while it was read: what was read is from before.
+          if (!get().folders.some((f) => f.uri === folder.uri) || picks.get(folder.uri) !== reading) continue;
+          const now: LocalFile[] = [];
+          for (const f of found) {
+            if (f.unchanged) {
+              const old = byUri.get(f.uri);
+              if (old) now.push(old);
+            } else now.push({ ...f, folder: folder.uri });
+          }
+          set({ files: [...get().files.filter((f) => f.folder !== folder.uri), ...now] });
+          save();
         }
-        files = [...files.filter((f) => f.folder !== folder.uri), ...now];
-        set({ files });
-        save();
-      }
+      } while (scanAgain);
     } catch (err) {
       toast(err instanceof Error && err.message ? err.message : T("A folder couldn't be read"));
     } finally {

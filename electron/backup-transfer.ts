@@ -85,6 +85,7 @@ export const SETTINGS_KEYS = new Set([
   "corners",
   "accent",
   "nowPlayingLook",
+  "homeWithLibrary",
   "libraryField",
 ]);
 

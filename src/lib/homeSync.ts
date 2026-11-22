@@ -10,15 +10,18 @@
  * computer" in the devices area brings the music here and stops it there. Only a
  * second stream, asked for there as well, lets both go their own way.
  */
+import { songFromPhone } from "./peerSongs";
 import { create } from "zustand";
 import { songKey, useCatalog } from "../stores/catalog";
 import { useLibrary, type LibraryFolder, type Playlist } from "../stores/library";
 import { useMuted } from "../stores/muted";
-import { setSteering, usePlayer, type Steering } from "../stores/player";
+import { setEditAhead, setSteering, usePlayer, type Steering } from "../stores/player";
 import { useSettings } from "../stores/settings";
 import { useUI } from "../stores/ui";
 import type { Track } from "../types";
 import { songFinder, toPlaylistDoc, toWireTrack, withSyncedDeletions, type PlaylistDoc, type WireTrack } from "./playlistSync";
+import { lineEndOf } from "./queueCore";
+import { applyEdits, createEntryBook, editsBetween, editsFromList, randomId, readOps, type EditPlayer, type QueueOp } from "./queueEntries";
 import { jumpTarget, lineInList, listAround, placeOf } from "./queueSections";
 import { followClock, handOverToCast, takeBackFromCast } from "./audio";
 import { useCast } from "./cast";
@@ -46,6 +49,8 @@ const FOLLOW_TICK_MS = 1000;
 /** Reports arrive when they arrive: less than this from the clock running here is no move, and the words on screen stay put. */
 const FOLLOW_DRIFT_MS = 1500;
 const AT_KEY = "songsta.sync.at";
+/** The order of Liked Songs last agreed on with the sync service: what changed here since goes on top of a newer one. */
+const LIKES_BASE_KEY = "songsta.sync.likesBase";
 const QUEUE_KEY = "songsta.sync.queueId";
 /** the service's problem last told as a note: told once, again only when it's another */
 const NOTED_KEY = "songsta.sync.serviceNoted";
@@ -75,6 +80,8 @@ interface HomeSyncState {
   serviceProblem: SyncServiceProblem | null;
   /** a sync service ever answered this computer for this server: until one has, it's only looked for now and then */
   linked: boolean;
+  /** the service is this computer's own, for phones at home (Settings → Phones at home) */
+  home: boolean;
 }
 
 export const useHomeSync = create<HomeSyncState>(() => ({
@@ -88,6 +95,7 @@ export const useHomeSync = create<HomeSyncState>(() => ({
   service: null,
   serviceProblem: null,
   linked: false,
+  home: false,
 }));
 
 export const isAround = (device: RemoteDevice): boolean => device.ageMs < DEVICE_ONLINE_MS;
@@ -108,6 +116,8 @@ export const otherDevices = {
 
 /** A list this long goes by the queue document rather than in a command. */
 const SONGS_IN_A_COMMAND = 100;
+/** Songs for another device go with the ids they're to have there, up to this many at once. */
+const NAMED_UP_TO = 500;
 /** The most of a list another device is sent, and how much of it comes before the song it starts at (as from the phone). */
 const LONGEST_LIST = 5000;
 const LIST_BEHIND = 200;
@@ -195,6 +205,11 @@ function findSong(wire: WireTrack): Track | undefined {
   return finder.find(wire);
 }
 
+/** A song another device plays or sends: this library's, or one only a linked phone has, from there (lib/peerSongs.ts). */
+function playableSong(wire: WireTrack): Track | undefined {
+  return findSong(wire) ?? songFromPhone(wire);
+}
+
 /**
  * A playlist's song as this computer keeps it: what it already has, the
  * library's own copy, or the description until a library has it. Its id stays:
@@ -261,11 +276,25 @@ export function watchHomeSync(): () => void {
   let lookedAt: string | null = null;
   /** a service answered while this ran, for this server: known, whether or not it could be written down */
   let linkedHere = false;
-  const linked = (): boolean => linkedHere || isLinked(serverKey);
+  /** the service is this computer's own: it's there, nothing to look for */
+  let homeService = false;
+  const linked = (): boolean => homeService || linkedHere || isLinked(serverKey);
+  /**
+   * The entries of the queue in the player here, by id (lib/queueEntries.ts): this computer's own queue,
+   * or its copy of the one it follows. Edits from elsewhere name them, and so do edits made here.
+   */
+  const book = createEntryBook();
+  const keysOf = (queue: readonly Track[]): string[] => queue.map((t) => songKey(t.id));
+  /** the list (session) queueId was named in: another one (this app started again) gets another name, so the devices following look again */
+  let idSession = "";
+  /** the list the followed device's queue is, as it said it; null when it says none (an older app): edits go the old way */
+  let followedSession: string | null = null;
+  /** the entries of the followed queue as last said to it: an edit made here goes out as what changed since */
+  let sentIds: readonly string[] = [];
 
   function inSameSong(note: PlaybackNote): boolean {
     const { queue, index } = usePlayer.getState();
-    return note.queueId === queueId && !!queue[index] && songKey(findSong(note.track)?.id ?? "") === songKey(queue[index].id);
+    return note.queueId === queueId && !!queue[index] && songKey(playableSong(note.track)?.id ?? "") === songKey(queue[index].id);
   }
 
   /** Later than the note this computer stands on, whatever the two devices' clocks say: it's what makes it the news. */
@@ -278,11 +307,26 @@ export function watchHomeSync(): () => void {
     engine?.playbackChanged();
   };
 
+  /**
+   * The last song of this queue shown to the others when they saw only a stretch of it: an edit from an
+   * older app, which says nothing about how much it knew, keeps what comes after it (Codex, 2026-11-21:
+   * with 8f47c10 editing, 799 of 1,199 songs were left). A newer app says so itself (keepAfter).
+   */
+  let shownUpTo: KeepAfter | null = null;
+
   function readPlayback(): { note: PlaybackNote; queue: () => QueueDoc } | null {
     const { queue, index, position, playing, shuffle, repeat } = usePlayer.getState();
     const track = queue[index];
     // What another device plays is that device's to tell; and where the music just went, that it's paused here is no news that should overwrite its word.
     if (!track || !activityAt || followed || followNext) return null;
+    // Its entries started over since the queue got its name (this app started again): a new name, so the
+    // devices following look again and learn them.
+    if (idSession !== book.session()) {
+      const next = String(Date.now());
+      queueId = next === queueId ? `${next}b` : next;
+      store(QUEUE_KEY, queueId);
+      idSession = book.session();
+    }
     if (!queueId) queueId = String(activityAt);
     const id = queueId;
     store(AT_KEY, String(activityAt));
@@ -291,6 +335,9 @@ export function watchHomeSync(): () => void {
       queue: () => {
         const from = Math.max(0, index - QUEUE_NOTE_BEHIND);
         const { lineEnd, branches, unshuffled } = usePlayer.getState();
+        book.follow(keysOf(queue), index);
+        const end = Math.min(queue.length, index + QUEUE_NOTE_AHEAD);
+        shownUpTo = end < queue.length && end > index + 1 ? { track: toWireTrack(queue[end - 1]), ahead: end - 1 - index } : null;
         return {
           id,
           from,
@@ -299,6 +346,8 @@ export function watchHomeSync(): () => void {
           lineEnd: lineInList(lineEnd, from),
           branches: branches.map((b) => ({ ...b, ids: b.ids.slice(0, BRANCH_IDS_SENT) })),
           unshuffled: unshuffled ? listAround(unshuffled, track.id, QUEUE_NOTE_BEHIND, QUEUE_NOTE_AHEAD).map(toWireTrack) : undefined,
+          entries: book.ids().slice(from, index + QUEUE_NOTE_AHEAD),
+          session: book.session(),
         };
       },
     };
@@ -316,12 +365,12 @@ export function watchHomeSync(): () => void {
   /** Continues from another device: its queue, its song, its position, paused until somebody presses play. */
   function adoptPlayback(given: PlaybackNote, queue: QueueDoc | null, handedOver = false): boolean {
     let note = given;
-    let current = findSong(note.track);
+    let current = playableSong(note.track);
     if (!current) {
       if (!handedOver) return true;
       // Sent here, and not here: the next song of its list that is, from its start.
       const after = note.place !== undefined && queue?.from !== undefined ? note.place - queue.from + 1 : 0;
-      current = (queue?.tracks ?? []).slice(Math.max(0, after)).map(findSong).find((t): t is Track => !!t);
+      current = (queue?.tracks ?? []).slice(Math.max(0, after)).map(playableSong).find((t): t is Track => !!t);
       const { title } = note.track;
       useUI.getState().toast(current ? T("\"{title}\" isn't on this computer, so the next song plays", { title }) : T("\"{title}\" isn't on this computer", { title }), "warning");
       if (!current) return false;
@@ -339,7 +388,7 @@ export function watchHomeSync(): () => void {
       return true;
     }
     const wires = queue?.tracks ?? [];
-    const songs = wires.map(findSong);
+    const songs = wires.map(playableSong);
     const found = songs.filter((t): t is Track => !!t);
     const whole = found.some((t) => t.id === current.id);
     const list = whole ? found : [current];
@@ -364,7 +413,7 @@ export function watchHomeSync(): () => void {
       index: going >= 0 ? going : playingAt,
       ...goesOn,
       // Shuffled there: back to the list's own order when shuffle goes off here.
-      unshuffled: whole && note.shuffle && queue?.unshuffled ? queue.unshuffled.map(findSong).filter((t): t is Track => !!t) : null,
+      unshuffled: whole && note.shuffle && queue?.unshuffled ? queue.unshuffled.map(playableSong).filter((t): t is Track => !!t) : null,
       lineEnd: whole ? songs.slice(0, queue?.lineEnd ?? 0).filter(Boolean).length : 0,
       branches: whole ? (queue?.branches ?? []) : [],
       position: going >= 0 ? state.position : note.positionMs / 1000,
@@ -374,9 +423,52 @@ export function watchHomeSync(): () => void {
       seekNonce: usePlayer.getState().seekNonce + 1,
     });
     applying = false;
+    // The entries of that queue as that device said them, for the songs of it here: edits made here name
+    // them, and this computer goes on with them when the music comes here.
+    const entries = Array.isArray(queue?.entries) && queue.entries.length === wires.length ? queue.entries : null;
+    if (entries) {
+      const mine = whole ? songs.flatMap((t, i) => (t ? [entries[i]] : [])) : [said >= 0 ? entries[said] : undefined];
+      book.seed(keysOf(list), usePlayer.getState().index, mine, queue?.session);
+    }
+    followedSession = followed && entries && queue?.session ? queue.session : null;
+    sentIds = book.ids();
+    idSession = book.session();
     // A new song within a queue this one already follows needs no word; a device being followed shows by itself.
     if (newQueue && !followed) useUI.getState().toast(T("Picked up from {name}", { name: note.device.name }), "info");
     return true;
+  }
+
+  /** Whether the device followed takes edits by entry, and its queue's entries are known here. */
+  function editable(): boolean {
+    if (!followed || !followedSession) return false;
+    const there = useHomeSync.getState().others.find((d) => d.id === followed?.id);
+    return !!there?.presence.abilities?.includes("edits");
+  }
+
+  /**
+   * Songs for the followed queue, with the ids they're to have there and here alike: the copy here and the
+   * queue there know them by the same ids, so an edit made right after finds them there.
+   */
+  function named(tracks: Track[]): { entries?: string[] } {
+    if (!editable() || !tracks.length || tracks.length > NAMED_UP_TO) return {};
+    const entries = tracks.map(() => randomId());
+    book.expect(tracks.map((t, i) => ({ key: songKey(t.id), id: entries[i] })));
+    // The store puts them in here right after: that copy is what the device followed knows then.
+    queueMicrotask(() => (sentIds = book.ids()));
+    return { entries };
+  }
+
+  /** An edit for the device followed, by entry. Some of it found nothing to apply to there, or that list is gone: its queue again. */
+  function sendEdit(ops: QueueOp[]): void {
+    if (!followed || !followedSession) return;
+    const to = followed.id;
+    const { index } = usePlayer.getState();
+    void engine?.sendEdit(to, { action: "editQueue", session: followedSession, ops, playing: book.ids()[index] }).then((result) => {
+      if ((result === "partial" || result === "stale" || result === "unknown") && followed?.id === to) {
+        queueId = "";
+        void engine?.checkPlayback();
+      }
+    });
   }
 
   /** Songs for the device being followed: right in the command if they fit. */
@@ -410,16 +502,29 @@ export function watchHomeSync(): () => void {
       usePlayer.setState({ queue: [song], index: 0, playing: true, position: 0, duration: song.duration, lineEnd: 0, branches: [], error: null, seekNonce: usePlayer.getState().seekNonce + 1 });
       applying = false;
       steeringTo = { id: song.id, until: Date.now() + STEER_PATIENCE_MS };
-      // The list itself comes back with that device's next word, in the order it plays.
+      // The list itself comes back with that device's next word, in the order it plays, with its entries.
       queueId = "";
+      followedSession = null;
       followed = { ...followed, playing: true, positionMs: 0, heardAt: Date.now() };
       followClock(0, true);
       // The stretch of the list around the song asked for, so that song is in it, wherever it stands.
       const from = Math.max(0, start - LIST_BEHIND);
       void engine?.sendList(followed.id, tracks.slice(from, from + LONGEST_LIST).map(toWireTrack), undefined, { action: "playList", start: start - from, keepOrder, shuffle: usePlayer.getState().shuffle });
     },
-    upcoming(tracks, all = false) {
+    upcoming(tracks, all = false, line = false) {
       const { lineEnd, index, queue } = usePlayer.getState();
+      // That device takes edits by entry: what changed here, applied where those entries stand there.
+      if (editable()) {
+        const ops: QueueOp[] = all ? [{ op: "clear" }] : line ? [{ op: "clearLine" }] : editsBetween(sentIds, book.ids(), (j) => (queue[j] ? toWireTrack(queue[j]) : undefined));
+        sentIds = book.ids();
+        if (!ops.length) return;
+        const songs = ops.reduce((n, op) => n + (op.op === "insert" ? op.tracks.length : 0), 0);
+        if (songs <= SONGS_IN_A_COMMAND) {
+          sendEdit(ops);
+          return;
+        }
+      }
+      // An older app there, or more songs than a word holds: what comes after the playing song, as a whole.
       // Cleared: nothing comes after these there either, also what this computer never saw.
       if (all) followedTail = null;
       sendSongs(tracks, { action: "setUpcoming", line: Math.max(0, lineEnd - index - 1), ...(followedTail ? { keepAfter: followedTail } : {}) });
@@ -429,16 +534,17 @@ export function watchHomeSync(): () => void {
         followedTail = last ? { track: toWireTrack(last), ahead: tracks.length } : null;
       }
     },
-    add: (tracks) => sendSongs(tracks, { action: "enqueue", next: true }),
+    add: (tracks) => sendSongs(tracks, { action: "enqueue", next: true, ...named(tracks) }),
     jump: (track) => steerTo(usePlayer.getState().queue.indexOf(track)),
-    branchOff: (tracks, name) => sendSongs(tracks, { action: "branchOff", name }),
+    branchOff: (tracks, name) => sendSongs(tracks, { action: "branchOff", name, ...named(tracks) }),
     cancelBranch: (name) => void (followed && engine?.sendCommand(followed.id, { action: "cancelBranch", name })),
     shuffle: (on) => void (followed && engine?.sendCommand(followed.id, { action: "shuffle", on })),
     repeat: (mode) => void (followed && engine?.sendCommand(followed.id, { action: "repeat", mode })),
     next() {
       const { queue, index } = usePlayer.getState();
       if (queue[index + 1]) steerTo(index + 1);
-      else if (followed) void engine?.sendCommand(followed.id, { action: "next" });
+      // From the entry playing there, so a word that comes twice doesn't go on twice.
+      else if (followed) void engine?.sendCommand(followed.id, { action: "next", ...(followedSession && book.ids()[index] ? { from: book.ids()[index] } : {}) });
     },
     previous() {
       const { index, position, seekNonce } = usePlayer.getState();
@@ -514,6 +620,7 @@ export function watchHomeSync(): () => void {
     dropVolume();
     followed = null;
     followedTail = null;
+    followedSession = null;
     followNext = null;
     setSteering(null);
     if (followTimer !== null) window.clearInterval(followTimer);
@@ -540,7 +647,7 @@ export function watchHomeSync(): () => void {
       // Not playing any more: the others shouldn't go by what it said before.
       engine?.presenceChanged();
     }
-    const song = findSong(p.track) ?? ({ thumb: "", ...p.track } as Track);
+    const song = playableSong(p.track) ?? ({ thumb: "", ...p.track } as Track);
     // That device can have a song as another copy than the list here: the same song is the same song.
     const isIt = (t: Track | { id: string } | null | undefined): boolean => !!t && songKey(t.id) === songKey(song.id);
     // What it says from before it got to what was asked of it doesn't move the screen back.
@@ -564,8 +671,9 @@ export function watchHomeSync(): () => void {
       const at = placeOf(queue, songKey(song.id), index, undefined, (t) => songKey(t.id));
       if (at >= 0 && p.queueId === queueId) usePlayer.setState({ index: at });
       else {
-        // The queue itself comes with the look below.
+        // The queue itself comes with the look below; its entries with it.
         usePlayer.setState({ queue: [song], index: 0, unshuffled: null, lineEnd: 0, branches: [] });
+        followedSession = null;
         queueId = "";
         void engine?.checkPlayback();
       }
@@ -627,14 +735,52 @@ export function watchHomeSync(): () => void {
     else if (followed) stopFollowing(false);
   }
 
-  function runCommand(command: DeviceCommand): void {
+  /** This computer's queue, for edits made on another device (lib/queueEntries.ts). */
+  const editPlayer: EditPlayer<Track> = {
+    index: () => usePlayer.getState().index,
+    lineEnd: () => lineEndOf(usePlayer.getState()),
+    songs: (tracks) => tracks.map(playableSong),
+    key: (t) => songKey(t.id),
+    remove: (at) => usePlayer.getState().removeAt(at),
+    move: (from, to) => usePlayer.getState().moveInQueue(from, to),
+    insert: (songs, at) => usePlayer.getState().insertInQueue(songs, at),
+    clear: () => usePlayer.getState().clearUpcoming(),
+    clearLine: () => usePlayer.getState().clearLine(),
+  };
+
+  /** Songs sent with the ids they're to have here: the device that sent them knows them by those. */
+  function nameSongs(wires: WireTrack[] | undefined, entries: unknown): void {
+    if (!Array.isArray(entries) || !wires) return;
+    book.expect(
+      wires.flatMap((wire, i) => {
+        const song = playableSong(wire);
+        const id = entries[i];
+        return song && typeof id === "string" ? [{ key: songKey(song.id), id }] : [];
+      })
+    );
+  }
+
+  /** An edit of this computer's queue made on another device, by entry: applied where those entries stand now. */
+  function editHere(command: Extract<DeviceCommand, { action: "editQueue" }>): string {
+    // Not this computer's music any more, or not that list: the device that edited looks again.
+    if (followed || command.session !== book.session()) {
+      // This app started again since it last said its queue: said now, with its entries.
+      if (!followed && idSession !== book.session()) engine?.playbackChanged();
+      return "stale";
+    }
+    return applyEdits(book, readOps(command.ops), editPlayer, typeof command.playing === "string" ? command.playing : undefined);
+  }
+
+  function runCommand(command: DeviceCommand): void | string {
     if (command.action === "syncLikes") {
       void syncFavorites().catch(() => undefined);
       return;
     }
-    const songsOf = (wire: WireTrack[] | undefined): Track[] => (wire ?? []).map(findSong).filter((t): t is Track => !!t);
+    if (command.action === "editQueue") return editHere(command);
+    const songsOf = (wire: WireTrack[] | undefined): Track[] => (wire ?? []).map(playableSong).filter((t): t is Track => !!t);
     if (command.action === "enqueue") {
       const songs = songsOf(command.tracks);
+      nameSongs(command.tracks, command.entries);
       if (songs.length) usePlayer.getState().addToQueue(songs);
       return;
     }
@@ -663,29 +809,47 @@ export function watchHomeSync(): () => void {
         break;
       case "playList": {
         // The very entry asked for (a list can have a song twice), or the next one this computer has.
-        const found = (command.tracks ?? []).map(findSong);
+        const found = (command.tracks ?? []).map(playableSong);
         const songs = found.filter((t): t is Track => !!t);
         if (!songs.length) break;
         const start = Math.min(songs.length - 1, found.slice(0, Math.max(0, command.start)).filter((t) => !!t).length);
         if (command.shuffle !== undefined) usePlayer.setState({ shuffle: command.shuffle });
-        if (command.keepOrder) usePlayer.setState({ queue: songs, index: start, unshuffled: null, lineEnd: 0, branches: [], playing: true, position: 0, error: null });
+        // A list started from another device is a new list here, whatever songs it shares with the last one:
+        // an edit meant for that one doesn't land on it (Codex, section 17).
+        if (command.keepOrder) {
+          book.foresee({ start: true });
+          usePlayer.setState({ queue: songs, index: start, unshuffled: null, lineEnd: 0, branches: [], playing: true, position: 0, error: null });
+        }
         else player.playQueue(songs, start);
         break;
       }
       case "setUpcoming": {
         const songs = songsOf(command.tracks);
+        // From an app that sends the whole list: lined up with the queue as it stood when that app saw it,
+        // what it changed and nothing else, so another device's edit meanwhile stays (lib/queueEntries.ts).
+        const seenTo = command.keepAfter ?? shownUpTo;
+        const last = seenTo ? playableSong(seenTo.track) : undefined;
+        const reach = { ahead: seenTo?.ahead ?? QUEUE_NOTE_AHEAD - 1, ...(last ? { anchor: songKey(last.id) } : {}) };
+        const edits = editsFromList(book, keysOf(songs), reach, (j) => (songs[j] ? toWireTrack(songs[j]) : undefined));
+        if (edits) {
+          applyEdits(book, edits, editPlayer);
+          break;
+        }
         // Edited where only a stretch of this queue was known: what comes after the last song known there stays.
         let keepFrom: number | undefined;
-        if (command.keepAfter) {
+        // An older app doesn't say how much it knew: what it was shown, then.
+        const keepAfter = command.keepAfter ?? shownUpTo;
+        if (keepAfter) {
           const { queue, index } = usePlayer.getState();
-          const anchor = findSong(command.keepAfter.track);
+          const anchor = playableSong(keepAfter.track);
           const key = (t: Track): string => songKey(t.id);
-          keepFrom = keptFrom(queue, index, command.keepAfter, (t) => !!anchor && key(t) === key(anchor), songs, key);
+          keepFrom = keptFrom(queue, index, keepAfter, (t) => !!anchor && key(t) === key(anchor), songs, key);
         }
         player.replaceUpcoming(songs, command.line, keepFrom);
         break;
       }
       case "branchOff":
+        nameSongs(command.tracks, command.entries);
         player.branchOff(songsOf(command.tracks), command.name);
         break;
       case "cancelBranch":
@@ -704,9 +868,12 @@ export function watchHomeSync(): () => void {
         player.setPlaying(false);
         break;
       case "next":
+        // From an entry this computer is past already: done before, not again.
+        if (typeof command.from === "string" && book.ids()[player.index] !== command.from) break;
         player.next(true);
         break;
       case "previous":
+        if (typeof command.from === "string" && book.ids()[player.index] !== command.from) break;
         player.prev();
         break;
       case "seek":
@@ -714,7 +881,7 @@ export function watchHomeSync(): () => void {
         break;
       case "jump": {
         // By the song, whichever copy of it that device has in its list.
-        const id = (command.track && findSong(command.track)?.id) ?? command.trackId;
+        const id = (command.track && playableSong(command.track)?.id) ?? command.trackId;
         const at = jumpTarget(player.queue, songKey(id), player.index, command.by, (t) => songKey(t.id));
         if (at >= 0) player.jumpTo(at);
         break;
@@ -735,9 +902,18 @@ export function watchHomeSync(): () => void {
   async function refresh(): Promise<void> {
     const info = await bridge!.homeSyncInfo();
     if (closed) return;
-    if ((info.serverKey ?? null) !== serverKey) linkedHere = false;
+    const otherService = (info.serverKey ?? null) !== serverKey;
+    if (otherService) linkedHere = false;
+    // This computer's own service switched on or off: another service altogether, with its own
+    // revisions and devices, so the line to the one before goes and starts afresh.
+    if (otherService && engine && (homeService || info.home)) {
+      engine.stop();
+      engine = null;
+      useHomeSync.setState({ status: "off", service: null, serviceProblem: null, others: [] });
+    }
+    homeService = info.home === true;
     serverKey = info.serverKey ?? null;
-    useHomeSync.setState({ address: info.address, customAddress: info.customAddress, needsUser: info.needsUser, linked: linked() });
+    useHomeSync.setState({ address: info.address, customAddress: info.customAddress, needsUser: info.needsUser, linked: linked(), home: homeService });
     device = { id: info.deviceId, name: info.deviceName };
     // A new address (another one entered, or away from home and back) is worth a look at once; nothing else is.
     const moved = info.address !== lookedAt;
@@ -783,6 +959,31 @@ export function watchHomeSync(): () => void {
       wantsPlayback,
       adoptPlayback,
       readLikes: () => useLibrary.getState().liked.map(toWireTrack),
+      likesBase() {
+        try {
+          const kept = JSON.parse(readStored(LIKES_BASE_KEY) || "null") as { server?: unknown; rev?: unknown; ids?: unknown } | null;
+          if (!kept || kept.server !== serverKey || typeof kept.rev !== "number" || !Array.isArray(kept.ids)) return null;
+          return { rev: kept.rev, ids: kept.ids.filter((id): id is string => typeof id === "string") };
+        } catch {
+          return null;
+        }
+      },
+      keepLikesBase: (base) => store(LIKES_BASE_KEY, JSON.stringify({ server: serverKey, ...base })),
+      // Put together with another computer's order: the songs liked here go by it. One liked here and not in
+      // it (taken out there, maybe unliked) stays, after the rest, till the favorites say otherwise.
+      adoptLikes(tracks) {
+        const { liked } = useLibrary.getState();
+        const place = new Map<string, number>();
+        tracks.forEach((t, i) => {
+          if (!place.has(songKey(t.id))) place.set(songKey(t.id), i);
+        });
+        const inOrder = liked.filter((t) => place.has(songKey(t.id))).sort((a, b) => (place.get(songKey(a.id)) as number) - (place.get(songKey(b.id)) as number));
+        const next = [...inOrder, ...liked.filter((t) => !place.has(songKey(t.id)))];
+        if (next.every((t, i) => t === liked[i])) return;
+        applying = true;
+        useLibrary.setState({ liked: next });
+        applying = false;
+      },
       readPresence,
       applyDevices: hearDevices,
       onCommand: runCommand,
@@ -863,11 +1064,21 @@ export function watchHomeSync(): () => void {
   };
   // Away from home and back: the address moved, and the service is looked for at the new one.
   const offReach = bridge.onJellyfinReach?.(() => refreshQuietly()) ?? (() => undefined);
+  // This computer's own service for phones at home started or stopped.
+  const offHomeLink = bridge.onHomeLinkChanged?.(() => refreshQuietly()) ?? (() => undefined);
 
   // What the stores read from disk at the start isn't anything somebody just did.
   const offLibrary = useLibrary.subscribe((s, prev) => {
-    if (s.liked !== prev.liked && useLibrary.persist.hasHydrated()) engine?.likesChanged();
+    if (!applying && s.liked !== prev.liked && useLibrary.persist.hasHydrated()) engine?.likesChanged();
     if (!applying && useLibrary.persist.hasHydrated() && (s.playlists !== prev.playlists || s.folders !== prev.folders)) engine?.playlistsChanged();
+  });
+  book.follow(keysOf(usePlayer.getState().queue), usePlayer.getState().index);
+  // An edit made here by place: the ids follow it exactly (two copies side by side stay told apart).
+  setEditAhead((change) => book.foresee(change));
+  const offEntries = usePlayer.subscribe((s, prev) => {
+    if (s.queue !== prev.queue || s.index !== prev.index) book.follow(keysOf(s.queue), s.index);
+    // A change the sync made itself (what the device followed said) is no edit made here.
+    if (applying) sentIds = book.ids();
   });
   let playerRead = usePlayer.persist.hasHydrated();
   const offPlayer = usePlayer.subscribe((s, prev) => {
@@ -883,6 +1094,7 @@ export function watchHomeSync(): () => void {
       if (!followed) {
         queueId = String(Date.now());
         store(QUEUE_KEY, queueId);
+        idSession = book.session();
       }
       activity();
     } else if (s.playing !== prev.playing || s.index !== prev.index || s.seekNonce !== prev.seekNonce) {
@@ -944,11 +1156,14 @@ export function watchHomeSync(): () => void {
     lookNow = () => undefined;
     searchNow = () => undefined;
     offReach();
+    offHomeLink();
     setSteering(null);
     engine?.stop();
     if (followTimer !== null) window.clearInterval(followTimer);
     offMuted();
     offLibrary();
+    offEntries();
+    setEditAhead(null);
     offPlayer();
     offCatalog();
     offSettings();

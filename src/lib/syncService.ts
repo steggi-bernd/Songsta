@@ -21,6 +21,8 @@ export interface SyncServiceInfo {
   version?: string;
   /** the documents it keeps; services from before the library's documents don't say */
   docs?: string[];
+  /** what else it can do: "commands-kept", "command-results", "lists" (2026-11-21); older ones say less */
+  features?: string[];
 }
 
 export interface SyncServiceProblem {
@@ -31,11 +33,12 @@ export interface SyncServiceProblem {
 
 /** What a service's /health answer says, if it is one. */
 export function readServiceInfo(body: unknown): SyncServiceInfo | null {
-  const b = body as { service?: unknown; version?: unknown; docs?: unknown } | null;
+  const b = body as { service?: unknown; version?: unknown; docs?: unknown; features?: unknown } | null;
   if (!b || typeof b !== "object" || b.service !== "songsta-sync") return null;
   const info: SyncServiceInfo = {};
   if (typeof b.version === "string" && b.version.trim()) info.version = b.version.trim();
   if (Array.isArray(b.docs)) info.docs = b.docs.filter((d): d is string => typeof d === "string");
+  if (Array.isArray(b.features)) info.features = b.features.filter((f): f is string => typeof f === "string");
   return info;
 }
 

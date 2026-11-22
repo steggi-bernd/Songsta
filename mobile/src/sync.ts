@@ -3,9 +3,12 @@
  * the conversation (lib/syncEngine.ts) reads and changes here. It listens while
  * the app is in front, and in the background while it plays and for a while
  * after, so another device can steer it; what it plays still goes out either way.
+ * Linked to a computer at home (homeLink.ts), that computer is the service, with
+ * or without a Jellyfin login here.
  */
 import { AppState, type NativeEventSubscription } from "react-native";
 import { create } from "zustand";
+import { findAgain, homeAuthorization, homeDeviceId, homeLink, loadHomeLink } from "./homeLink";
 import { authHeader } from "./jellyfin";
 import { libraryDocHosts, watchLibraryDocs } from "./libraryDocs";
 import { createSyncEngine, defaultSyncAddress, problemKey, serviceProblem, sharesListens, toPlaylistDoc, T, type ListenHost, type SyncEngine, type SyncServiceInfo, type SyncServiceProblem, type SyncStatus } from "./shared";
@@ -51,6 +54,8 @@ const saveSettings = (): void => writeJson(FILE, { customAddress: useSync.getSta
 
 /** Which server this is, whatever address it's reached at: another one is looked for afresh. */
 function serverKey(): string | null {
+  const home = homeLink();
+  if (home) return `home|${home.id}`;
   const session = useSession.getState().session;
   return session ? `${session.serverId || session.server}|${useSync.getState().customAddress}` : null;
 }
@@ -58,10 +63,36 @@ function serverKey(): string | null {
 /** a service answered while this ran, for this server: known, whether or not it could be written down */
 let linkedHere = false;
 
+// A linked computer is known to be there: nothing to look for.
 const isLinked = (): boolean => {
+  if (homeLink()) return true;
   const key = serverKey();
   return linkedHere || (!!key && linkedServers.includes(key));
 };
+
+/** Where the sync goes and as whom: the computer at home when linked to one, else the Jellyfin server's service. */
+function syncLine(): { base: string; headers: Record<string, string>; deviceId: string } | null {
+  const home = homeLink();
+  if (home) return { base: home.address, headers: { Authorization: homeAuthorization(home.token) }, deviceId: homeDeviceId() };
+  const session = useSession.getState().session;
+  const base = syncAddress();
+  if (!session || !base) return null;
+  return { base, headers: { Authorization: authHeader(session.deviceId, session.token) }, deviceId: session.deviceId };
+}
+
+/**
+ * The linked computer doesn't answer at its address: it may have another one from the router, so the
+ * network is asked once more, with the app in front and every five minutes at most (it may just be off).
+ */
+const LOOK_AGAIN_MS = 5 * 60_000;
+let lookedAgainAt = 0;
+function lookForComputer(): void {
+  if (!homeLink() || AppState.currentState !== "active" || Date.now() - lookedAgainAt < LOOK_AGAIN_MS) return;
+  lookedAgainAt = Date.now();
+  void findAgain().then((moved) => {
+    if (moved) engine?.retryNow();
+  });
+}
 
 export const useSync = create<SyncState>((set) => ({
   status: "off",
@@ -104,6 +135,8 @@ function hearService(info: SyncServiceInfo | null): void {
 
 /** Where the service is looked for right now. */
 export function syncAddress(): string | null {
+  const home = homeLink();
+  if (home) return home.address;
   const custom = useSync.getState().customAddress;
   if (custom) return /^https?:\/\//i.test(custom) ? custom : `http://${custom}`;
   const session = useSession.getState().session;
@@ -115,15 +148,14 @@ export function syncAddress(): string | null {
  * other devices keep what they already took in, this phone keeps its own and doesn't send those again.
  */
 export async function removeSharedListens(): Promise<"removed" | "old-service" | "not-linked" | "failed"> {
-  const session = useSession.getState().session;
-  const base = syncAddress();
-  if (!session || !base || !isLinked()) return "not-linked";
+  const line = syncLine();
+  if (!line || !isLinked()) return "not-linked";
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20_000);
   try {
-    const res = await fetch(`${base}/v1/listens?device=${encodeURIComponent(session.deviceId)}`, {
+    const res = await fetch(`${line.base}/v1/listens?device=${encodeURIComponent(line.deviceId)}`, {
       method: "DELETE",
-      headers: { Authorization: authHeader(session.deviceId, session.token), Accept: "application/json" },
+      headers: { ...line.headers, Accept: "application/json" },
       signal: ctrl.signal,
     });
     // A service from before this can't take anything out.
@@ -172,17 +204,18 @@ function tellVolumeKeys(): void {
 
 export async function startSync(): Promise<void> {
   if (engine) return;
-  const session = useSession.getState().session;
-  if (!session) return;
+  await loadHomeLink();
+  if (!syncLine()) return;
   const saved = await readJson<{ customAddress?: string; serviceNoted?: string; linked?: unknown }>(FILE);
   if (saved?.customAddress) useSync.setState({ customAddress: saved.customAddress });
   serviceNoted = typeof saved?.serviceNoted === "string" ? saved.serviceNoted : "";
   linkedServers = Array.isArray(saved?.linked) ? saved.linked.filter((k): k is string => typeof k === "string") : [];
   useSync.setState({ linked: isLinked() });
   await Promise.all([usePlaylists.getState().restore(), useAlbumEdits.getState().restore(), useLibrarySync.getState().restore()]);
-  if (engine || !useSession.getState().session) return;
+  const line = syncLine();
+  if (engine || !line) return;
 
-  const device = { id: session.deviceId, name: phonePresence().name };
+  const device = { id: line.deviceId, name: phonePresence().name };
   await useListens.getState().load();
   // Plays read from another sync service don't carry on in this one.
   useListens.getState().useServer(serverKey() ?? "");
@@ -194,20 +227,22 @@ export async function startSync(): Promise<void> {
     readUpTo: () => useListens.getState().readUpTo,
     take: (listens, devices, upTo, startOver) => useListens.getState().take(listens, devices, upTo, startOver),
     missing: () => useListens.getState().setMissing(true),
+    generation: () => useListens.getState().versionRead(),
+    readAfresh: (generation) => useListens.getState().readAfresh(generation),
+    readThrough: (generation) => useListens.getState().readThrough(generation),
   };
   const created = createSyncEngine({
-    deviceId: session.deviceId,
+    deviceId: line.deviceId,
     async request(method, path, body, timeoutMs = 20_000) {
-      const current = useSession.getState().session;
-      const base = syncAddress();
-      if (!current || !base) throw new Error("No server");
+      const now = syncLine();
+      if (!now) throw new Error("No server");
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), timeoutMs);
       try {
-        const res = await fetch(`${base}${path}`, {
+        const res = await fetch(`${now.base}${path}`, {
           method,
           headers: {
-            Authorization: authHeader(current.deviceId, current.token),
+            ...now.headers,
             Accept: "application/json",
             ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
           },
@@ -216,6 +251,9 @@ export async function startSync(): Promise<void> {
         });
         const text = await res.text();
         return { status: res.status, body: text ? JSON.parse(text) : null };
+      } catch (err) {
+        lookForComputer();
+        throw err;
       } finally {
         clearTimeout(timer);
       }
@@ -279,8 +317,9 @@ export async function startSync(): Promise<void> {
     else created.playbackChanged(routine);
   });
   linkDevices({
-    self: session.deviceId,
+    self: line.deviceId,
     send: (id, command) => created.sendCommand(id, command),
+    sendEdit: (id, command) => created.sendEdit(id, command),
     sendList: (id, tracks, context, command) => created.sendList(id, tracks, context, command),
     handOver: (id) => created.handOver(id),
     look: () => void created.checkPlayback(),
@@ -339,6 +378,12 @@ export async function startSync(): Promise<void> {
 }
 
 let offShares: (() => void) | null = null;
+
+/** Linked to a computer at home, or not any more: the sync starts afresh with the service there is now. */
+export function restartSync(): void {
+  stopSync();
+  void startSync();
+}
 
 export function stopSync(): void {
   offShares?.();

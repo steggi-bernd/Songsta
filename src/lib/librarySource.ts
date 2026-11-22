@@ -9,6 +9,7 @@
 import { requireBridge } from "./bridge";
 import { versionsOf } from "../stores/catalog";
 import { sourceOf, useAvailability, versionAvailable } from "../stores/availability";
+import { phoneAddressOf } from "./peerSongs";
 import type { Track } from "../types";
 
 export interface LibrarySource {
@@ -27,6 +28,12 @@ export function playableVersions(track: Track, exclude?: ReadonlySet<string>): T
 
 export async function resolveLibrarySource(track: Track, exclude?: ReadonlySet<string>): Promise<LibrarySource | null> {
   const bridge = requireBridge();
+  // Only a linked phone has it: from the phone, through this computer's stream proxy.
+  const phone = phoneAddressOf(track.id);
+  if (phone && !exclude?.has(track.id)) {
+    const url = await bridge.peerTrackUrl?.(phone);
+    if (url) return { url, version: track };
+  }
   for (const version of playableVersions(track, exclude)) {
     const url = await bridge.localTrackUrl(version.id);
     if (url) return { url, version };

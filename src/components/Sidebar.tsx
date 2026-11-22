@@ -145,6 +145,7 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   const looseCount = useMemo(() => libraryTracks.filter(isLoose).length, [libraryTracks]);
   const libraryOrder = useSettings((s) => s.libraryOrder);
   const played = useLibraryOrder((s) => s.played);
+  const homeSince = useLibraryOrder((s) => s.homeSince ?? Number.MAX_SAFE_INTEGER);
   const pins = useLibraryOrder((s) => s.pins);
   const pinOrder = useLibraryOrder((s) => s.pinOrder);
   const groups = useLibraryOrder((s) => s.groups);
@@ -153,8 +154,10 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
   /** Spotify's filter chips: one category at a time, a second click shows everything again. */
   const [filter, setFilter] = useState<LibFilter | null>(null);
   const onLibraryPage = useUI((st) => st.view.name === "library" && !st.view.param);
+  // Only with the earlier layout (Home holds the Your Library page otherwise), and off in Settings →
+  // Look and language for a panel as close to Spotify's as it gets.
+  const libraryField = useSettings((s) => !s.homeWithLibrary && s.libraryField);
   // Off in Settings → Look and language, for a panel as close to Spotify's as it gets.
-  const libraryField = useSettings((s) => s.libraryField);
   const sortedAlbums = useMemo(() => {
     const list = [...albums];
     if (libraryOrder === "alpha") return list.sort((a, b) => a.title.localeCompare(b.title));
@@ -304,17 +307,24 @@ function LibraryPill({ collapsed }: { collapsed: boolean }) {
     });
   }
   if (!likedRow.pinned) top.push(likedRow);
+  // Recently played counts real plays only (the user's wish, 2026-11-22): what was played from since the
+  // play times count that way (stores/libraryOrder.ts homeSince), not the times once guessed from the
+  // history. What hasn't played since keeps the order it had (the albums by when they joined).
+  const realPlayed = (id: string): number => {
+    const at = played[id] ?? 0;
+    return at >= homeSince ? at : 0;
+  };
   const folderPlayed = new Map<string, number>();
   for (const p of playlists) {
-    if (p.folderId) folderPlayed.set(p.folderId, Math.max(folderPlayed.get(p.folderId) ?? 0, played[p.id] ?? 0));
+    if (p.folderId) folderPlayed.set(p.folderId, Math.max(folderPlayed.get(p.folderId) ?? 0, realPlayed(p.id)));
   }
-  const groupPlayed = (r: LibRow): number => Math.max(0, ...(r.members ?? []).map((m) => played[m.id] ?? 0));
+  const groupPlayed = (r: LibRow): number => Math.max(0, ...(r.members ?? []).map((m) => realPlayed(m.id)));
   const ordered = orderRows(top, {
     isPinned,
     pinOrder,
     playedAt:
       libraryOrder === "played"
-        ? (r) => (r.kind === "folder" ? folderPlayed.get(r.id) ?? 0 : r.kind === "group" ? groupPlayed(r) : played[r.id] ?? 0)
+        ? (r) => (r.kind === "folder" ? folderPlayed.get(r.id) ?? 0 : r.kind === "group" ? groupPlayed(r) : realPlayed(r.id))
         : undefined,
   });
   /** every pinned row in its place, whatever the chips show — a drag reorders these */

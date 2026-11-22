@@ -133,3 +133,25 @@ test("read back at the start: the place kept, or from the start where the plays 
   assert.equal(useListens.getState().sentCount, 0, "more sent than there are: what's here goes again");
   globalThis.__files = undefined;
 });
+
+/* ------------------------------------------------------------- the history's generation (part 2 of the protocol rework) */
+
+test("another version of the shared history: read from its start, this phone's plays go again, what came in stays", () => {
+  fresh();
+  const s = useListens.getState();
+  s.note(song("mine"), T0);
+  s.markSent({ at: T0, id: "mine" });
+  s.take([{ n: 1, device: "pc", at: T0 - 60_000, id: "pc1", title: "PC1", artist: "Band", ms: 200_000 }], { pc: { name: "PC" } }, 2);
+  s.readThrough("g1");
+  assert.deepEqual(useListens.getState().versionRead(), { read: "g1", afresh: null });
+  s.readAfresh("g2");
+  assert.equal(useListens.getState().readUpTo, 0, "read from its start");
+  assert.equal(useListens.getState().sentCount, 0, "its own plays go again");
+  assert.deepEqual(useListens.getState().versionRead(), { read: "g1", afresh: "g2" });
+  s.take([{ n: 1, device: "pc2", at: T0 - 30_000, id: "pc2", title: "PC2", artist: "Band", ms: 200_000 }], { pc2: { name: "New PC" } }, 1);
+  s.readThrough("g2");
+  assert.deepEqual(useListens.getState().versionRead(), { read: "g2", afresh: null });
+  assert.deepEqual(ids(useListens.getState().shared), ["pc1", "pc2"], "what came in stays");
+  useListens.getState().useServer("another");
+  assert.deepEqual(useListens.getState().versionRead(), { read: null, afresh: null }, "another service: no version read yet");
+});

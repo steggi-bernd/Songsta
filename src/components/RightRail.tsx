@@ -23,7 +23,7 @@ import { branchOffAfterDrop } from "../lib/trackActions";
 import { fmtTime } from "../lib/format";
 import { useArtistAbout } from "../lib/artistAbout";
 import { useArtistImages, useSongInfo } from "../lib/songInfo";
-import { isLibraryTrack, leadArtist } from "../lib/libraryTracks";
+import { artistRoute, isLibraryTrack, leadArtist, parseRoute } from "../lib/libraryTracks";
 import { ArtistLinks } from "./ArtistLinks";
 import { DevicesPanel } from "./DevicesPanel";
 import { useLibrary } from "../stores/library";
@@ -431,13 +431,22 @@ function PlayingFrom({ track }: { track: Track }) {
   const navigate = useUI((s) => s.navigate);
   if (!from) return null;
   const key = songKey(track.id);
-  const playlist = from.startsWith("lib:album:") || from === "__liked__" ? null : playlists.find((p) => p.id === from) ?? null;
-  const inIt = from === "__liked__" ? liked.some((t) => songKey(t.id) === key) : from.startsWith("lib:album:") ? track.albumId === from : !!playlist?.tracks.some((t) => songKey(t.id) === key);
-  const name = from === "__liked__" ? T("Liked Songs") : from.startsWith("lib:album:") ? track.album : playlist?.name;
+  const artist = parseRoute(from, "artist");
+  const playlist = from.startsWith("lib:album:") || from === "__liked__" || artist ? null : playlists.find((p) => p.id === from) ?? null;
+  const inIt =
+    from === "__liked__"
+      ? liked.some((t) => songKey(t.id) === key)
+      : from.startsWith("lib:album:")
+        ? track.albumId === from
+        : artist
+          ? !!track.artist && artistRoute(leadArtist(track.artist)) === from
+          : !!playlist?.tracks.some((t) => songKey(t.id) === key);
+  const name = from === "__liked__" ? T("Liked Songs") : from.startsWith("lib:album:") ? track.album : artist ?? playlist?.name;
   if (!inIt || !name) return null;
   const open = (): void => {
     if (from === "__liked__") navigate({ name: "library", param: "liked" });
     else if (from.startsWith("lib:album:")) navigate({ name: "album", param: from });
+    else if (artist) navigate({ name: "artist", param: from });
     else navigate({ name: "playlist", param: from });
   };
   return (

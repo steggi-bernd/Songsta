@@ -13,7 +13,6 @@ const stubs = {
   "stores/library": `import { create } from "zustand"; export const useLibrary = create(() => ({ loaded: false, data: { tracks: [], counts: {} }, albums: [] }));`,
   "stores/playlists": `import { create } from "zustand"; export const usePlaylists = create(() => ({ playlists: [], restore: () => Promise.resolve() })); export const playlistTracks = (p) => p.tracks;`,
   storage: `export const readJson = async () => null; export const writeJson = (name, value) => { (globalThis.__saved ??= []).push([name, value]); };`,
-  shared: `export { seedPlayed } from "${libraryOrder}";`,
   "stores/settings": `export const useSettings = { getState: () => ({ recordListening: globalThis.__recordListening !== false }) };`,
 };
 const out = await build({
@@ -103,20 +102,51 @@ test("another device's music shown here is that device's to count", () => {
   usePlayer.setState({ remote: null, playWhenReady: false, source: null });
 });
 
-test("the start comes once from past plays: two of an album in a row for the album, three of a playlist for it, never an artist", async () => {
-  // Newest first: three songs of playlist Q (not all one album), the last two of them album A's, in a row.
+test("past plays aren't turned into guessed played times: a library with songs played before adds nothing", async () => {
+  // The songs' last plays as the server keeps them say nothing about what they were played from (the user's wish, 2026-11-22).
   const counts = { b1: { lastAt: 500 }, c1: { lastAt: 450 }, a2: { lastAt: 400 }, a1: { lastAt: 300 } };
   usePlaylists.setState({ playlists: [{ id: "P", name: "Mix tape", tracks: [a1, b1] }, { id: "Q", name: "Three", tracks: [b1, a2, c1] }] });
-  usePlayed.setState({ at: {}, seeded: false });
+  usePlayed.setState({ at: {} });
   useLibrary.setState({ loaded: true, data: { tracks: [a1, a2, b1, c1], counts }, albums: [{ key: "A", tracks: [a1, a2] }, { key: "B", tracks: [b1, song("b2", "Other")] }, { key: "C", tracks: [c1, song("c2", "Third")] }] });
-  const at = usePlayed.getState().at;
-  assert.ok(usePlayed.getState().seeded);
-  assert.ok(at["playlist:Q"] > 0, "three of Q in a row");
-  assert.ok(at["album:A"] > 0, "two of A in a row");
-  assert.equal(at["album:B"], undefined, "one song of an album among others says nothing about it (a single by itself would count, as on the computer)");
-  assert.ok(!Object.keys(at).some((k) => k.startsWith("artist:")), "an artist only counts from its own page");
-  // Seeded once: later changes of the library don't start it over.
-  usePlayed.setState({ at: { "playlist:Q": 1 } });
-  useLibrary.setState({ data: { tracks: [a1, a2, b1, c1], counts: { ...counts, x: { lastAt: 900 } } } });
-  assert.deepEqual(usePlayed.getState().at, { "playlist:Q": 1 });
+  await wait(5);
+  assert.deepEqual(usePlayed.getState().at, {});
+});
+
+/* ------------------------------------------------------------- Home's tiles count from when Home started counting (2026-11-22) */
+
+test("Home counts what's played from since it started counting: times from before don't show, Liked Songs counts, the latest first", async () => {
+  // playedSince on its own, built with the same stand-ins.
+  const own = await build({
+    stdin: { contents: `export { playedSince } from "./played";`, resolveDir: stores, loader: "ts" },
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    write: false,
+    plugins: [
+      {
+        name: "stubs",
+        setup(b) {
+          b.onLoad({ filter: /\.ts$/ }, (args) => {
+            const p = args.path.split("\\").join("/");
+            for (const [name, contents] of Object.entries(stubs)) if (p.endsWith(`/mobile/src/${name}.ts`)) return { contents, resolveDir: stores, loader: "ts" };
+            return undefined;
+          });
+        },
+      },
+    ],
+  });
+  const { playedSince } = await import(`data:text/javascript;base64,${Buffer.from(own.outputFiles[0].text).toString("base64")}`);
+  const since = usePlayed.getState().homeSince;
+  assert.equal(typeof since, "number", "set once the times were read");
+  // Times kept from before (the guessed ones of earlier versions among them) don't show.
+  usePlayed.setState({ at: { "album:A": since - 60_000, "playlist:P": since - 1 } });
+  assert.deepEqual(playedSince(usePlayed.getState().at, since), [], "so Home shows none of it");
+  // Played from Liked Songs, then from an album: both count, the latest first.
+  usePlayer.setState({ playWhenReady: false });
+  play([a1, b1], 0, "liked");
+  await wait(5);
+  usePlayer.setState({ playWhenReady: false });
+  play([a1, a2], 0, "album:A");
+  assert.deepEqual(playedSince(usePlayed.getState().at, since), ["album:A", "liked"]);
+  usePlayer.setState({ playWhenReady: false, source: null });
 });

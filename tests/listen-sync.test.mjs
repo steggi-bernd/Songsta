@@ -289,3 +289,123 @@ test("a service from before the shared history: each device counts its own, and 
   await new Promise((resolve) => setTimeout(resolve, 200));
   assert.equal(posts, 0, "nothing sent to a service that can't keep it");
 });
+
+/* ------------------------------------------------------------ the history's generation (part 2 of the protocol rework) */
+
+/** A service of its own on a folder of its own; a restart is another one on the same folder. */
+async function ownService(dir) {
+  const server = createSyncServer({ dataDir: dir, jellyfinUrl: `http://127.0.0.1:${jellyfin.address().port}` });
+  const at = `http://127.0.0.1:${await listenOn(server)}`;
+  return {
+    ask: async (method, url, body) => {
+      const res = await fetch(`${at}${url}`, { method, headers: { Authorization: `MediaBrowser Token="t"`, ...(body ? { "Content-Type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+      return { status: res.status, body: await res.json() };
+    },
+    close() {
+      server.closeAllConnections();
+      server.close();
+    },
+  };
+}
+
+test("the history has a generation: the same through new plays and a restart, a new one when plays are taken out or the history isn't what the service wrote", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "songsta-listen-gen-"));
+  const pc = { id: "gen-pc", name: "PC", kind: "computer" };
+  try {
+    const first = await ownService(dir);
+    await first.ask("POST", "/v1/listens", { device: pc, listens: [play("jf:1", 9), play("jf:2", 8)] });
+    const g1 = (await first.ask("GET", "/v1/listens?since=0&limit=10")).body.generation;
+    assert.equal(typeof g1, "string");
+    await first.ask("POST", "/v1/listens", { device: pc, listens: [play("jf:3", 7)] });
+    assert.equal((await first.ask("GET", "/v1/listens?since=0&limit=10")).body.generation, g1, "plays added: the same history");
+    assert.equal((await first.ask("GET", "/v1/changes?since=-1&wait=0")).body.listensGeneration, g1, "the summary says it too");
+    first.close();
+    const again = await ownService(dir);
+    assert.equal((await again.ask("GET", "/v1/listens?since=0&limit=10")).body.generation, g1, "started again: the same history");
+    again.close();
+    // Put back from an older backup: not what the service last wrote.
+    const file = path.join(dir, "users", ANNA, "listens.jsonl");
+    const lines = fs.readFileSync(file, "utf8").trim().split("\n");
+    fs.writeFileSync(file, `${lines.slice(0, 2).join("\n")}\n`);
+    const restored = await ownService(dir);
+    try {
+      const g2 = (await restored.ask("GET", "/v1/listens?since=0&limit=10")).body.generation;
+      assert.notEqual(g2, g1, "a backup put back: another generation");
+      await restored.ask("POST", "/v1/listens", { device: { id: "gen-phone", name: "Phone", kind: "phone" }, listens: [play("jf:9", 3)] });
+      const removed = await restored.ask("DELETE", "/v1/listens?device=gen-pc");
+      assert.equal(removed.body.removed, 2);
+      assert.notEqual(removed.body.generation, g2, "plays taken out: another generation");
+      assert.equal((await restored.ask("GET", "/v1/listens?since=0&limit=10")).body.generation, removed.body.generation);
+    } finally {
+      restored.close();
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a play taken out and others in while a device was away: it reads the history again and has the new ones, though the length stayed the same", async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "songsta-listen-away-"));
+  const there = await ownService(dir);
+  const me = { own: [play("jf:mine", 50)], sent: 0, upTo: 0, got: [], read: null, afresh: null, afreshTimes: 0 };
+  const listens = {
+    device: () => ({ name: "AWAY", kind: "phone" }),
+    pending: async (max) => me.own.slice(me.sent, me.sent + max),
+    sent: (last) => {
+      me.sent = me.own.indexOf(last) + 1;
+    },
+    readUpTo: () => me.upTo,
+    take(got, devices, upTo, startOver) {
+      if (startOver) {
+        me.upTo = 0;
+        me.sent = 0;
+        return;
+      }
+      for (const l of got) if (!me.got.some((g) => listenKey(g.device, g) === listenKey(l.device, l))) me.got.push(l);
+      me.upTo = upTo;
+    },
+    generation: () => ({ read: me.read, afresh: me.afresh }),
+    readAfresh(generation) {
+      me.afresh = generation;
+      me.upTo = 0;
+      me.sent = 0;
+      me.afreshTimes += 1;
+    },
+    readThrough(generation) {
+      if (me.afresh === generation) me.afresh = null;
+      me.read = generation;
+    },
+  };
+  const engineOf = () =>
+    createSyncEngine({
+      deviceId: "away-phone",
+      request: there.ask,
+      readPlaylists: () => toPlaylistDoc({ playlists: [], folders: [] }),
+      applyPlaylists() {},
+      readPlayback: () => null,
+      wantsPlayback: () => false,
+      adoptPlayback() {},
+      listens,
+    });
+  let engine = null;
+  t.after(() => {
+    engine?.stop();
+    there.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  await there.ask("POST", "/v1/listens", { device: { id: "gone-pc", name: "Old PC", kind: "computer" }, listens: [play("jf:old1", 30), play("jf:old2", 29)] });
+  engine = engineOf();
+  engine.start();
+  await until(() => me.got.length === 2 && me.read !== null && me.sent === 1, "the history read to its end, its own play there");
+  engine.stop();
+  // While it's away: the old computer's plays taken out, a new computer's two in. Three plays, as before.
+  await there.ask("DELETE", "/v1/listens?device=gone-pc");
+  await there.ask("POST", "/v1/listens", { device: { id: "new-pc", name: "New PC", kind: "computer" }, listens: [play("jf:new1", 5), play("jf:new2", 4)] });
+  assert.equal((await there.ask("GET", "/v1/listens?since=0&limit=1")).body.count, 3, "the same length");
+  engine = engineOf();
+  engine.start();
+  await until(() => me.got.some((l) => l.id === "jf:new1") && me.got.some((l) => l.id === "jf:new2"), "the new plays", 12000);
+  await until(() => me.read !== null && me.afresh === null && me.sent === 1, "read to its end, its own play sent again", 12000);
+  assert.equal(me.afreshTimes, 2, "read afresh once more");
+  assert.ok(me.got.some((l) => l.id === "jf:old1"), "what it had stays, as the privacy settings promise");
+});

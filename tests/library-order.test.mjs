@@ -13,7 +13,7 @@ const out = await build({
   format: "esm",
   write: false,
 });
-const { orderRows, movePinned, collectionOf, seedPlayed } = await import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString("base64")}`);
+const { orderRows, movePinned, collectionOf } = await import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString("base64")}`);
 
 const row = (id) => ({ id });
 const ids = (rows) => rows.map((r) => r.id);
@@ -78,19 +78,16 @@ test("a queue plays the playlist or Liked Songs it covers best; a mix of elsewhe
   assert.equal(collectionOf(L("y1", "s1"), s), null);
 });
 
-test("played times start from the history: album runs, singles, and three songs running in a playlist", () => {
-  const s = shelves([
-    ["road", ["x1", "y1", "z1"]],
-    ["__liked__", ["x2", "y1", "z1"]],
-  ]);
-  // Newest first: y1 z1 x1 (three albums, all on "road"), x1 x2 (album X back to back), s1 (a single).
-  const seeded = seedPlayed(L("y1", "z1", "x1", "x2", "s1"), s, 1_000_000);
-  assert.deepEqual(Object.keys(seeded).sort(), ["lib:album:s", "lib:album:x", "road"]);
-  assert.equal(seeded.road, 1_000_000 - 60_000, "the smallest collection holding the three");
-  assert.equal(seeded["lib:album:x"], 1_000_000 - 3 * 60_000);
-  assert.equal(seeded["lib:album:s"], 1_000_000 - 5 * 60_000);
-  // An album played through is no playlist play, though a playlist holds it.
-  const album = seedPlayed(L("x1", "x2", "x3", "x4"), shelves([["xs", ["x1", "x2", "x3", "x4"]]]), 1_000_000);
-  assert.deepEqual(Object.keys(album), ["lib:album:x"]);
-  assert.deepEqual(seedPlayed([], s, 5), {});
+// Played times are no longer guessed from the history (the user's wish, 2026-11-22): it knows songs, not what
+// they were played from. Only real plays count (lib/recentlyPlayed.ts).
+
+/* ------------------------------------------------------------- artists, for Home's tiles (2026-11-22) */
+
+test("where the shelves know artists, an artist's songs from two albums play the artist; an album or a playlist still comes first", () => {
+  const withArtists = (collections) => ({ ...shelves(collections), artistOf: (t) => `lib:artist:${t.artist}` });
+  assert.equal(collectionOf(L("x1", "y1"), withArtists([])), "lib:artist:A", "two albums of theirs");
+  assert.equal(collectionOf(L("x1", "x2"), withArtists([])), "lib:album:x", "half of one album is the album");
+  assert.equal(collectionOf(L("x1", "y1"), withArtists([["mine", ["x1", "y1"]]])), "mine", "a playlist of theirs is the playlist");
+  assert.equal(collectionOf(L("x2"), withArtists([])), null, "one song says nothing");
+  assert.equal(collectionOf(L("x1", "y1"), shelves([])), null, "without artists, as before");
 });

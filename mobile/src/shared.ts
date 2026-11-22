@@ -11,7 +11,6 @@ export { lrcRows, sungLines, unfoldStamps } from "../../src/lib/lrc";
 export { describePlayback, formatLine } from "../../src/lib/playbackFormat";
 export { jellyfinItemToTrack, jellyfinToTrack } from "../../src/lib/jellyfinItem";
 export { PLAY_AHEAD_MAX_MS, PLAY_AHEAD_STEP_MS } from "../../src/lib/groupSync";
-export { seedPlayed } from "../../src/lib/libraryOrder";
 export {
   artistAlbums,
   artistTracks,
@@ -103,6 +102,11 @@ export { fmtLength, fmtMinutes, fmtTime, plural } from "../../src/lib/format";
 export { RELEASE_LABEL } from "../../src/lib/releases";
 export { isNewerVersion, latestApk, latestVersion, lookForNewVersion, NEW_VERSION_FIRST_LOOK_MS, NEW_VERSION_LOOK_EVERY_MS, NO_VERSION_MEMORY, RELEASE_PAGE, type NewVersionMemory, type ReleaseApk } from "../../src/lib/newVersion";
 export { handRows, jumpTarget, lineInList, listAround, orderUpTo, orderWithout, placeOf, putBack, tendedBranches, withoutSongs, type HandRow, type QueueBranch } from "../../src/lib/queueSections";
+// The queue's rules, the same as on the computer.
+import * as rules from "../../src/lib/queueCore";
+export { rules };
+// A queue's entries by id, edited by entry from another device (part 3 of the protocol rework).
+export { applyEdits, createEntryBook, editsBetween, editsFromList, randomId, readOps, type EditPlayer, type QueueOp } from "../../src/lib/queueEntries";
 export { currentLanguage, languageOf, LANGUAGES, setLanguage, T, textLocale, type Language, type LanguageChoice } from "../../src/lib/i18n";
 // How the library is organised, the same as on the computer: album edits, and the documents they travel in.
 export {

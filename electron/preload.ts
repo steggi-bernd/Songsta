@@ -1,5 +1,6 @@
 /** Preload — exposes a minimal, typed API to the renderer via contextBridge. */
 import type { UpdateState } from "../src/lib/newVersion";
+import type { HomeLinkStatus } from "./home-link";
 import type { HomeSyncInfo } from "./home-sync";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import type { Track } from "../src/types";
@@ -215,9 +216,23 @@ const api = {
 
   // The sync service: playlists and where playback stopped (lib/homeSync.ts); the login stays in the main process
   homeSyncInfo: () => ipcRenderer.invoke("homeSync:info") as Promise<HomeSyncInfo>,
+  /** a song only a linked phone has: where the player gets it, through the stream proxy; null for any other address */
+  peerTrackUrl: (address: string) => ipcRenderer.invoke("library:peerurl", address) as Promise<string | null>,
   homeSyncSetAddress: (address: string) => ipcRenderer.invoke("homeSync:setAddress", address) as Promise<HomeSyncInfo>,
   homeSyncRequest: (method: "GET" | "PUT" | "POST" | "DELETE", path: string, body?: unknown, timeoutMs?: number) =>
     ipcRenderer.invoke("homeSync:request", method, path, body, timeoutMs) as Promise<{ status: number; body: any }>,
+  // Phones at home without a sync service: this computer runs one for them (home-link.ts)
+  homeLinkStatus: () => ipcRenderer.invoke("homeLink:status") as Promise<HomeLinkStatus>,
+  homeLinkSetEnabled: (on: boolean) => ipcRenderer.invoke("homeLink:setEnabled", on) as Promise<HomeLinkStatus>,
+  homeLinkOpenPairing: () => ipcRenderer.invoke("homeLink:openPairing") as Promise<HomeLinkStatus>,
+  homeLinkClosePairing: () => ipcRenderer.invoke("homeLink:closePairing") as Promise<HomeLinkStatus>,
+  homeLinkRemove: (id: string) => ipcRenderer.invoke("homeLink:remove", id) as Promise<HomeLinkStatus>,
+  /** a phone paired, the code ran out, or it started or stopped */
+  onHomeLinkChanged: (listener: () => void): (() => void) => {
+    const handler = (): void => listener();
+    ipcRenderer.on("homeLink:changed", handler);
+    return () => ipcRenderer.removeListener("homeLink:changed", handler);
+  },
   // Server sync: favorites ↔ Liked Songs, plays reported (what to change is decided in the renderer)
   jellyfinUsers: () => ipcRenderer.invoke("jellyfin:users") as Promise<JellyfinUser[]>,
   jellyfinSetSyncUser: (id: string | null) => ipcRenderer.invoke("jellyfin:setSyncUser", id) as Promise<JellyfinStatus>,

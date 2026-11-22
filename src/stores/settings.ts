@@ -135,7 +135,9 @@ interface SettingsState {
   accent: Accent;
   /** full-screen Now Playing: rays dancing round the cover in the song's tempo, or the classic cover beside the lyrics */
   nowPlayingLook: "visualizer" | "classic";
-  /** the Your Library field at the top of the side panel, the way to the Your Library page; off for a panel as Spotify's */
+  /** Home holds what the Your Library page had (2026-11-21); off: the earlier Home and the Your Library page */
+  homeWithLibrary: boolean;
+  /** with the earlier layout: the Your Library field at the top of the side panel, the way to the Your Library page; off for a panel as Spotify's */
   libraryField: boolean;
 
   setTrackColumns(v: ColumnChoice): void;
@@ -211,6 +213,7 @@ interface SettingsState {
   setCorners(v: Corners): void;
   setAccent(v: Accent): void;
   setNowPlayingLook(v: "visualizer" | "classic"): void;
+  setHomeWithLibrary(v: boolean): void;
   setLibraryField(v: boolean): void;
 }
 
@@ -291,6 +294,7 @@ export const useSettings = create<SettingsState>()(
       corners: "soft",
       accent: "violet",
       nowPlayingLook: "visualizer",
+      homeWithLibrary: true,
       libraryField: true,
 
       setTrackColumns: (trackColumns) => set({ trackColumns }),
@@ -375,6 +379,7 @@ export const useSettings = create<SettingsState>()(
       setCorners: (corners) => set({ corners }),
       setAccent: (accent) => set({ accent }),
       setNowPlayingLook: (nowPlayingLook) => set({ nowPlayingLook }),
+      setHomeWithLibrary: (homeWithLibrary) => set({ homeWithLibrary }),
       setLibraryField: (libraryField) => set({ libraryField }),
     }),
     {

@@ -72,6 +72,7 @@ import { serviceOn } from "../lib/netPolicy";
 import { SETTINGS_JUMP, type SettingsJump } from "../lib/settingsJump";
 import { MediaAnalysis } from "../components/MediaAnalysis";
 import { PrivacyBlock } from "./PrivacySettings";
+import { HomeLinkGroup } from "./HomeLinkSettings";
 import { EQ_BANDS, listOutputDevices } from "../lib/audio";
 import type { OutputDeviceChoice } from "../lib/audio-output";
 import type { DiscordStatus } from "../../electron/discord";
@@ -1417,12 +1418,24 @@ export function SettingsView() {
         <Divider />
         <SettingsRow
           icon={Library}
-          title={T("“Your Library” in the side panel")}
-          subtitle={T("The field that opens the Your Library page. Off, the panel is as Spotify's")}
-          trailing={<Switch checked={s.libraryField} onChange={s.setLibraryField} />}
-          onClick={() => s.setLibraryField(!s.libraryField)}
+          title={T("Home with your library")}
+          subtitle={T("Home holds what the Your Library page had. Off: the earlier Home, and the Your Library page with its field in the side panel")}
+          trailing={<Switch checked={s.homeWithLibrary} onChange={s.setHomeWithLibrary} />}
+          onClick={() => s.setHomeWithLibrary(!s.homeWithLibrary)}
         />
         <Divider />
+        {!s.homeWithLibrary && (
+          <>
+            <SettingsRow
+              icon={Library}
+              title={T("“Your Library” in the side panel")}
+              subtitle={T("The field that opens the Your Library page. Off, the panel is as Spotify's")}
+              trailing={<Switch checked={s.libraryField} onChange={s.setLibraryField} />}
+              onClick={() => s.setLibraryField(!s.libraryField)}
+            />
+            <Divider />
+          </>
+        )}
         <SettingsRow
           icon={AppWindow}
           title={T("Reduce animation")}
@@ -1583,6 +1596,7 @@ export function SettingsView() {
     connections: (
       <>
         <ServerSyncGroup />
+        <HomeLinkGroup />
         <SettingsGroup header={T("Receivers and TVs")}>
         <SettingsRow
           icon={Power}

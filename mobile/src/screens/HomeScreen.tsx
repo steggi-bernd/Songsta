@@ -1,11 +1,12 @@
 /**
- * Home, as on the desktop: a greeting, six quick tiles (what played last,
- * topped up with mixes), "Made for you", what was added last, top artists and
- * songs played last.
+ * Home, as on the desktop: a greeting, six quick tiles (what was played from
+ * last, as on Spotify: albums, playlists, Liked Songs, artists, mixes; topped up
+ * with mixes), "Made for you", what was added last, top artists and songs
+ * played last.
  */
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { CloudOff, Settings, Speaker } from "lucide-react-native";
+import { CloudOff, Heart, Settings, Speaker } from "lucide-react-native";
 import { useNewerVersion } from "../newVersion";
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -15,11 +16,13 @@ import { refreshEverything, whenTold } from "../refreshAll";
 import { GreetingTicker } from "../components/GreetingTicker";
 import { PullRefreshScroll } from "../components/PullRefresh";
 import { Card, CARD_SIZE, Chip, Cover, CoverGrid, LoadingBars, Shelf } from "../components/ui";
-import { splitCredits, type LibAlbum, type Track } from "../shared";
+import { splitCredits, type Track } from "../shared";
 import { useConnection } from "../stores/connection";
 import { useSession } from "../stores/session";
 import { useArtistPhoto, useCoverColor, useLibrary } from "../stores/library";
+import { playedSince, usePlayed } from "../stores/played";
 import { usePlayer } from "../stores/player";
+import { playlistTracks, usePlaylists } from "../stores/playlists";
 import { colors, PAGE_END } from "../theme";
 import { T } from "../shared";
 
@@ -40,6 +43,25 @@ function Tile({ art, title, onPress }: { art: React.ReactNode; title: string; on
         {title}
       </Text>
     </Pressable>
+  );
+}
+
+/** An artist's quick tile picture: their photo, round, inside the tile's square (as Spotify draws artists). */
+function ArtistTileArt({ name, thumb }: { name: string; thumb: string }) {
+  const photo = useArtistPhoto(name);
+  return (
+    <View style={styles.artistArt}>
+      <Cover uri={photo} fallback={thumb} size={46} radius={23} />
+    </View>
+  );
+}
+
+/** Liked Songs' quick tile picture: the accent with a heart, as Your Library shows it. */
+function LikedTileArt() {
+  return (
+    <View style={styles.likedArt}>
+      <Heart size={24} color="#fff" fill="#fff" />
+    </View>
   );
 }
 
@@ -78,10 +100,11 @@ export function HomeScreen() {
   const mixes = useLibrary((s) => s.mixes);
   const playTracks = usePlayer((s) => s.playTracks);
   const color = useCoverColor(usePlayer((s) => s.queue[s.index]?.thumb));
+  const played = usePlayed((s) => s.at);
+  const homeSince = usePlayed((s) => s.homeSince ?? Number.MAX_SAFE_INTEGER);
+  const playlists = usePlaylists((s) => s.playlists);
 
-  const { recentAlbums, recentlyAdded, topArtists, recentSongs } = useMemo(() => {
-    const lastAt = (a: LibAlbum): number => Math.max(0, ...a.tracks.map((t) => data.counts[t.id]?.lastAt ?? 0));
-    const played = albums.filter((a) => lastAt(a) > 0).sort((a, b) => lastAt(b) - lastAt(a));
+  const { recentlyAdded, topArtists, recentSongs } = useMemo(() => {
     const plays = new Map<string, number>();
     for (const t of tracks) {
       const n = data.counts[t.id]?.plays ?? 0;
@@ -90,7 +113,6 @@ export function HomeScreen() {
       for (const name of splitCredits(t.artist)) plays.set(name.toLowerCase(), (plays.get(name.toLowerCase()) ?? 0) + n);
     }
     return {
-      recentAlbums: played.slice(0, 6),
       recentlyAdded: [...albums].sort((a, b) => b.addedAt - a.addedAt).slice(0, 14),
       topArtists: artists
         .filter((a) => plays.has(a.name.toLowerCase()))
@@ -104,17 +126,36 @@ export function HomeScreen() {
     };
   }, [data, tracks, albums, artists]);
 
+  // The quick tiles, as on Spotify: what was played from last (an album, a playlist, Liked Songs, an
+  // artist, a mix: stores/played.ts), not the albums of single songs; topped up with mixes and the
+  // albums that joined last.
   const quick = useMemo(() => {
-    const tiles = recentAlbums.map((a) => ({
-      key: a.key,
-      title: a.title,
-      art: <Cover uri={a.thumb} size={56} radius={0} />,
-      open: () => nav.navigate("Album", { albumKey: a.key }),
-    }));
+    const tiles: { key: string; title: string; art: React.ReactNode; open: () => void }[] = [];
+    for (const key of playedSince(played, homeSince)) {
+      if (tiles.length >= 6) break;
+      if (key === "liked") {
+        tiles.push({ key, title: T("Liked Songs"), art: <LikedTileArt />, open: () => nav.navigate("Collection", { kind: "liked" }) });
+      } else if (key.startsWith("album:")) {
+        const a = albums.find((x) => `album:${x.key}` === key);
+        if (a) tiles.push({ key, title: a.title, art: <Cover uri={a.thumb} size={56} radius={0} />, open: () => nav.navigate("Album", { albumKey: a.key }) });
+      } else if (key.startsWith("artist:")) {
+        const name = key.slice("artist:".length);
+        const a = artists.find((x) => x.name.toLowerCase() === name);
+        if (a) tiles.push({ key, title: a.name, art: <ArtistTileArt name={a.name} thumb={a.thumb} />, open: () => nav.navigate("Artist", { name: a.name }) });
+      } else if (key.startsWith("playlist:")) {
+        const p = playlists.find((x) => `playlist:${x.id}` === key);
+        const songs = p ? playlistTracks(p) : [];
+        if (p && songs.length) tiles.push({ key, title: p.name, art: <CoverGrid tracks={songs} size={56} radius={0} />, open: () => nav.navigate("Collection", { kind: "playlist", id: p.id }) });
+      } else if (key.startsWith("mix:")) {
+        const m = mixes.find((x) => `mix:${x.id}` === key);
+        if (m) tiles.push({ key, title: m.title, art: <CoverGrid tracks={m.tracks} size={56} radius={0} />, open: () => nav.navigate("Collection", { kind: "mix", id: m.id }) });
+      }
+    }
     for (const m of mixes) {
       if (tiles.length >= 6) break;
+      if (tiles.some((t) => t.key === `mix:${m.id}`)) continue;
       tiles.push({
-        key: m.id,
+        key: `mix:${m.id}`,
         title: m.title,
         art: <CoverGrid tracks={m.tracks} size={56} radius={0} />,
         open: () => nav.navigate("Collection", { kind: "mix", id: m.id }),
@@ -122,11 +163,11 @@ export function HomeScreen() {
     }
     for (const a of recentlyAdded) {
       if (tiles.length >= 6) break;
-      if (tiles.some((t) => t.key === a.key)) continue;
-      tiles.push({ key: a.key, title: a.title, art: <Cover uri={a.thumb} size={56} radius={0} />, open: () => nav.navigate("Album", { albumKey: a.key }) });
+      if (tiles.some((t) => t.key === `album:${a.key}`)) continue;
+      tiles.push({ key: `album:${a.key}`, title: a.title, art: <Cover uri={a.thumb} size={56} radius={0} />, open: () => nav.navigate("Album", { albumKey: a.key }) });
     }
     return tiles;
-  }, [recentAlbums, mixes, recentlyAdded, nav]);
+  }, [played, homeSince, albums, artists, playlists, mixes, recentlyAdded, nav]);
 
   if (!loaded) {
     return (
@@ -257,4 +298,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tile,
   },
   tileText: { flex: 1, color: colors.ink, fontSize: 13, fontWeight: "700", paddingRight: 6 },
+  artistArt: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
+  likedArt: { width: 56, height: 56, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent },
 });

@@ -1,25 +1,36 @@
 /**
- * When each album, artist, playlist and mix last played as a whole: Your Library's "Recently played"
- * order. What counts is what was started, an album's page or an artist's or a playlist's, not where
- * a song comes from: a song from a playlist makes the playlist recent, not its album or its artist.
- * Only while the list started plays: what's added to the queue after it, or comes by itself once
- * it's through, isn't it. The times start once from the plays the library knows (seedPlayed, as on
- * the computer: two songs of an album in a row count for the album, three of a playlist for it).
+ * When each album, artist, playlist, mix and Liked Songs last played as a whole: Home's "played last"
+ * tiles and Your Library's "Recently played" order. What counts is what was started, an album's page
+ * or an artist's or a playlist's, not where a song comes from: a song from a playlist makes the
+ * playlist recent, not its album or its artist. Only while the list started plays: what's added to the
+ * queue after it, or comes by itself once it's through, isn't it. Only real plays count: nothing is
+ * guessed from past plays any more (the user's wish, 2026-11-22; they know songs, not what they were
+ * played from, and the guesses named the albums of single songs heard from Liked Songs).
  */
 import { create } from "zustand";
-import { seedPlayed } from "../shared";
 import { readJson, writeJson } from "../storage";
-import { useLibrary } from "./library";
 import { usePlayer } from "./player";
-import { playlistTracks, usePlaylists } from "./playlists";
+import { usePlaylists } from "./playlists";
 import { useSettings } from "./settings";
 
 const FILE = "played.json";
 
 interface Saved {
-  /** "album:…", "artist:…" (lower case), "playlist:…", "mix:…" → when it last played */
+  /** "album:…", "artist:…" (lower case), "playlist:…", "mix:…", "liked" → when it last played */
   at: Record<string, number>;
-  seeded: boolean;
+  /**
+   * From when the played times count (set once, 2026-11-22): Home's tiles and Your Library's Recently
+   * played take only what was really played from since then. The times kept from before (guessed ones
+   * among them) don't show.
+   */
+  homeSince?: number;
+}
+
+/** What was played from since `since`, the latest first: Home's "played last" tiles. */
+export function playedSince(at: Record<string, number>, since: number): string[] {
+  return Object.keys(at)
+    .filter((key) => at[key] >= since)
+    .sort((a, b) => at[b] - at[a]);
 }
 
 interface PlayedState extends Saved {
@@ -32,20 +43,19 @@ interface PlayedState extends Saved {
 }
 
 function save(): void {
-  const { at, seeded } = usePlayed.getState();
-  writeJson(FILE, { at, seeded } satisfies Saved);
+  const { at, homeSince } = usePlayed.getState();
+  writeJson(FILE, { at, ...(homeSince ? { homeSince } : {}) } satisfies Saved);
 }
 
 export const usePlayed = create<PlayedState>((set, get) => ({
   at: {},
-  seeded: false,
   restored: false,
   touch(key) {
     set({ at: { ...get().at, [key]: Date.now() } });
     save();
   },
   forget() {
-    set({ at: {}, seeded: true });
+    set({ at: {} });
     save();
   },
   adopt(times) {
@@ -62,32 +72,12 @@ export const usePlayed = create<PlayedState>((set, get) => ({
   },
 }));
 
-/** Once, from the plays the library knows, in their order. */
-function seedOnce(): void {
-  const { seeded, restored } = usePlayed.getState();
-  const { loaded, data, albums } = useLibrary.getState();
-  if (seeded || !restored || !loaded || !data.tracks.length) return;
-  const albumOf = new Map<string, string>();
-  const sizes = new Map<string, number>();
-  for (const a of albums) {
-    sizes.set(`album:${a.key}`, a.tracks.length);
-    for (const t of a.tracks) albumOf.set(t.id, `album:${a.key}`);
-  }
-  const lastAt = (id: string): number => data.counts[id]?.lastAt ?? 0;
-  const history = data.tracks.filter((t) => lastAt(t.id) > 0).sort((a, b) => lastAt(b.id) - lastAt(a.id));
-  const collections = usePlaylists.getState().playlists.map((p) => ({ id: `playlist:${p.id}`, keys: new Set(playlistTracks(p).map((t) => t.id)) }));
-  const at = seedPlayed(history, { keyOf: (t) => t.id, albumOf: (t) => albumOf.get(t.id) ?? null, albumSize: (album) => sizes.get(album) ?? 0, collections }, Date.now());
-  usePlayed.setState({ at: { ...at, ...usePlayed.getState().at }, seeded: true });
-  save();
-}
-
 export function watchPlayed(): void {
   void Promise.all([readJson<Saved>(FILE), usePlaylists.getState().restore()]).then(([saved]) => {
-    usePlayed.setState({ at: { ...(saved?.at ?? {}), ...usePlayed.getState().at }, seeded: saved?.seeded ?? false, restored: true });
-    seedOnce();
+    const homeSince = typeof saved?.homeSince === "number" ? saved.homeSince : Date.now();
+    usePlayed.setState({ at: { ...(saved?.at ?? {}), ...usePlayed.getState().at }, homeSince, restored: true });
+    if (saved?.homeSince !== homeSince) save();
   });
-  useLibrary.subscribe(seedOnce);
-  usePlaylists.subscribe(seedOnce);
   // The list as it was started.
   let list: { source: string; ids: Set<string> } | null = null;
   usePlayer.subscribe((s, prev) => {

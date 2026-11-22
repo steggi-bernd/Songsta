@@ -53,13 +53,17 @@ export interface Shelves {
   albumSize(album: string): number;
   /** the playlists, then Liked Songs */
   collections: readonly Collection[];
+  /** a song's lead artist, as an artist's page names it (Home's "played last" counts artists too) */
+  artistOf?(t: Track): string | null;
 }
 
 /**
  * Which album, playlist or Liked Songs a queue plays: the album when every
  * song is of one and it plays at least half of it (a single by itself
  * counts); else the collection holding every song of it that it covers best,
- * at least half. A song from elsewhere — a search, a mix — plays none.
+ * at least half; else, where the shelves know artists, the artist when every
+ * song is theirs and it spans two albums or five songs (an artist page's Play
+ * or Shuffle). A song from elsewhere — a search, a mix — plays none.
  */
 export function collectionOf(queue: readonly Track[], s: Shelves): string | null {
   if (!queue.length) return null;
@@ -82,29 +86,14 @@ export function collectionOf(queue: readonly Track[], s: Shelves): string | null
     const cover = keys.size / c.keys.size;
     if (all && (!best || cover > best.cover)) best = { id: c.id, cover };
   }
-  return best?.id ?? null;
-}
-
-/**
- * Played times to start from, out of the listening history (newest first) —
- * it keeps no times, so its order stands in: the n-th song back counts n
- * minutes ago. An album counts where two of its songs ran back to back (a
- * single by itself); a playlist or Liked Songs where three songs, not all of
- * one album, ran back to back in it — the smallest holding all three.
- */
-export function seedPlayed(history: readonly Track[], s: Shelves, now: number): Record<string, number> {
-  const out: Record<string, number> = {};
-  history.forEach((t, i) => {
-    const next = history[i + 1];
-    const at = now - (i + 1) * 60_000;
-    const album = s.albumOf(t);
-    if (album && !(album in out) && (s.albumSize(album) === 1 || (next && s.albumOf(next) === album))) out[album] = at;
-    const run = history.slice(i, i + 3);
-    if (run.length < 3 || (album && run.every((r) => s.albumOf(r) === album))) return;
-    const keys = run.map((r) => s.keyOf(r));
-    let best: Collection | null = null;
-    for (const c of s.collections) if (keys.every((k) => c.keys.has(k)) && (!best || c.keys.size < best.keys.size)) best = c;
-    if (best && !(best.id in out)) out[best.id] = at;
-  });
-  return out;
+  if (best) return best.id;
+  const artistOf = s.artistOf;
+  if (artistOf && keys.size >= 2) {
+    const artist = artistOf(queue[0]);
+    if (artist && queue.every((t) => artistOf(t) === artist)) {
+      const albums = new Set(queue.map((t) => s.albumOf(t) ?? t.album ?? ""));
+      if (albums.size >= 2 || keys.size >= 5) return artist;
+    }
+  }
+  return null;
 }

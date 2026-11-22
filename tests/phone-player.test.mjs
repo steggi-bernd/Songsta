@@ -18,13 +18,18 @@ const stubs = {
   "stores/session": `export const useSession = { getState: () => ({ session: null }) }; export const here = (x) => x;`,
   "stores/settings": `export const useSettings = { getState: () => ({ autoplay: false, dontRepeat: false, speed: 1, skipEndsRepeatOne: globalThis.__skipEnds !== false }) };`,
   "stores/popups": `export const toast = () => undefined;`,
+  // Linked to a computer at home: a song only it has comes from there (homeLink.ts).
+  homeLink: `export const songFromComputer = (id) => (globalThis.__computer && id === "elsewhere" ? "http://computer/v1/files/elsewhere" : null);
+    export const handOutToComputer = async () => globalThis.__pendingShare?.ready;
+    export const toHandOut = (tracks) => tracks.some((track) => track.id === globalThis.__pendingShare?.id);
+    export const handedOutAddress = (id) => globalThis.__handedOut?.[id];`,
   storage: `export const readJson = async () => null; export const writeJson = () => undefined; export const removeJson = () => undefined;`,
   jellyfin: `export const streamUrl = () => "http://test/song";`,
   addresses: `export const withoutServer = (x) => x;`,
   quality: `export const ORIGINAL = { kind: "original" }; export const chooseStream = () => globalThis.__stream ?? ORIGINAL; export const levelGain = () => 0; export const sameChoice = () => true; export const stepDown = () => null;`,
 };
 const out = await build({
-  stdin: { contents: `export { usePlayer, adoptPlayback, hearDevices, linkDevices, playbackNote, runCommand, wantsPlayback, watchPlayer } from "./player";`, resolveDir: stores, loader: "ts" },
+  stdin: { contents: `export { usePlayer, adoptPlayback, hearDevices, linkDevices, playbackNote, runCommand, wantsPlayback, watchPlayer } from "./player"; export { servingComputer } from "../serving";`, resolveDir: stores, loader: "ts" },
   bundle: true,
   platform: "node",
   format: "esm",
@@ -102,6 +107,53 @@ beforeEach(() => {
 });
 
 /* ------------------------------------------------------------- the queue */
+
+test("a later remote play choice stays last when preparing a local file takes time", async () => {
+  followPc();
+  let release;
+  const ready = new Promise((resolve) => { release = resolve; });
+  globalThis.__pendingShare = { id: "local:a", ready };
+  try {
+    player().playTracks([{ ...t("local:a"), localPath: "content://music/a" }], 0, "First", false);
+    player().playTracks(songs("jf:b"), 0, "Second", false);
+    assert.equal(now(), "jf:b");
+    release();
+    await new Promise((resolve) => setImmediate(resolve));
+    const last = sent.filter((command) => command.action === "playList").at(-1);
+    assert.ok(last, "the player received a selection");
+    assert.equal(last.tracks[last.start]?.id, "jf:b");
+  } finally {
+    release();
+    delete globalThis.__pendingShare;
+  }
+});
+
+test("a pending remote play belongs to the link on which it was requested", async () => {
+  followPc();
+  let release;
+  const ready = new Promise((resolve) => { release = resolve; });
+  globalThis.__pendingShare = { id: "local:a", ready };
+  const onNewLink = [];
+  try {
+    player().playTracks([{ ...t("local:a"), localPath: "content://music/a" }], 0, "First", false);
+    await new Promise((resolve) => setImmediate(resolve));
+    linkDevices(null);
+    linkDevices({
+      self: "phone",
+      send: async () => true,
+      sendList: async (target, tracks) => { onNewLink.push({ target, ids: tracks.map((song) => song.id) }); return true; },
+      handOver: async () => true,
+      look() {},
+      presence() {},
+    });
+    release();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(onNewLink, []);
+  } finally {
+    release();
+    delete globalThis.__pendingShare;
+  }
+});
 
 test("first come, first played: a song, a branch, a song, another branch", () => {
   player().playTracks(songs("a", "b", "c"), 0, "Album");
@@ -547,6 +599,58 @@ test("sent a song this phone doesn't have: the next one it does, from its start;
   assert.equal(adoptPlayback(note, null), true);
 });
 
+test("linked to a computer at home: a song only the computer has stays in the list and plays from there", () => {
+  globalThis.__computer = true;
+  try {
+    player().stop();
+    globalThis.__native.length = 0;
+    const note = { device: { id: "pc", name: "PC" }, at: 6, playing: true, positionMs: 9000, track: t("elsewhere"), queueId: "q9", place: 0 };
+    assert.equal(adoptPlayback(note, { id: "q9", from: 0, tracks: songs("elsewhere", "b") }, true), true);
+    assert.deepEqual(ids(), ["elsewhere", "b"], "nothing left out");
+    assert.equal(now(), "elsewhere", "the computer's song, not the next one");
+    assert.equal(player().positionMs, 9000, "from where it was");
+    const set = globalThis.__native.filter((c) => c[0] === "setQueue").at(-1);
+    assert.equal(set[1][0].url, "http://computer/v1/files/elsewhere", "fetched from the computer");
+  } finally {
+    globalThis.__computer = false;
+    player().stop();
+  }
+});
+
+test("a song only this phone has goes to the linked computer with the address it fetches it from", () => {
+  const address = "http://192.168.1.5:4000/song/0123456789abcdef0123456789abcdef.flac";
+  globalThis.__handedOut = { b: address };
+  try {
+    player().stop();
+    player().playTracks(songs("a", "b", "c"), 0, "Album");
+    nativeSays(0);
+    const note = m.playbackNote({ id: "phone", name: "Phone" });
+    const doc = note.queue();
+    assert.equal(doc.tracks.find((w) => w.id === "b").src, address, "handed out: with its address");
+    assert.equal(doc.tracks.find((w) => w.id === "a").src, undefined, "not handed out: without");
+  } finally {
+    globalThis.__handedOut = undefined;
+    player().stop();
+  }
+});
+
+test("while the computer it follows plays this phone's songs, the phone stays awake for it; taken back, it rests", () => {
+  globalThis.__handedOut = { b: "http://192.168.1.5:4000/song/0123456789abcdef0123456789abcdef.flac" };
+  try {
+    followPc("a", songs("a", "b", "c"));
+    assert.deepEqual(m.servingComputer(), { name: "PC", title: "A", playing: true }, "b of this phone's comes up there");
+    player().takeHere();
+    assert.equal(m.servingComputer(), null);
+    globalThis.__handedOut = {};
+    followPc("a", songs("a", "b", "c"));
+    assert.equal(m.servingComputer(), null, "nothing of this phone's there: nothing to stay awake for");
+  } finally {
+    globalThis.__handedOut = undefined;
+    if (player().remote) player().takeHere();
+    player().stop();
+  }
+});
+
 /* ------------------------------------------------------------- skipping away from repeat-one */
 
 function onRepeatOne() {
@@ -871,7 +975,7 @@ test("told to play a list from the second copy of a song in it: that copy, and w
   assert.deepEqual(ids(), ["a", "c", "d"]);
 });
 
-test("two controllers removing different songs from one queue preserve both deletions", { todo: "setUpcoming can reinsert an entry from the older snapshot" }, () => {
+test("two controllers removing different songs from one queue preserve both deletions", () => {
   const original = many(1200);
   player().playTracks(original, 0, "Long list", false);
   player().removeAt(800);
@@ -898,4 +1002,272 @@ test("an edit anchored to a song another controller took out meanwhile keeps wha
   m.runCommand({ action: "setUpcoming", tracks: many(801).slice(1), keepAfter: { track: t("s800"), ahead: 800 } });
   assert.equal(new Set(ids()).size, ids().length, "nothing twice");
   assert.ok(ids().includes("s801"));
+});
+
+test("a word still waiting when the link changes goes nowhere: the new link hears only what's said on it", async () => {
+  followPc();
+  let release;
+  const ready = new Promise((resolve) => {
+    release = resolve;
+  });
+  globalThis.__pendingShare = { id: "local:w", ready };
+  const heard = [];
+  try {
+    player().playTracks([{ ...t("local:w"), localPath: "content://music/w" }], 0, "Waiting", false);
+    linkDevices({
+      self: "phone",
+      send: async (target, command) => {
+        heard.push(command.action);
+        return true;
+      },
+      sendList: async (target, tracks, context, command) => {
+        heard.push(command.action);
+        return true;
+      },
+      handOver: async () => true,
+      look() {},
+      presence() {},
+    });
+    release();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(heard, [], "the old word stayed with the old link");
+  } finally {
+    release();
+    delete globalThis.__pendingShare;
+    // Not following any more: its ticking would keep the test run alive.
+    if (player().remote) player().takeHere();
+    player().stop();
+  }
+});
+
+test("an edit from an older app that saw only a stretch of this queue keeps what comes after that stretch", () => {
+  try {
+    player().playTracks(Array.from({ length: 1200 }, (_, i) => t(`s${i}`)), 0, "Long");
+    nativeSays(0);
+    const shown = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    assert.equal(shown.tracks.length, 800, "the others see a stretch");
+    assert.equal(shown.total, 1200);
+    // An older app takes the second song out of what it saw, and says nothing of how much that was.
+    m.runCommand({ action: "setUpcoming", line: 0, tracks: shown.tracks.slice(1).filter((w) => w.id !== "s1") });
+    assert.equal(player().queue.length, 1199, "what it never saw stays");
+    assert.equal(player().queue[1].id, "s2");
+    assert.equal(player().queue.at(-1).id, "s1199");
+  } finally {
+    player().stop();
+  }
+});
+
+/* ------------------------------------------------------------- edits by entry (part 3 of the protocol rework) */
+
+test("edits by entry from two devices at once, and a song put in behind place 1,000 by a third: all of it stays here, in one order", () => {
+  try {
+    player().playTracks(many(1200), 300, "Long list", false);
+    nativeSays(300);
+    const doc = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    assert.equal(doc.entries.length, doc.tracks.length, "an id for every song said");
+    const id = (song) => doc.entries[doc.tracks.findIndex((w) => w.id === song)];
+    const playing = id("s300");
+    const edit = (ops) => m.runCommand({ action: "editQueue", session: doc.session, ops, playing });
+    assert.equal(edit([{ op: "remove", entry: id("s302") }]), "done");
+    assert.equal(edit([{ op: "remove", entry: id("s800") }]), "done");
+    assert.equal(edit([{ op: "insert", after: [id("s1000")], tracks: [t("new")], entries: ["n1"] }]), "done");
+    const expected = many(1200).map((x) => x.id).filter((x) => x !== "s302" && x !== "s800");
+    expected.splice(expected.indexOf("s1000") + 1, 0, "new");
+    assert.deepEqual(ids(), expected);
+    assert.equal(now(), "s300", "the song playing plays on");
+    const later = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    assert.equal(later.entries[later.tracks.findIndex((w) => w.id === "new")], "n1", "the new song has the id it was sent with");
+    assert.equal(edit([{ op: "remove", entry: id("s302") }]), "partial", "gone already: nothing to apply to");
+    assert.equal(m.runCommand({ action: "editQueue", session: "another list", ops: [{ op: "remove", entry: id("s303") }] }), "stale");
+    assert.ok(ids().includes("s303"), "an edit of another list changes nothing");
+  } finally {
+    player().stop();
+  }
+});
+
+test("of a song in the queue twice, an edit by entry takes out just the one chosen", () => {
+  try {
+    player().playTracks(songs("a", "x", "b", "x", "c"), 0, "Twice", false);
+    nativeSays(0);
+    const doc = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    assert.equal(m.runCommand({ action: "editQueue", session: doc.session, ops: [{ op: "remove", entry: doc.entries[3] }], playing: doc.entries[0] }), "done");
+    assert.deepEqual(ids(), ["a", "x", "b", "c"]);
+  } finally {
+    player().stop();
+  }
+});
+
+test("following a computer that takes edits by entry: an edit made here goes out as edits of its entries, never the whole list", async () => {
+  m.runCommand({ action: "yield", to: "pc" });
+  const abilities = ["lists", "kept", "edits", "handover"];
+  hearDevices([pc("b", { abilities })]);
+  adoptPlayback(
+    { device: { id: "pc", name: "PC" }, at: 1, playing: true, positionMs: 40000, track: t("b"), queueId: "q1", place: 1 },
+    { id: "q1", from: 0, tracks: songs("a", "b", "c", "d", "c"), entries: ["e1", "e2", "e3", "e4", "e5"], session: "s-pc" }
+  );
+  try {
+    assert.deepEqual(ids(), ["a", "b", "c", "d", "c"]);
+    player().removeAt(4);
+    assert.deepEqual(sent.at(-1), { action: "editQueue", session: "s-pc", ops: [{ op: "remove", entry: "e5" }], playing: "e2" }, "the second C, by its entry");
+    player().moveItem(3, 2);
+    assert.deepEqual(sent.at(-1).ops, [{ op: "move", entry: "e4", after: ["e2", "e1"] }]);
+    player().addToQueue([t("x")]);
+    const word = sent.at(-1);
+    assert.equal(word.action, "enqueue");
+    assert.equal(word.entries?.length, 1, "the song goes with the id it's to have there");
+    await Promise.resolve();
+    player().removeAt(ids().indexOf("x"));
+    assert.deepEqual(sent.at(-1).ops, [{ op: "remove", entry: word.entries[0] }], "taken out again right away: by that id");
+    player().clearUpcoming();
+    assert.deepEqual(sent.at(-1).ops, [{ op: "clear" }]);
+    assert.equal(sent.some((command) => command.action === "setUpcoming"), false);
+  } finally {
+    player().takeHere();
+    player().stop();
+  }
+});
+test("turning shuffle on and off at a second occurrence preserves the following queue", () => {
+  try {
+    player().playTracks(songs("a", "x", "b", "x", "c"), 3, "Duplicates", false);
+    nativeSays(3);
+    assert.equal(now(), "x");
+    player().toggleShuffle();
+    player().toggleShuffle();
+    assert.deepEqual(ids(), ["a", "x", "b", "x", "c"]);
+  } finally {
+    player().stop();
+  }
+});
+test("independent removals of adjacent copies keep the surviving entry addressable", () => {
+  try {
+    player().playTracks(songs("a", "x", "x", "b"), 0, "Copies", false);
+    nativeSays(0);
+    const doc = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    for (const entry of doc.entries.slice(1, 3)) {
+      const result = m.runCommand({ action: "editQueue", session: doc.session, playing: doc.entries[0], ops: [{ op: "remove", entry }] });
+      assert.equal(result, "done");
+    }
+    assert.deepEqual(ids(), ["a", "b"]);
+  } finally {
+    player().stop();
+  }
+});
+
+/* ------------------------------------------------------------- shuffle with a song in the queue twice (Codex, section 15) */
+
+test("shuffle on and off at the first of two copies: B comes next; started shuffled from the second copy: shuffle off goes on after it", () => {
+  try {
+    player().playTracks(songs("a", "x", "b", "x", "c"), 1, "Duplicates", false);
+    nativeSays(1);
+    player().toggleShuffle();
+    player().toggleShuffle();
+    assert.deepEqual(ids(), ["a", "x", "b", "x", "c"]);
+    assert.equal(player().queue[player().index + 1].id, "b");
+    player().playTracks(songs("a", "x", "b", "x", "c"), 3, "Duplicates", true);
+    nativeSays(0);
+    player().toggleShuffle();
+    assert.equal(now(), "x");
+    assert.deepEqual(ids().slice(player().index + 1), ["c"], "what came after the second copy");
+  } finally {
+    player().stop();
+  }
+});
+
+test("the same song object twice in a list (as the library hands it out): shuffle off still finds the copy that plays", () => {
+  const x = t("x");
+  try {
+    player().playTracks([t("a"), x, t("b"), x, t("c")], 3, "One object twice", false);
+    nativeSays(3);
+    player().toggleShuffle();
+    player().toggleShuffle();
+    assert.deepEqual(ids(), ["a", "x", "b", "x", "c"]);
+    assert.equal(player().queue[player().index + 1].id, "c");
+  } finally {
+    player().stop();
+  }
+});
+
+test("starting an overlapping playlist rejects a clear from the previous session", () => {
+  try {
+    player().playTracks(songs("a", "b", "c"), 0, "First", false);
+    nativeSays(0);
+    const note = () => m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    const old = note();
+    player().playTracks(songs("a", "c", "d"), 0, "Second", false);
+    nativeSays(0);
+    const current = note();
+    assert.notEqual(current.session, old.session);
+    const clear = (doc) => m.runCommand({ action: "editQueue", session: doc.session, playing: doc.entries[0], ops: [{ op: "clear" }] });
+    assert.equal(clear(old), "stale");
+    assert.deepEqual(ids(), ["a", "c", "d"]);
+    assert.equal(clear(current), "done");
+    assert.deepEqual(ids(), ["a"]);
+  } finally {
+    player().stop();
+  }
+});
+
+/* ------------------------------------------------------------- copies side by side, a step from an entry, lists from elsewhere (Codex, sections 16 and 17) */
+
+test("two to five copies side by side taken out by their entries in every order (152 in all): each removal done, the ids left the ones not taken out", () => {
+  const orders = (list) => (list.length <= 1 ? [list] : list.flatMap((x, i) => orders([...list.slice(0, i), ...list.slice(i + 1)]).map((rest) => [x, ...rest])));
+  let cases = 0;
+  try {
+    for (let n = 2; n <= 5; n++) {
+      // One song object n times over, as the library hands it out.
+      const x = t("x");
+      for (const order of orders([...Array(n).keys()])) {
+        player().playTracks([t("a"), ...Array(n).fill(x), t("b")], 0, "Copies", false);
+        nativeSays(0);
+        const doc = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+        const copies = doc.entries.slice(1, 1 + n);
+        let left = [...copies];
+        for (const k of order) {
+          const result = m.runCommand({ action: "editQueue", session: doc.session, playing: doc.entries[0], ops: [{ op: "remove", entry: copies[k] }] });
+          assert.equal(result, "done", `n=${n}, order ${order}`);
+          left = left.filter((id) => id !== copies[k]);
+          const now = m.playbackNote({ id: "phone", name: "Phone" }).queue().entries;
+          assert.deepEqual(now.slice(1, 1 + left.length), left, `the ids left, n=${n}, order ${order}`);
+        }
+        assert.deepEqual(ids(), ["a", "b"]);
+        cases += 1;
+      }
+    }
+  } finally {
+    player().stop();
+  }
+  assert.equal(cases, 152);
+});
+
+test("on to the next song from a named entry: the word coming twice goes on once; from another entry, it stays", () => {
+  try {
+    player().playTracks(songs("a", "b", "c", "d"), 0, "Steps", false);
+    nativeSays(0);
+    const doc = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    m.runCommand({ action: "next", from: doc.entries[0] });
+    nativeSays(1);
+    m.runCommand({ action: "next", from: doc.entries[0] });
+    assert.equal(now(), "b", "the same word again: still at B");
+    m.runCommand({ action: "next", from: doc.entries[1] });
+    nativeSays(2);
+    assert.equal(now(), "c");
+  } finally {
+    player().stop();
+  }
+});
+
+test("a list started from another device is a new list, also when it shares songs with the last one: a late clear of that one finds nothing", () => {
+  try {
+    player().playTracks(songs("a", "b", "c"), 0, "First", false);
+    nativeSays(0);
+    const old = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    m.runCommand({ action: "playList", tracks: songs("a", "c", "d"), start: 0, keepOrder: true });
+    nativeSays(0);
+    const current = m.playbackNote({ id: "phone", name: "Phone" }).queue();
+    assert.notEqual(current.session, old.session);
+    assert.equal(m.runCommand({ action: "editQueue", session: old.session, playing: old.entries[0], ops: [{ op: "clear" }] }), "stale");
+    assert.deepEqual(ids(), ["a", "c", "d"]);
+  } finally {
+    player().stop();
+  }
 });
