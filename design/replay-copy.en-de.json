@@ -1,0 +1,297 @@
+{
+  "version": "0.1.0",
+  "status": "editorial-tone-samples",
+  "note": "Data-driven copy candidates. Trigger thresholds are illustrative and must be validated using actual Songsta stats per replay period. Make the pick stable by period + ID; never imply personal facts without data.",
+  "rules": {
+    "maxHeroVariantsPerSlide": 5,
+    "stableSelection": true,
+    "requireMinListeningMinutes": 30,
+    "privacy": "Only local listening history and existing library metadata. No invented statistics.",
+    "noJudgment": "Avoid criticism of low activity or repeated listening.",
+    "fallback": "generic"
+  },
+  "segments": [
+    {
+      "id": "intro",
+      "variants": [
+        {
+          "id": "intro.default",
+          "when": "fallback",
+          "de": {
+            "headline": "Dein Monat. Dein Soundtrack.",
+            "body": "Das lief bei dir."
+          },
+          "en": {
+            "headline": "Your month. Your soundtrack.",
+            "body": "Here's what you listened to."
+          }
+        },
+        {
+          "id": "intro.discovery",
+          "when": "unique_first_listens >= 20 AND first_listen_ratio >= 0.4",
+          "de": {
+            "headline": "Da war einiges neu.",
+            "body": "Ein Monat voller neuer Songs – und bestimmt ein paar neuer Favoriten."
+          },
+          "en": {
+            "headline": "You found something new.",
+            "body": "A month of discoveries, and maybe a few new favorites."
+          }
+        },
+        {
+          "id": "intro.repeats",
+          "when": "top_track_plays >= 10 AND top_track_share >= 0.12",
+          "de": {
+            "headline": "Manche Songs gehen einfach immer.",
+            "body": "Dieser Monat hatte ein paar klare Favoriten."
+          },
+          "en": {
+            "headline": "Some songs never get old.",
+            "body": "This month had some clear favorites."
+          }
+        },
+        {
+          "id": "intro.variety",
+          "when": "distinct_artists >= 35 AND distinct_genres >= 6",
+          "de": {
+            "headline": "Du hast dich durchgehört.",
+            "body": "Viele Künstler, unterschiedliche Sounds – alles in deinem Monat."
+          },
+          "en": {
+            "headline": "You went exploring.",
+            "body": "Different artists, different sounds. All part of your month."
+          }
+        },
+        {
+          "id": "intro.quiet",
+          "when": "total_minutes < 30",
+          "de": {
+            "headline": "Hier geht’s gerade erst los.",
+            "body": "Hör einfach weiter Musik. Dein Replay wächst mit."
+          },
+          "en": {
+            "headline": "Just getting started.",
+            "body": "Keep listening. Your Replay will grow with you."
+          }
+        }
+      ]
+    },
+    {
+      "id": "top-track",
+      "variants": [
+        {
+          "id": "top.default",
+          "when": "fallback",
+          "de": {
+            "headline": "Dein Song des Monats.",
+            "body": "{song} von {artist} war ganz vorne dabei."
+          },
+          "en": {
+            "headline": "Your song of the month.",
+            "body": "{song} by {artist} led the way."
+          }
+        },
+        {
+          "id": "top.repeat",
+          "when": "top_track_plays >= 12",
+          "de": {
+            "headline": "Den konntest du gut nochmal hören.",
+            "body": "{song} lief {plays} Mal. Manche Songs passen einfach immer."
+          },
+          "en": {
+            "headline": "Worth another listen. And another.",
+            "body": "You played {song} {plays} times. Some songs just stick."
+          }
+        },
+        {
+          "id": "top.close",
+          "when": "top_track_plays - second_track_plays <= 2 AND second_track_plays >= 4",
+          "de": {
+            "headline": "Das war knapp.",
+            "body": "{song} hat sich ganz knapp den ersten Platz geholt."
+          },
+          "en": {
+            "headline": "That was close.",
+            "body": "{song} just made it into first place."
+          }
+        }
+      ]
+    },
+    {
+      "id": "artists",
+      "variants": [
+        {
+          "id": "artists.default",
+          "when": "fallback",
+          "de": {
+            "headline": "Diese Künstler waren dabei.",
+            "body": "Hier sind deine meistgehörten."
+          },
+          "en": {
+            "headline": "The artists behind your month.",
+            "body": "Here are the ones you played most."
+          }
+        },
+        {
+          "id": "artists.loyal",
+          "when": "top_artist_share >= 0.25 AND top_artist_minutes >= 60",
+          "de": {
+            "headline": "Ein klarer Favorit.",
+            "body": "{artist} hat dich diesen Monat besonders oft begleitet."
+          },
+          "en": {
+            "headline": "One clear favorite.",
+            "body": "{artist} kept you company this month."
+          }
+        },
+        {
+          "id": "artists.many",
+          "when": "distinct_artists >= 50",
+          "de": {
+            "headline": "Ganz schön viele Stimmen.",
+            "body": "{count} Künstler hast du diesen Monat gehört."
+          },
+          "en": {
+            "headline": "So many voices.",
+            "body": "You listened to {count} artists this month."
+          }
+        }
+      ]
+    },
+    {
+      "id": "genres",
+      "variants": [
+        {
+          "id": "genre.default",
+          "when": "fallback",
+          "de": {
+            "headline": "Dein Sound: {genre}.",
+            "body": "Das Genre, das bei dir am häufigsten lief."
+          },
+          "en": {
+            "headline": "Your sound: {genre}.",
+            "body": "The genre you played most."
+          }
+        },
+        {
+          "id": "genre.diverse",
+          "when": "distinct_genres >= 8",
+          "de": {
+            "headline": "Du bleibst nicht bei einem Sound.",
+            "body": "Von {genreA} bis {genreB} war einiges dabei."
+          },
+          "en": {
+            "headline": "You kept things varied.",
+            "body": "From {genreA} to {genreB}, you covered some ground."
+          }
+        },
+        {
+          "id": "genre.dominant",
+          "when": "top_genre_share >= 0.5",
+          "de": {
+            "headline": "{genre} hatte die Nase vorn.",
+            "body": "Davon konntest du diesen Monat offenbar nicht genug bekommen."
+          },
+          "en": {
+            "headline": "{genre} led the way.",
+            "body": "You kept coming back to it this month."
+          }
+        }
+      ]
+    },
+    {
+      "id": "time",
+      "variants": [
+        {
+          "id": "time.evening",
+          "when": "peak_hour >= 18 AND peak_hour < 23",
+          "de": {
+            "headline": "Abends läuft’s bei dir.",
+            "body": "Um {time} Uhr lief bei dir besonders viel Musik."
+          },
+          "en": {
+            "headline": "Evenings sound good on you.",
+            "body": "You listened most around {time}."
+          }
+        },
+        {
+          "id": "time.night",
+          "when": "peak_hour >= 23 OR peak_hour < 5",
+          "de": {
+            "headline": "Musik kennt keine Sperrstunde.",
+            "body": "Rund um {time} Uhr war deine häufigste Hörzeit."
+          },
+          "en": {
+            "headline": "Music after hours.",
+            "body": "You listened most around {time}."
+          }
+        },
+        {
+          "id": "time.morning",
+          "when": "peak_hour >= 5 AND peak_hour < 11",
+          "de": {
+            "headline": "Mit Musik in den Tag.",
+            "body": "Rund um {time} Uhr war bei dir am meisten los."
+          },
+          "en": {
+            "headline": "Start the day with music.",
+            "body": "You listened most around {time}."
+          }
+        },
+        {
+          "id": "time.day",
+          "when": "fallback",
+          "de": {
+            "headline": "Deine Musikzeit.",
+            "body": "Rund um {time} Uhr lief bei dir am meisten."
+          },
+          "en": {
+            "headline": "Your listening hour.",
+            "body": "You listened most around {time}."
+          }
+        }
+      ]
+    },
+    {
+      "id": "new",
+      "variants": [
+        {
+          "id": "new.none",
+          "when": "first_listens == 0",
+          "de": {
+            "headline": "Vertraute Songs, gute Gesellschaft.",
+            "body": "Diesmal standen deine bekannten Favoriten im Mittelpunkt."
+          },
+          "en": {
+            "headline": "Back to your favorites.",
+            "body": "This time was all about the music you know."
+          }
+        },
+        {
+          "id": "new.some",
+          "when": "first_listens > 0 AND first_listens < 20",
+          "de": {
+            "headline": "Ein paar neue Entdeckungen.",
+            "body": "{count} Songs hast du zum ersten Mal gehört."
+          },
+          "en": {
+            "headline": "A few fresh finds.",
+            "body": "You heard {count} songs for the first time."
+          }
+        },
+        {
+          "id": "new.many",
+          "when": "first_listens >= 20",
+          "de": {
+            "headline": "Ganz schön viel Neues entdeckt.",
+            "body": "{count} Songs waren zum ersten Mal dabei."
+          },
+          "en": {
+            "headline": "Plenty of new discoveries.",
+            "body": "You heard {count} songs for the first time."
+          }
+        }
+      ]
+    }
+  ]
+}
