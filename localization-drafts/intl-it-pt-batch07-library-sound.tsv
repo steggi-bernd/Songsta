@@ -1,0 +1,200 @@
+group	gruppo	grupo
+Group · {count}	Gruppo · {count}	Grupo · {count}
+Group {count}	Gruppo {count}	Grupo {count}
+Group name	Nome gruppo	Nome do grupo
+groups	gruppi	grupos
+Headliner: {name}	Protagonista: {name}	Destaque: {name}
+Headphone corrections from AutoEQ by Jaakko Pasanen (github.com/jaakkopasanen/AutoEq). The preamp keeps boosts from clipping; a limiter catches anything that still would.	Correzioni per cuffie AutoEQ di Jaakko Pasanen (github.com/jaakkopasanen/AutoEq). Il preamplificatore evita la distorsione dei picchi; un limiter interviene su quelli rimanenti.	Correções para fones de ouvido do AutoEQ, de Jaakko Pasanen (github.com/jaakkopasanen/AutoEq). O pré-amplificador evita distorção nos ajustes elevados; um limitador segura os picos restantes.
+Headphones	Cuffie	Fones de ouvido
+Hi-Res	Hi-Res	Hi-Res
+Hi-Res lossless	Hi-Res senza perdita	Hi-Res sem perdas
+Hide clips, recordings and voice notes (applies on rescan)	Nascondi clip, registrazioni e note vocali (alla prossima scansione)	Ocultar clipes, gravações e notas de voz (após nova verificação)
+Hide volume bar	Nascondi barra del volume	Ocultar barra de volume
+High shelf	Filtro a scaffale per le alte frequenze	Filtro shelving de agudos
+Highlight the current line and auto-scroll	Evidenzia la riga corrente e scorri automaticamente	Destacar a linha atual e rolar automaticamente
+Highlight the current line and follow it	Evidenzia la riga corrente e seguila	Destacar e acompanhar a linha atual
+Home	Home	Início
+How a pulled song feels	Sensazione quando trascini un brano	Sensação ao arrastar uma música
+How it sounded	Come suonava	Como soou
+How round panels, cards and menus are	Quanto sono arrotondati pannelli, schede e menu	Arredondamento de painéis, cartões e menus
+How songs follow each other, and what plays when the list ends	Come si susseguono i brani e cosa succede quando finisce la lista	Como as músicas se encadeiam e o que toca quando a lista termina
+I have it…	Ce l'ho già…	Eu já tenho…
+Import	Importa	Importar
+Import a backup?	Importare un backup?	Importar um backup?
+Import a local folder first	Importa prima una cartella locale	Importe primeiro uma pasta local
+Import another folder	Importa un'altra cartella	Importar outra pasta
+Import data	Importa dati	Importar dados
+Import failed	Importazione non riuscita	Falha na importação
+Import file	Importa file	Importar arquivo
+Import from Spotify	Importa da Spotify	Importar do Spotify
+Import music folders — a parent folder brings its music subfolders along	Importa cartelle musicali: una cartella principale include anche le sottocartelle	Importar pastas de música: uma pasta principal também traz as subpastas
+Import one folder or a whole organised parent — Songsta keeps each folder as its own collection, with tags and cover art, on your machine only.	Importa una cartella o una cartella principale organizzata. Songsta gestisce ogni cartella come raccolta a sé, con tag e copertine, solo sul tuo computer.	Importe uma pasta ou uma pasta principal organizada. O Songsta mantém cada pasta como uma coleção separada, com tags e capas, apenas no seu computador.
+Import playlist	Importa playlist	Importar playlist
+Import this backup?	Importare questo backup?	Importar este backup?
+Import ZIP	Importa ZIP	Importar ZIP
+Import ZIP…	Importa ZIP…	Importar ZIP…
+Imported "{name}"	«{name}» importato	“{name}” importado
+Imported {count} filters	Importati {count} filtri	{count} filtros importados
+Imported {count} of {count2} songs — {missed} aren't in your library	Importati {count} brani su {count2}; {missed} non sono nella tua libreria	{count} de {count2} músicas importadas; {missed} não estão na sua biblioteca
+Imported {count} songs	Importati {count} brani	{count} músicas importadas
+Imported {n} folders	Importate {n} cartelle	{n} pastas importadas
+Importing folder…	Importazione cartella…	Importando pasta…
+In Spotify's order, newest first — adding again later puts newly found songs in their place. Songs you liked only in Songsta stay on top{value}.	Nell'ordine di Spotify, dai Mi piace più recenti. I brani trovati in seguito si inseriscono al posto giusto. Quelli che hai aggiunto solo su Songsta restano in cima{value}.	Na ordem do Spotify, com as curtidas mais recentes primeiro. Músicas encontradas depois entram no lugar certo. As curtidas apenas no Songsta ficam no topo{value}.
+in the file's order (no like dates)	nell'ordine del file (senza date dei Mi piace)	na ordem do arquivo (sem datas de curtidas)
+In the full-screen player the cover glows stronger behind everything, its colours brighter	Nel lettore a schermo intero la copertina illumina lo sfondo con colori più vividi	No player em tela cheia, a capa ilumina o fundo com cores mais vibrantes
+in the order you liked them	nell'ordine in cui hai messo Mi piace	na ordem em que você curtiu
+in the playlist's order	nell'ordine della playlist	na ordem da playlist
+In the playlist's order. Songs you get later join it by themselves, in their place. Songs you added to it in Songsta stay, after them{value}.	Nell'ordine della playlist originale. I brani che ottieni in seguito si inseriscono automaticamente al posto giusto. Quelli aggiunti su Songsta rimangono dopo{value}.	Na ordem da playlist original. Músicas que você conseguir depois entram automaticamente no lugar certo. As adicionadas no Songsta permanecem depois{value}.
+In the Spotify import's “to buy” list: searches on Qobuz, Bandcamp, 7digital and Amazon	Nella lista «Da acquistare» dell'importazione Spotify: ricerche su Qobuz, Bandcamp, 7digital e Amazon	Na lista “Para comprar” da importação do Spotify: buscas no Qobuz, Bandcamp, 7digital e Amazon
+Input	Ingresso	Entrada
+inside — it holds all your playlists; you pick one next.	al suo interno: contiene tutte le tue playlist; scegline una.	lá dentro: contém todas as suas playlists; escolha uma.
+inside. It has no like dates, so the file's order is used.	al suo interno. Non contiene le date dei Mi piace, quindi verrà usato l'ordine del file.	lá dentro. Não contém datas de curtidas, então será usada a ordem do arquivo.
+Instrumental	Strumentale	Instrumental
+Into "{name}"	In «{name}»	Em “{name}”
+it all.	tutto questo.	tudo isso.
+It goes from all your devices.	Verrà rimosso da tutti i tuoi dispositivi.	Será removido de todos os seus dispositivos.
+It had a	Aveva il suo	Teve seu próprio
+It installs when you close Songsta.	Si installerà quando chiuderai Songsta.	Será instalado quando você fechar o Songsta.
+It may have been deleted.	Potrebbe essere stato eliminato.	Talvez tenha sido excluído.
+It may have been deleted. Head back to your playlists to find the rest.	Potrebbe essere stato eliminato. Torna alle playlist per trovare il resto.	Talvez tenha sido excluído. Volte às playlists para encontrar as outras.
+It may have been removed from your library.	Potrebbe essere stato rimosso dalla tua libreria.	Talvez tenha sido removido da sua biblioteca.
+It refused this login	Accesso rifiutato	Este login foi recusado
+It stays in Songsta — your files keep their tags. The album editor takes them off again.	La modifica rimane in Songsta: i tag dei file non cambiano. Puoi annullarla nell'editor album.	A alteração fica apenas no Songsta: as tags dos arquivos não mudam. Você pode desfazê-la no editor de álbuns.
+Its songs disappear from Songsta until you connect again. Nothing on the server changes.	I brani spariranno da Songsta finché non ti ricollegherai. Sul server non cambia nulla.	As músicas somem do Songsta até você conectar novamente. Nada muda no servidor.
+Its songs leave the app. The files stay on your phone.	I brani spariranno dall'app, ma i file resteranno sul telefono.	As músicas saem do aplicativo, mas os arquivos continuam no celular.
+Its songs were	I suoi brani erano	As músicas eram
+Jellyfin or Navidrome, at home and on the road.	Jellyfin o Navidrome, a casa e fuori.	Jellyfin ou Navidrome, em casa ou fora dela.
+Jellyfin user	Utente Jellyfin	Usuário do Jellyfin
+Jellyfin waits for a user — choose one below	Jellyfin aspetta un utente: scegline uno qui sotto	O Jellyfin precisa de um usuário: escolha um abaixo
+Jellyfin, at home and on the road.	Jellyfin, a casa e fuori.	Jellyfin, em casa ou fora dela.
+Joins your album “{title}” by {artist} ({count} {value}).	Verrà unito al tuo album «{title}» di {artist} ({count} {value}).	Será unido ao seu álbum “{title}” de {artist} ({count} {value}).
+JUMP BACK IN	RIPRENDI L'ASCOLTO	VOLTE A OUVIR
+Jump here	Vai qui	Ir para cá
+Jump over silent intros and gaps	Salta le introduzioni e le pause silenziose	Pular introduções e pausas silenciosas
+Keep Liked Songs and the {servers} favorites the same	Mantieni allineati i Brani preferiti e i preferiti su {servers}	Manter músicas curtidas e favoritas de {servers} sincronizadas
+Keep on	Resta acceso	Manter ligado
+Keep recently played tracks out of autoplay	Escludi i brani riprodotti di recente dalla riproduzione automatica	Evitar músicas recentes na reprodução automática
+Keep the music going when the queue ends	Continua la musica quando finisce la coda	Continuar ouvindo quando a fila terminar
+Keep the player bar free of the volume slider	Nascondi il cursore del volume dalla barra del lettore	Ocultar o controle de volume da barra do player
+Keep the spotlight on the current line	Mantieni evidenziata la riga corrente	Manter a linha atual em destaque
+Keep them as a playlist	Salvali come playlist	Salvar como playlist
+Keeps the full resolution of 24-bit files up to your phone's mixer. Turn it off if those songs play too fast.	Mantiene tutti i 24 bit fino al mixer del telefono. Disattiva l'opzione se questi brani si riproducono troppo velocemente.	Mantém os 24 bits até o mixer do celular. Desative se essas músicas tocarem rápido demais.
+Kept offline: new songs download by themselves. Press to stop that.	Salvati offline: i brani nuovi vengono scaricati automaticamente. Premi per interrompere.	Salvos offline: novas músicas são baixadas automaticamente. Toque para parar.
+Key	Tonalità	Tonalidade
+Language	Lingua	Idioma
+Language, colours, and how the app moves	Lingua, colori e animazioni dell'app	Idioma, cores e animações do aplicativo
+Last month	Mese scorso	Mês passado
+Last played	Ultimo ascolto	Última reprodução
+Later	Più tardi	Depois
+Latin	Latino	Latino
+Leave the group	Esci dal gruppo	Sair do grupo
+Legacy mesh gradient	Vecchio gradiente a forme fluide	Gradiente de malha antigo
+Length	Durata	Duração
+Let's find something for your playlist	Troviamo qualcosa per la tua playlist	Vamos encontrar algo para sua playlist
+Leveling target	Volume di riferimento	Nível de volume desejado
+Limit to	Limita a	Limitar a
+Lining up the lyrics	Allineamento del testo…	Alinhando a letra…
+Liquid glass	Vetro liquido	Vidro líquido
+List	Lista	Lista
+Live albums, DJ mixes and songs that run into each other play on without a gap or a crossfade	Album dal vivo, mix DJ e brani continui si susseguono senza pause né dissolvenze.	Álbuns ao vivo, mixes de DJ e músicas contínuas tocam sem intervalos nem transições graduais.
+Loading the server's library…	Caricamento della libreria del server…	Carregando a biblioteca do servidor…
+Local library scanned	Libreria locale aggiornata	Biblioteca local atualizada
+In {key}	In {key}	Em {key}
+BPM	BPM	BPM
+The key on the Camelot wheel	La tonalità sulla ruota Camelot	A tonalidade na roda Camelot
+Late night	A tarda notte	De madrugada
+Run	Corsa	Corrida
+Focus	Concentrazione	Concentração
+Sunlit	Soleggiato	Ensolarado
+70–95 BPM · minor · calm	70–95 BPM · minore · rilassato	70–95 BPM · menor · tranquilo
+150–175 BPM · lots of energy	150–175 BPM · tanta energia	150–175 BPM · muita energia
+steady 100–120 BPM · little energy	100–120 BPM costanti · poca energia	100–120 BPM constantes · pouca energia
+major · bright · lift	maggiore · luminoso · energico	maior · brilhante · animado
+{key} and its neighbours	{key} e le tonalità vicine	{key} e tonalidades próximas
+Same tempo	Stesso tempo	Mesmo ritmo
+Same key	Stessa tonalità	Mesma tonalidade
+Both	Entrambi	Ambos
+Same energy	Stessa energia	Mesma energia
+Play a song first	Prima riproduci un brano	Toque uma música primeiro
+Klingt wie finds the songs in your library that sound like the one playing: by tempo, key and energy.	Suona come trova nella tua libreria brani simili a quello in riproduzione, usando tempo, tonalità ed energia.	Soa como encontra músicas da sua biblioteca parecidas com a que está tocando, usando ritmo, tonalidade e energia.
+playing now	in riproduzione ora	tocando agora
+paused	in pausa	pausado
+Key · {camelot} on the wheel	Tonalità · {camelot} sulla ruota	Tonalidade · {camelot} na roda
+Energy	Energia	Energia
+The server can't make a stretch of it	Il server non riesce a fornire un estratto del brano	O servidor não consegue fornecer um trecho da música
+They leave the history your devices share. Your other devices keep the ones they already have, and this computer keeps its own history. New plays go there again while the listening history is shared.	Vengono rimossi dalla cronologia condivisa. Gli altri dispositivi conservano le proprie copie e questo computer la sua cronologia. I nuovi ascolti continueranno a essere sincronizzati se la condivisione rimane attiva.	As reproduções serão removidas do histórico compartilhado. Os outros dispositivos mantêm suas cópias, e este computador mantém o histórico local. Novas reproduções voltarão a ser sincronizadas se o compartilhamento continuar ativo.
+They leave the history your devices share. Your other devices keep the ones they already have, and this phone keeps its own history. New plays go there again while the listening history is shared.	Vengono rimossi dalla cronologia condivisa. Gli altri dispositivi conservano le proprie copie e questo telefono la sua cronologia. I nuovi ascolti continueranno a essere sincronizzati se la condivisione rimane attiva.	As reproduções serão removidas do histórico compartilhado. Os outros dispositivos mantêm suas cópias, e este celular mantém o histórico local. Novas reproduções voltarão a ser sincronizadas se o compartilhamento continuar ativo.
+This computer's plays are off your sync service	Gli ascolti di questo computer sono stati rimossi dal servizio di sincronizzazione	As reproduções deste computador foram removidas do serviço de sincronização
+This computer's plays on the sync service	Gli ascolti di questo computer sul servizio di sincronizzazione	As reproduções deste computador no serviço de sincronização
+This is how {key} sounds	Ecco come suona {key}	Veja como soa {key}
+This phone's plays are off your sync service	Gli ascolti di questo telefono sono stati rimossi dal servizio di sincronizzazione	As reproduções deste celular foram removidas do serviço de sincronização
+{count} fit	{count} corrispondono	{count} correspondem
+Keep as playlist	Salva come playlist	Salvar como playlist
+Advanced	Avanzate	Avançado
+Tempo window ± {bpm} BPM	Intervallo di tempo ± {bpm} BPM	Intervalo de ritmo ± {bpm} BPM
+Tempo window	Intervallo di tempo	Intervalo de ritmo
+Count half and double time	Includi tempo dimezzato e raddoppiato	Incluir metade e dobro do ritmo
+The same only	Solo la stessa	Apenas a mesma
+Neighbours on the wheel	Tonalità vicine sulla ruota	Tonalidades vizinhas na roda
+Any	Qualsiasi	Qualquer
+Calmer	Più rilassato	Mais tranquilo
+Similar	Simile	Parecido
+More lift	Più energia	Mais energia
+Leave out what played today	Escludi ciò che hai ascoltato oggi	Excluir músicas ouvidas hoje
+Nothing in your library fits this closely. Try another way to match, or a wider tempo window under Advanced.	Nessun brano della tua libreria corrisponde così precisamente. Prova un altro criterio o un intervallo di tempo più ampio in Avanzate.	Nenhuma música da sua biblioteca combina tão bem. Tente outro critério ou aumente o intervalo de ritmo em Avançado.
+half time	tempo dimezzato	metade do ritmo
+double time	tempo raddoppiato	dobro do ritmo
+Through your sync service, to your other devices	Tramite il servizio di sincronizzazione, agli altri dispositivi	Pelo serviço de sincronização, para os outros dispositivos
+Too short to measure	Troppo breve per l'analisi	Curto demais para analisar
+Trying them again	Nuovo tentativo in corso	Tentando novamente
+Updates and tools	Aggiornamenti e strumenti	Atualizações e ferramentas
+Visualizer	Visualizzatore	Visualizador
+was new to you.	era nuovo per te.	era novidade para você.
+was quiet.	è stato tranquillo.	foi tranquilo.
+What may go out to the internet, what's kept here, and where	Cosa può uscire su Internet, cosa rimane qui e dove	O que pode ir para a internet, o que fica aqui e onde
+What plays, on your Discord profile	La musica in riproduzione sul tuo profilo Discord	O que toca no seu perfil do Discord
+Where your data is kept	Dove vengono conservati i tuoi dati	Onde seus dados ficam guardados
+Whether a new Songsta is out, the update itself, and AutoEQ's headphone profiles	Nuove versioni di Songsta, aggiornamenti e profili AutoEQ per le cuffie	Novas versões do Songsta, atualização e perfis AutoEQ para fones de ouvido
+Which album (its MusicBrainz number)	Quale album (il suo identificativo MusicBrainz)	Qual álbum (seu identificador no MusicBrainz)
+Which key?	Quale tonalità?	Qual tonalidade?
+Word-synced lyrics as Apple Music and QQ Music have them	Testi sincronizzati parola per parola, come in Apple Music e QQ Music	Letras sincronizadas palavra por palavra como no Apple Music e QQ Music
+Word-synced lyrics as Apple Music has them	Testi sincronizzati parola per parola, come in Apple Music	Letras sincronizadas palavra por palavra como no Apple Music
+Word-synced lyrics from Apple Music	Testi sincronizzati parola per parola da Apple Music	Letras sincronizadas palavra por palavra do Apple Music
+Your {name}	Il tuo {name}	Seu {name}
+Your data is there already	I tuoi dati sono già lì	Seus dados já estão lá
+your folders	le tue cartelle	suas pastas
+Your folders: {done} of {total}	Le tue cartelle: {done} su {total}	Suas pastas: {done} de {total}
+Your folders: looked through	Le tue cartelle: scansione completata	Suas pastas: verificação concluída
+Your folders' songs need FFmpeg (Settings → Library).	I brani nelle tue cartelle richiedono FFmpeg (Impostazioni → Libreria).	As músicas das suas pastas precisam de FFmpeg (Configurações → Biblioteca).
+Tags that mean the same are one genre (“Hip Hop”, “Hip-Hop”, “HipHop”), “Singer/Songwriter” stays whole, and every genre belongs to one family. An album's songs share its genre where they carry none.	I tag equivalenti diventano un solo genere («Hip Hop», «Hip-Hop», «HipHop»). «Singer/Songwriter» resta intero, ogni genere appartiene a una famiglia e i brani senza genere ereditano quello dell'album.	Tags com o mesmo significado viram um único gênero (“Hip Hop”, “Hip-Hop”, “HipHop”). “Singer/Songwriter” permanece inteiro, cada gênero pertence a uma família e músicas sem gênero usam o do álbum.
+Measured: {done} of {total} songs. Server songs are measured from a short stretch in the background.	Analizzati {done} brani su {total}. I brani sul server vengono analizzati in background da un breve estratto.	{done} de {total} músicas analisadas. Músicas do servidor são analisadas em segundo plano usando um trecho curto.
+Electronic	Elettronica	Eletrônica
+Classical	Classica	Clássica
+World	Musiche dal mondo	Música do mundo
+Flow (tempo, key, energy)	Flusso (tempo, tonalità, energia)	Fluidez (ritmo, tonalidade, energia)
+Workout	Allenamento	Treino
+Wind down	Rilassarsi	Relaxar
+Played on {device}	Riprodotto su {device}	Reproduzido em {device}
+Other device	Altro dispositivo	Outro dispositivo
+Genres from the tags, MusicBrainz and Wikidata, weighed together — {count} albums so far	Generi ricavati dai tag, da MusicBrainz e Wikidata, con fonti pesate · {count} album finora	Gêneros obtidos das tags, do MusicBrainz e do Wikidata, com pesos diferentes · {count} álbuns até agora
+Genres from the tags, MusicBrainz and Wikidata, weighed together. Sends album names and artists to those open databases.	Generi combinati dai tag, MusicBrainz e Wikidata dando peso alle fonti. Nomi di album e artisti vengono inviati a questi database aperti.	Gêneros combinados a partir de tags, MusicBrainz e Wikidata com pesos para cada fonte. Nomes de álbuns e artistas são enviados a esses bancos de dados abertos.
+Often played together	Spesso ascoltati insieme	Frequentemente ouvidas juntas
+What you play around this song, from your listening history.	Brani che ascolti spesso vicino a questo, secondo la cronologia.	Músicas que você costuma ouvir junto desta, segundo seu histórico.
+Folk & Country	Folk e country	Folk e country
+Jazz & Blues	Jazz e blues	Jazz e blues
+R&B & Soul	R&B e soul	R&B e soul
+contains	contiene	contém
+doesn't contain	non contiene	não contém
+is	è	é
+is not	non è	não é
+is more than	è maggiore di	é maior que
+is less than	è minore di	é menor que
+is between	è tra	está entre
+in the last	negli ultimi	nos últimos
+not in the last	non negli ultimi	não nos últimos
+is on or next to	è uguale o vicina a	é igual ou vizinha de
+This week's songs aren't in your listening history.	I brani di questa settimana non sono nella tua cronologia.	As músicas desta semana não estão no seu histórico.
+This phone and {devices} · as of {time}	Questo telefono e {devices} · aggiornato alle {time}	Este celular e {devices} · atualizado às {time}
+Local library updated	Libreria locale aggiornata	Biblioteca local atualizada
+Local Music — {offlineFolders} {value} can't be reached	Musica locale — {offlineFolders} {value} non raggiungibili	Música local — {offlineFolders} {value} inacessíveis
+Look again	Riprova la ricerca	Procurar novamente
