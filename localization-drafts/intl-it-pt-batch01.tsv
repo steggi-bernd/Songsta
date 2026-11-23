@@ -1,0 +1,100 @@
+ — nothing is lost	 — senza perdita di qualità	 — sem perda de qualidade
+ — updated {fetched}	 — aggiornato {fetched}	 — atualizado {fetched}
+ · first {limit} are kept	 · vengono conservati i primi {limit}	 · apenas os primeiros {limit} são mantidos
+ · with {names}	 · con {names}	 · com {names}
+ ({count} zones)	 ({count} zone)	 ({count} zonas)
+ ({months} months of history)	 ({months} mesi di ascolti	 ({months} meses de histórico)
++{count} new since yesterday	+{count} novità da ieri	+{count} novidades desde ontem
+, and {count} on the way	, e altri {count} in arrivo	, e mais {count} a caminho
+, in the playlist's order	, nell'ordine della playlist	, na ordem da playlist
+, newest like first	, dai Mi piace più recenti	, das curtidas mais recentes às mais antigas
+, sign in with Spotify and click Export next to “Liked Songs”. The CSV says when you liked each song, so the order comes over exactly.	, accedi a Spotify e fai clic su Esporta accanto a «Brani che ti piacciono». Il CSV contiene le date dei Mi piace, così l'ordine viene mantenuto.	, entre no Spotify e clique em Exportar ao lado de “Músicas curtidas”. O CSV registra quando você curtiu cada música, mantendo a ordem exata.
+, sign in with Spotify and click Export next to the playlist. The CSV keeps the playlist's order.	, accedi a Spotify e fai clic su Esporta accanto alla playlist. Il CSV ne mantiene l'ordine.	, entre no Spotify e clique em Exportar ao lado da playlist. O CSV preserva a ordem original.
+; the {count} still to check aren't added until you decide	; i {count} brani ancora da verificare non verranno aggiunti finché non decidi	; as {count} músicas que ainda precisam de análise só serão adicionadas depois que você decidir
+: Spotify account → Privacy settings → “Download your data” → Account data. The ZIP arrives within a few days; use the	: Account Spotify → Impostazioni sulla privacy → «Scarica i tuoi dati» → Dati dell'account. Lo ZIP arriverà entro qualche giorno; usa il	: Conta Spotify → Configurações de privacidade → “Baixar seus dados” → Dados da conta. O ZIP chega em alguns dias; use o
+All here	Tutto qui	Tudo aqui
+COMPUTER AT HOME	COMPUTER DI CASA	COMPUTADOR DE CASA
+Couldn't start	Impossibile avviare	Não foi possível iniciar
+Everything you heard	Tutto quello che hai ascoltato	Tudo o que você ouviu
+Export as CSV…	Esporta come CSV…	Exportar como CSV…
+For homes without a sync service: this computer keeps your phones' playlists, library and what plays in step	Per chi non usa un servizio di sincronizzazione: questo computer tiene allineati playlist, libreria e riproduzione dei tuoi telefoni	Para quem não usa um serviço de sincronização: este computador mantém playlists, biblioteca e reprodução dos seus celulares sincronizados
+From this phone on {name}	Da questo telefono su {name}	Deste celular em {name}
+History	Cronologia	Histórico
+Home holds what the Your Library page had. Off: the earlier Home, and the Your Library page with its field in the side panel	La Home mostra quello che prima era nella pagina La tua libreria. Se disattivi l'opzione, tornano la Home precedente e la pagina Libreria nella barra laterale.	A tela Início mostra o que antes ficava em Sua biblioteca. Se desativar, a tela inicial anterior volta, com a biblioteca em uma página separada no painel lateral.
+Home with your library	Home con la tua libreria	Início com sua biblioteca
+Is Songsta open on it, and this phone on the same Wi-Fi?	Songsta è aperto sul computer e il telefono è collegato alla stessa rete Wi-Fi?	O Songsta está aberto no computador e este celular usa a mesma rede Wi-Fi?
+It answers while Songsta is open on it	Risponde quando Songsta è aperto sul computer	Ele responde enquanto o Songsta estiver aberto no computador
+Let phones in	Consenti l'accesso ai telefoni	Permitir conexão de celulares
+Link	Collega	Vincular
+Link phones without a sync service	Collega i telefoni senza un servizio di sincronizzazione	Vincular celulares sem serviço de sincronização
+Link to a computer	Collega a un computer	Vincular a um computador
+Linked to {name}	Collegato a {name}	Vinculado a {name}
+Look at the code on the computer and try again.	Controlla il codice sul computer e riprova.	Confira o código no computador e tente novamente.
+Looking for computers…	Ricerca dei computer…	Procurando computadores…
+No computer found. Is Songsta open on it with Phones at home switched on, and this phone on the same Wi-Fi?	Nessun computer trovato. Songsta è aperto con «Telefoni di casa» attivo e questo telefono è sulla stessa rete Wi-Fi?	Nenhum computador encontrado. O Songsta está aberto com “Celulares em casa” ativado, e este celular usa a mesma rede Wi-Fi?
+Not linked to a computer	Non collegato a un computer	Não vinculado a um computador
+On the computer: Settings → Sync & devices → Phones at home → Pair a phone.	Sul computer: Impostazioni → Sincronizzazione e dispositivi → Telefoni di casa → Associa un telefono.	No computador: Configurações → Sincronização e dispositivos → Celulares em casa → Parear um celular.
+On the phone: Settings → Sync and devices → Link to a computer, then {name}. Valid for {minutes} min.	Sul telefono: Impostazioni → Sincronizzazione e dispositivi → Collega a un computer, poi {name}. Valido per {minutes} min.	No celular: Configurações → Sincronização e dispositivos → Vincular a um computador, depois {name}. Válido por {minutes} min.
+Pair a phone	Associa un telefono	Parear um celular
+Paired on {date}	Associato il {date}	Pareado em {date}
+Phones at home	Telefoni di casa	Celulares em casa
+Phones look for this computer on your home network. Only a phone that typed in the code shown here gets in, and only from your home network. What it keeps is on this computer, and a song only this computer has plays on the phone from here.	I telefoni cercano questo computer nella rete di casa. Può collegarsi solo un telefono che inserisce il codice mostrato qui, e solo dalla rete locale. I dati restano su questo computer. Anche i brani presenti solo qui possono essere riprodotti sul telefono da questo computer.	Os celulares procuram este computador na rede doméstica. Só consegue se conectar quem digitar o código mostrado aqui, e apenas pela rede local. Os dados ficam neste computador. Músicas que existem apenas nele também podem ser transmitidas para o celular.
+Phones look for this computer on your home network. Only a phone that typed in the code shown here gets in, and only from your home network. What it keeps is on this computer.	I telefoni cercano questo computer nella rete di casa. Può collegarsi solo un telefono che inserisce il codice mostrato qui, e solo dalla rete locale. I dati restano su questo computer.	Os celulares procuram este computador na rede doméstica. Só consegue se conectar quem digitar o código mostrado aqui, e apenas pela rede local. Os dados ficam neste computador.
+Phones paired with this computer stay in step with it while Songsta is open here	I telefoni associati a questo computer restano sincronizzati finché Songsta rimane aperto qui	Os celulares pareados com este computador ficam sincronizados enquanto o Songsta estiver aberto aqui
+Playlists and your library stay on this phone as they are; the computer keeps what it has.	Le playlist e la libreria rimangono su questo telefono; il computer mantiene i propri dati.	As playlists e a biblioteca continuam neste celular; o computador mantém os dados que já tem.
+Playlists, your library and what plays stay in step with it	Playlist, libreria e riproduzione rimangono sincronizzate	Playlists, biblioteca e reprodução ficam sincronizadas
+Playlists, your library and what plays stay in step with it, and a song only it has plays here from it	Playlist, libreria e riproduzione rimangono sincronizzate; i brani presenti solo sul computer possono essere ascoltati anche qui	Playlists, biblioteca e reprodução ficam sincronizadas; músicas que existem apenas no computador também podem tocar aqui
+Port {port} is taken by another program	La porta {port} è già usata da un altro programma	A porta {port} já está sendo usada por outro programa
+Right-click → Download	Clic destro → Scarica	Clique com o botão direito → Baixar
+Show a new one on the computer: Settings → Sync & devices → Phones at home → Pair a phone.	Mostra un nuovo codice sul computer: Impostazioni → Sincronizzazione e dispositivi → Telefoni di casa → Associa un telefono.	Mostre um novo código no computador: Configurações → Sincronização e dispositivos → Celulares em casa → Parear um celular.
+Shows a code to type in on the phone	Mostra un codice da inserire sul telefono	Mostra um código para digitar no celular
+Songs you play show up here, newest first.	I brani che ascolti compaiono qui, dai più recenti.	As músicas que você ouvir aparecerão aqui, das mais recentes às mais antigas.
+Starts as soon as this computer can take connections	Si avvia non appena questo computer può ricevere connessioni	Inicia assim que este computador puder receber conexões
+That code doesn't fit	Il codice non corrisponde	O código não confere
+That didn't work	Qualcosa non ha funzionato	Não deu certo
+The code has run out	Il codice è scaduto	O código expirou
+Type this code in on the phone	Inserisci questo codice sul telefono	Digite este código no celular
+Unlink	Scollega	Desvincular
+Unlink from {name}?	Scollegare da {name}?	Desvincular de {name}?
+Windows keeps phones out of this computer until Songsta may take connections from your home network. Windows asks for your OK.	Windows blocca le connessioni dei telefoni finché non autorizzi Songsta nella rete di casa. Windows ti chiederà conferma.	O Windows bloqueia as conexões dos celulares até você permitir que o Songsta receba conexões da rede doméstica. O Windows pedirá sua confirmação.
+Without a sync service, a computer with Songsta keeps this phone's playlists, library and what plays in step. On the computer: Settings → Sync & devices → Phones at home.	Senza un servizio di sincronizzazione, un computer con Songsta tiene sincronizzate le playlist, la libreria e la riproduzione di questo telefono. Sul computer: Impostazioni → Sincronizzazione e dispositivi → Telefoni di casa.	Sem serviço de sincronização, um computador com Songsta mantém as playlists, a biblioteca e a reprodução deste celular sincronizadas. No computador: Configurações → Sincronização e dispositivos → Celulares em casa.
+Your plays aren't kept right now. Turn on “Keep my plays” under Network & privacy, and what you play shows up here.	Al momento la cronologia non viene salvata. Attiva «Conserva i miei ascolti» in Rete e privacy: i prossimi brani compariranno qui.	Seu histórico não está sendo salvo. Ative “Guardar meu histórico de reprodução” em Rede e privacidade para ver aqui o que você ouvir.
+Your sync service already links your devices. This is for homes without one.	Il tuo servizio di sincronizzazione collega già i dispositivi. Questa funzione serve quando non ne hai uno.	Seu serviço de sincronização já vincula seus dispositivos. Este recurso é para quem não usa um.
+{count} failed	{count} non riusciti	{count} falharam
+{count} more on the way	Altri {count} in arrivo	Mais {count} a caminho
+{name} didn't answer	{name} non risponde	{name} não respondeu
+{name} is no longer paired	{name} non è più associato	{name} não está mais pareado
+· {count} bands	· {count} bande	· {count} bandas
+· {count} of {count2}	· {count} di {count2}	· {count} de {count2}
+· marked different	· segnalato come diverso	· marcado como diferente
+“{name}” now follows Spotify's order	«{name}» ora segue l'ordine di Spotify	“{name}” agora segue a ordem do Spotify
+"{title}" can't be reached right now — its drive or server is away	«{title}» non è raggiungibile: l'unità o il server non è disponibile	Não foi possível acessar “{title}”: a unidade ou o servidor está indisponível
+"{title}" can't be reached right now — its drive or server is away.	«{title}» non è raggiungibile: l'unità o il server non è disponibile.	Não foi possível acessar “{title}”: a unidade ou o servidor está indisponível.
+"{title}" can't play on {playerName}	«{title}» non può essere riprodotto su {playerName}	Não é possível reproduzir “{title}” em {playerName}
+“{title}” goes from this phone. It stays on your server.	«{title}» verrà rimosso dal telefono, ma resterà sul server.	“{title}” será removida deste celular, mas continuará no servidor.
+“{title}” holds playlists — drop onto one of them	«{title}» contiene playlist: trascina su una di esse	“{title}” contém playlists: arraste para uma delas
+“{title}” is “{title2}” in your library	«{title}» corrisponde a «{title2}» nella tua libreria	“{title}” corresponde a “{title2}” na sua biblioteca
+"{title}" is a {ext} file — playing it needs FFmpeg. Install it (for example with "winget install ffmpeg"), then play it again.	«{title}» è un file {ext} e richiede FFmpeg per la riproduzione. Installalo (per esempio con «winget install ffmpeg»), poi riprova.	“{title}” é um arquivo {ext} e precisa do FFmpeg para tocar. Instale-o (por exemplo, com “winget install ffmpeg”) e tente de novo.
+“{title}” is already in “{name}”	«{title}» è già in «{name}»	“{title}” já está em “{name}”
+“{title}” is already in your Liked Songs	«{title}» è già tra i tuoi Brani preferiti	“{title}” já está nas suas músicas curtidas
+“{title}” is its own album again	«{title}» è di nuovo un album a sé	“{title}” voltou a ser um álbum separado
+“{title}” is now part of “{title2}”	«{title}» ora fa parte di «{title2}»	“{title}” agora faz parte de “{title2}”
+“{title}” is skipped from now on	D'ora in poi «{title}» verrà saltato	“{title}” será pulada de agora em diante
+“{title}” isn't measured yet	«{title}» non è ancora stato analizzato	“{title}” ainda não foi analisada
+"{title}" isn't on this computer	«{title}» non è su questo computer	“{title}” não está neste computador
+"{title}" isn't on this computer, so the next song plays	«{title}» non è su questo computer, quindi verrà riprodotto il brano successivo	“{title}” não está neste computador. A próxima música vai tocar
+“{title}” isn't on this phone	«{title}» non è su questo telefono	“{title}” não está neste celular
+“{title}” isn't on this phone, so the next song plays	«{title}» non è su questo telefono, quindi verrà riprodotto il brano successivo	“{title}” não está neste celular. A próxima música vai tocar
+“{title}” plays again	«{title}» può essere riprodotto di nuovo	“{title}” pode ser reproduzida novamente
+“Your Library” in the side panel	«La tua libreria» nella barra laterale	“Sua biblioteca” no painel lateral
+(recommended): open	(consigliato): apri	(recomendado): abrir
+{artist} · {count} song{value}	{artist} · {count} brani{value}	{artist} · {count} músicas{value}
+{artist} · also as	{artist} · anche come	{artist} · também como
+{artist}: open the artist	{artist}: apri l'artista	{artist}: abrir artista
+{artists} in all	{artists} in totale	{artists} no total
+{asked} requests to the internet since Songsta started	{asked} richieste a Internet dall'avvio di Songsta	{asked} solicitações à internet desde que o Songsta foi iniciado
+{count} · {count2} · {count3} in your library	{count} · {count2} · {count3} nella tua libreria	{count} · {count2} · {count3} na sua biblioteca
+{count} · {count2} in your library	{count} · {count2} nella tua libreria	{count} · {count2} na sua biblioteca
+{count} · kept on this computer only	{count} · salvati solo su questo computer	{count} · guardados apenas neste computador
+{count} · shared with your devices through your sync service	{count} · condivisi con i dispositivi tramite il servizio di sincronizzazione	{count} · compartilhados entre seus dispositivos pelo serviço de sincronização
+{count} · newest: {title}	{count} · più recente: {title}	{count} · mais recente: {title}
