@@ -1,0 +1,272 @@
+{
+  "schema": "songsta.replay-localization-samples/1",
+  "status": "tone-review-draft",
+  "notes": [
+    "Pairs map to corresponding IDs in design/replay-copy-v2.en-de.json on the design branch; these are culturally adapted, not literal translations.",
+    "Replay variant IDs are semantic; use full localized headline/body strings for each language.",
+    "Thresholds and coverage in the design file are examples, not validated implementation.",
+    "French uses informal tu; Spanish uses neutral informal tú; Russian copy avoids unnecessary gendered past tense; zh is Simplified Chinese; Japanese uses friendly neutral copy."
+  ],
+  "variants": [
+    {
+      "id": "replay.intro.base1",
+      "source": "Your month. Your soundtrack.",
+      "languages": {
+        "fr": {
+          "headline": "Ton mois. Ta bande-son.",
+          "body": "Voilà ce que tu as écouté."
+        },
+        "es": {
+          "headline": "Tu mes. Tu banda sonora.",
+          "body": "Así sonó tu mes."
+        },
+        "ru": {
+          "headline": "Твой месяц. Твой саундтрек.",
+          "body": "Вот что звучало у тебя."
+        },
+        "zh": {
+          "headline": "你的这个月，你的音乐。",
+          "body": "来看看这个月你听了什么。"
+        },
+        "ja": {
+          "headline": "今月のあなたのサウンドトラック。",
+          "body": "今月聴いた音楽を振り返ろう。"
+        }
+      }
+    },
+    {
+      "id": "replay.intro.repeat",
+      "source": "A few clear favorites.",
+      "languages": {
+        "fr": {
+          "headline": "Quelques favoris se démarquent.",
+          "body": "Certains titres reviennent toujours."
+        },
+        "es": {
+          "headline": "Unos favoritos muy claros.",
+          "body": "Hay canciones a las que siempre vuelves."
+        },
+        "ru": {
+          "headline": "Есть явные фавориты.",
+          "body": "К некоторым трекам хочется возвращаться."
+        },
+        "zh": {
+          "headline": "有几首歌格外受欢迎。",
+          "body": "有些歌就是忍不住一听再听。"
+        },
+        "ja": {
+          "headline": "何度でも聴きたくなる曲。",
+          "body": "今月はお気に入りがはっきりしていたね。"
+        }
+      }
+    },
+    {
+      "id": "replay.intro.discover",
+      "source": "Fresh finds, familiar favorites.",
+      "languages": {
+        "fr": {
+          "headline": "De belles découvertes.",
+          "body": "De nouvelles chansons se sont glissées dans ton mois."
+        },
+        "es": {
+          "headline": "Nuevos descubrimientos.",
+          "body": "Este mes ha traído unas cuantas canciones nuevas."
+        },
+        "ru": {
+          "headline": "Новые музыкальные находки.",
+          "body": "В этом месяце появилось немало новых треков."
+        },
+        "zh": {
+          "headline": "这个月发现了不少新歌。",
+          "body": "熟悉的最爱之外，还有许多新声音。"
+        },
+        "ja": {
+          "headline": "新しい曲にも出会えた月。",
+          "body": "いつものお気に入りに、新しい音楽が加わった。"
+        }
+      }
+    },
+    {
+      "id": "replay.topTrack.repeat",
+      "source": "Some songs never get old.",
+      "languages": {
+        "fr": {
+          "headline": "Certains titres ne lassent jamais.",
+          "body": "Tu as écouté {song} {plays} fois."
+        },
+        "es": {
+          "headline": "Hay canciones que nunca cansan.",
+          "body": "Has escuchado {song} {plays} veces."
+        },
+        "ru": {
+          "headline": "Некоторые треки не надоедают.",
+          "body": "{song} — {plays} прослушиваний."
+        },
+        "zh": {
+          "headline": "有些歌怎么听都不腻。",
+          "body": "{song} 播放了 {plays} 次。"
+        },
+        "ja": {
+          "headline": "何度聴いても飽きない曲。",
+          "body": "{song} を{plays}回再生しました。"
+        }
+      }
+    },
+    {
+      "id": "replay.topArtist.loyal",
+      "source": "One clear favorite artist.",
+      "languages": {
+        "fr": {
+          "headline": "Un artiste se démarque.",
+          "body": "{artist} t’a souvent accompagné ce mois-ci."
+        },
+        "es": {
+          "headline": "Un artista destaca sobre los demás.",
+          "body": "{artist} te ha acompañado a menudo este mes."
+        },
+        "ru": {
+          "headline": "Один исполнитель особенно выделился.",
+          "body": "В этом месяце {artist} звучал особенно часто."
+        },
+        "zh": {
+          "headline": "有位艺人格外受你喜爱。",
+          "body": "这个月你经常听 {artist}。"
+        },
+        "ja": {
+          "headline": "ひときわよく聴いたアーティスト。",
+          "body": "今月は{artist}の曲がよく流れていました。"
+        }
+      }
+    },
+    {
+      "id": "replay.discoveries.many",
+      "source": "Plenty of new discoveries.",
+      "languages": {
+        "fr": {
+          "headline": "Plein de nouvelles découvertes.",
+          "body": "Tu as écouté {count} titres pour la première fois."
+        },
+        "es": {
+          "headline": "Un montón de descubrimientos.",
+          "body": "Has escuchado {count} canciones por primera vez."
+        },
+        "ru": {
+          "headline": "Немало новых открытий.",
+          "body": "Впервые прозвучало {count} треков."
+        },
+        "zh": {
+          "headline": "发现了不少新歌。",
+          "body": "有 {count} 首歌是第一次播放。"
+        },
+        "ja": {
+          "headline": "新しい音楽との出会いがいっぱい。",
+          "body": "初めて聴いた曲は{count}曲でした。"
+        }
+      }
+    },
+    {
+      "id": "replay.discoveries.none",
+      "source": "Back to familiar favorites.",
+      "languages": {
+        "fr": {
+          "headline": "Retour aux titres que tu aimes.",
+          "body": "Cette fois, tu as surtout retrouvé tes favoris."
+        },
+        "es": {
+          "headline": "De vuelta a tus favoritas.",
+          "body": "Esta vez has preferido las canciones que ya conoces."
+        },
+        "ru": {
+          "headline": "Снова любимые треки.",
+          "body": "В этот раз чаще звучала знакомая музыка."
+        },
+        "zh": {
+          "headline": "还是熟悉的歌最对味。",
+          "body": "这次陪伴你的，主要是那些老朋友。"
+        },
+        "ja": {
+          "headline": "やっぱり、いつものお気に入り。",
+          "body": "今回は聴き慣れた曲が中心でした。"
+        }
+      }
+    },
+    {
+      "id": "replay.genre.clear",
+      "source": "One clear direction.",
+      "languages": {
+        "fr": {
+          "headline": "Une couleur musicale se démarque.",
+          "body": "Le {genre} a marqué ton mois."
+        },
+        "es": {
+          "headline": "Un estilo ha marcado el mes.",
+          "body": "El {genre} ha sido protagonista."
+        },
+        "ru": {
+          "headline": "У месяца было своё звучание.",
+          "body": "Особенно часто звучал жанр {genre}."
+        },
+        "zh": {
+          "headline": "这个月有很明确的音乐偏好。",
+          "body": "{genre} 是你的主打风格。"
+        },
+        "ja": {
+          "headline": "今月はこのジャンルが中心。",
+          "body": "{genre}をよく聴いた月でした。"
+        }
+      }
+    },
+    {
+      "id": "replay.timeOfDay.evening",
+      "source": "Evenings are for music.",
+      "languages": {
+        "fr": {
+          "headline": "Le soir, la musique est au rendez-vous.",
+          "body": "Tu as surtout écouté vers {time}."
+        },
+        "es": {
+          "headline": "Por la tarde-noche suena la música.",
+          "body": "Has escuchado más alrededor de las {time}."
+        },
+        "ru": {
+          "headline": "Вечером самое время для музыки.",
+          "body": "Чаще всего музыка звучала около {time}."
+        },
+        "zh": {
+          "headline": "晚上是你的音乐时间。",
+          "body": "你通常在 {time} 左右听得最多。"
+        },
+        "ja": {
+          "headline": "夜は音楽の時間。",
+          "body": "いちばんよく聴いたのは{time}ごろでした。"
+        }
+      }
+    },
+    {
+      "id": "replay.closing.base1",
+      "source": "One more spin?",
+      "languages": {
+        "fr": {
+          "headline": "On remet ça ?",
+          "body": "Tes titres préférés sont prêts."
+        },
+        "es": {
+          "headline": "¿Otra vuelta más?",
+          "body": "Tus canciones favoritas están listas."
+        },
+        "ru": {
+          "headline": "Ещё один круг?",
+          "body": "Твои любимые треки уже ждут."
+        },
+        "zh": {
+          "headline": "再听一遍？",
+          "body": "你的热门歌曲已经准备好了。"
+        },
+        "ja": {
+          "headline": "もう一度聴く？",
+          "body": "お気に入りの曲をすぐに再生できます。"
+        }
+      }
+    }
+  ]
+}
