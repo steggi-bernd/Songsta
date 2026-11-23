@@ -1,11 +1,11 @@
 /**
- * Proposed message formatter for Songsta i18n v2.
+ * Proposed message formatter for Songsta i18n v2 (nine languages).
  * Draft only: not imported by src/lib/i18n.ts.
  *
  * New messages use stable semantic IDs, rather than English source text keys.
  * Existing T("English key") calls remain intact until separately migrated.
  */
-export type SupportedLocale = "en" | "de" | "fr" | "es" | "ru" | "zh" | "ja";
+export type SupportedLocale = "en" | "de" | "fr" | "es" | "it" | "pt-BR" | "ru" | "zh" | "ja";
 export type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
 export type Message = string | PluralForms;
 export type MessageCatalog = Record<string, Message>;
@@ -16,6 +16,8 @@ const LOCALE: Record<SupportedLocale, string> = {
   de: "de-DE",
   fr: "fr-FR",
   es: "es-ES",
+  it: "it-IT",
+  "pt-BR": "pt-BR",
   ru: "ru-RU",
   zh: "zh-CN",
   ja: "ja-JP",
@@ -84,12 +86,14 @@ export function validateCatalog(reference: MessageCatalog, target: MessageCatalo
   return errors;
 }
 
-/** Example singular/plural messages for all seven language families. */
+/** Example singular/plural messages for all nine supported language drafts. */
 export const PLAY_COUNTS: Record<SupportedLocale, PluralForms> = {
   en: { one: "{count} play", other: "{count} plays" },
   de: { one: "{count} Wiedergabe", other: "{count} Wiedergaben" },
   fr: { one: "{count} écoute", other: "{count} écoutes" },
   es: { one: "{count} reproducción", other: "{count} reproducciones" },
+  it: { one: "{count} ascolto", other: "{count} ascolti" },
+  "pt-BR": { one: "{count} reprodução", other: "{count} reproduções" },
   ru: { one: "{count} прослушивание", few: "{count} прослушивания", many: "{count} прослушиваний", other: "{count} прослушивания" },
   zh: { other: "播放 {count} 次" },
   ja: { other: "{count}回再生" },
