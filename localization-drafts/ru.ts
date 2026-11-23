@@ -6,7 +6,7 @@ export const ru: Record<string, string> = {
   " · with {names}": " · с {names}",
   " ({count} zones)": " ({count} зон)",
   " ({months} months of history)": " ({months} месяцев истории)",
-  "— nothing is lost": " — без потерь",
+  " — nothing is lost": " — без потерь",
   ", and {count} on the way": ", ещё {count} в пути",
   ", in the playlist's order": ", в порядке плейлиста",
   ", newest like first": ", новые отметки «Нравится» первыми",
