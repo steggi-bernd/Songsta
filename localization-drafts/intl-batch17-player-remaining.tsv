@@ -1,0 +1,177 @@
+contains	contient	contiene	содержит	包含	含む
+doesn't contain	ne contient pas	no contiene	не содержит	不包含	含まない
+is	est	es	равно	等于	等しい
+is not	n’est pas	no es	не равно	不等于	等しくない
+is more than	est supérieur à	es mayor que	больше чем	大于	より大きい
+is less than	est inférieur à	es menor que	меньше чем	小于	より小さい
+is between	est entre	está entre	между	介于	範囲内
+in the last	au cours des derniers	en los últimos	за последние	最近	過去
+not in the last	pas au cours des derniers	no en los últimos	не за последние	不在最近	過去にはない
+is on or next to	est dans cette tonalité ou une voisine	está en esta tonalidad o una vecina	в этой или соседней тональности	为此调性或相邻调性	同じか隣のキー
+On this computer	Sur cet ordinateur	En este ordenador	На этом компьютере	在此电脑上	このパソコンで
+On time	À l’heure	A tiempo	Вовремя	准时	時間どおり
+On your Jellyfin server	Sur ton serveur Jellyfin	En tu servidor Jellyfin	На твоём сервере Jellyfin	在你的 Jellyfin 服务器上	Jellyfinサーバー上
+On your own server	Sur ton propre serveur	En tu propio servidor	На твоём сервере	在你自己的服务器上	自分のサーバー上
+Only used to sign in	Utilisé uniquement pour la connexion	Solo se usa para iniciar sesión	Только для входа	仅用于登录	ログインにのみ使用
+Open {title}	Ouvrir {title}	Abrir {title}	Открыть {title}	打开 {title}	{title}を開く
+Open Songsta when you sign in	Ouvrir Songsta à la connexion	Abrir Songsta al iniciar sesión	Запускать Songsta при входе в систему	登录时打开 Songsta	サインイン時にSongstaを開く
+Open the song on Genius	Ouvrir le titre sur Genius	Abrir canción en Genius	Открыть песню на Genius	在 Genius 上打开歌曲	Geniusで曲を開く
+or	ou	o	или	或	または
+Other music	Autre musique	Otra música	Другая музыка	其他音乐	ほかの音楽
+other song	autre titre	otra canción	другой трек	其他歌曲	ほかの曲
+other songs	autres titres	otras canciones	другие треки	其他歌曲	ほかの曲
+Out of reach. Downloaded music plays.	Inaccessible. La musique téléchargée reste disponible.	Inaccesible. Puedes reproducir música descargada.	Недоступно. Скачанная музыка воспроизводится.	无法连接，仍可播放已下载的音乐。	接続できません。ダウンロード済みの曲は再生できます。
+Pause {title}	Mettre {title} en pause	Pausar {title}	Приостановить {title}	暂停 {title}	{title}を一時停止
+Pause there	Mettre en pause sur cet appareil	Pausar allí	Пауза на том устройстве	在该设备暂停	そちらで一時停止
+Paused · 	En pause · 	En pausa · 	Пауза · 	已暂停 · 	一時停止中・
+Paused on	En pause sur	Pausado en	Пауза на	已暂停于	一時停止先
+Peak	Pic	Pico	Пик	峰值	ピーク
+Per song	Par titre	Por canción	Для каждого трека	每首歌	曲ごと
+Pick all	Tout sélectionner	Seleccionar todo	Выбрать всё	全选	すべて選択
+Pick none	Tout désélectionner	No seleccionar ninguno	Снять выделение	取消全选	すべて選択解除
+Picked up from {name}	Repris depuis {name}	Retomado desde {name}	Продолжено с {name}	已从 {name} 继续	{name}から続きを再生
+Pin	Épingler	Fijar	Закрепить	固定	ピン留め
+Pin to the top	Épingler en haut	Fijar arriba	Закрепить наверху	置顶	上部にピン留め
+Pin to the top of Your Library	Épingler en haut de ta bibliothèque	Fijar arriba de tu biblioteca	Закрепить вверху медиатеки	置顶音乐库	ライブラリの先頭にピン留め
+Pin to top	Épingler en haut	Fijar arriba	Закрепить наверху	置顶	先頭にピン留め
+Pinned to the top	Épinglé en haut	Fijado arriba	Закреплено наверху	已置顶	先頭にピン留め済み
+Pinned to this device	Épinglé sur cet appareil	Fijado en este dispositivo	Закреплено на этом устройстве	已固定到此设备	このデバイスに固定済み
+Plain text	Texte brut	Texto sin formato	Обычный текст	纯文本	プレーンテキスト
+Play {name}	Écouter {name}	Reproducir {name}	Воспроизвести {name}	播放 {name}	{name}を再生
+Play along with {join}	Écouter en même temps que {join}	Reproducir junto con {join}	Играть вместе с {join}	与 {join} 同步播放	{join}と同時再生
+Play along with {value}	Écouter en même temps que {value}	Reproducir junto con {value}	Играть вместе с {value}	与 {value} 同步播放	{value}と同時再生
+Play here together	Écouter ici en même temps	Reproducir aquí juntos	Воспроизводить здесь вместе	在这里同步播放	ここで同時再生
+Play something and it will show up here.	Écoute un titre et il apparaîtra ici.	Reproduce una canción y aparecerá aquí.	Включи трек, и он появится здесь.	播放歌曲后就会显示在这里。	曲を再生するとここに表示されます。
+Play something else here	Écouter autre chose ici	Reproducir otra cosa aquí	Включить здесь другую музыку	在此播放其他音乐	ここで別の曲を再生
+Play something to sing along.	Lance un titre pour chanter avec.	Reproduce una canción para cantar.	Включи трек, чтобы подпевать.	播放一首歌，跟着唱吧。	曲を再生して一緒に歌おう。
+Play your own files	Écouter tes propres fichiers	Reproducir tus archivos	Воспроизвести свои файлы	播放自己的音乐文件	自分のファイルを再生
+Playing · 	Lecture · 	Reproduciendo · 	Играет · 	正在播放 · 	再生中・
+Playing · {outputLine}	Lecture · {outputLine}	Reproduciendo · {outputLine}	Воспроизведение · {outputLine}	正在播放 · {outputLine}	再生中・{outputLine}
+Playing from '{context}'	Lecture depuis « {context} »	Reproduciendo desde «{context}»	Воспроизведение из «{context}»	播放来源：“{context}”	「{context}」から再生
+Playing from {from}	Lecture depuis {from}	Reproduciendo desde {from}	Воспроизведение из {from}	播放来源：{from}	{from}から再生
+Playing from {kind}	Lecture depuis {kind}	Reproduciendo desde {kind}	Воспроизведение из {kind}	播放来源：{kind}	{kind}から再生
+Playing now: {value}	Lecture en cours : {value}	Reproduciendo ahora: {value}	Сейчас играет: {value}	正在播放：{value}	再生中：{value}
+Playing on {castingLabel}	Lecture sur {castingLabel}	Reproduciendo en {castingLabel}	Воспроизведение на {castingLabel}	正在 {castingLabel} 上播放	{castingLabel}で再生中
+Playing on {elsewhere}	Lecture sur {elsewhere}	Reproduciendo en {elsewhere}	Воспроизведение на {elsewhere}	正在 {elsewhere} 上播放	{elsewhere}で再生中
+Playing on {name}	Lecture sur {name}	Reproduciendo en {name}	Воспроизведение на {name}	正在 {name} 上播放	{name}で再生中
+Playing on {value}. Choose where the sound goes	Lecture sur {value}. Choisis la sortie audio	Reproduciendo en {value}. Elige la salida de sonido	Воспроизведение на {value}. Выбери аудиовыход	正在 {value} 上播放。请选择音频输出设备	{value}で再生中。音声の出力先を選択
+Plays: {quality}	Lecture : {quality}	Reproducción: {quality}	Воспроизведение: {quality}	播放质量：{quality}	再生品質：{quality}
+Plugged into a receiver	Branché à un ampli	Conectado a un receptor	Подключено к ресиверу	连接到接收设备	レシーバーに接続
+Popular	Populaire	Popular	Популярное	热门	人気
+Press to install. Android asks once more.	Appuie pour installer. Android demandera une dernière confirmation.	Pulsa para instalar. Android pedirá una confirmación más.	Нажми для установки. Android попросит подтверждение ещё раз.	点按安装。Android 还会要求你确认一次。	押すとインストールします。Androidからもう一度確認があります。
+Press to try again.	Appuie pour réessayer.	Pulsa para volver a intentarlo.	Нажми, чтобы повторить.	点按重试。	押してもう一度試してください。
+Put “{title}” on the album	Ajouter « {title} » à l’album	Añadir «{title}» al álbum	Добавить «{title}» в альбом	将“{title}”加入专辑	「{title}」をアルバムに追加
+Put {n} {value} on “{title}”	Ajouter {n} {value} à « {title} »	Añadir {n} {value} a «{title}»	Добавить {n} {value} в «{title}»	将 {n} {value} 加入“{title}”	{n} {value}を「{title}」に追加
+Put back together what your tags split, like “Disc 2”	Réunir les parties séparées par les tags, comme « Disc 2 »	Reunir lo que separaron las etiquetas, como «Disc 2»	Объединить части, разделённые тегами, например «Disc 2»	重新合并标签拆开的专辑，例如“Disc 2”	タグで分かれた「Disc 2」などを再結合
+Put in “{name}”	Mettre dans « {name} »	Poner en «{name}»	Поместить в «{name}»	放入“{name}”	「{name}」に入れる
+Put together by hand	Assemblé manuellement	Reunido manualmente	Собрано вручную	手动组合	手動でまとめたもの
+Quality: {text}	Qualité : {text}	Calidad: {text}	Качество: {text}	质量：{text}	品質：{text}
+Quality: {title}	Qualité : {title}	Calidad: {title}	Качество: {title}	质量：{title}	品質：{title}
+Reading {read} of {total}…	Lecture : {read} sur {total}…	Leyendo {read} de {total}…	Чтение: {read} из {total}…	正在读取 {read}/{total}…	読み込み中：{read}/{total}…
+Reduce animation	Réduire les animations	Reducir animaciones	Уменьшить анимацию	减少动画	アニメーションを減らす
+Reduce dynamic blur	Réduire le flou dynamique	Reducir desenfoque dinámico	Уменьшить динамическое размытие	减少动态模糊	動的なぼかしを減らす
+Refreshed, but {what} couldn't be read just now	Actualisé, mais impossible de lire {what} pour le moment	Actualizado, pero no se pudo leer {what}	Обновлено, но пока не удалось прочитать {what}	已刷新，但暂时无法读取 {what}	更新しましたが、{what}は読み取れませんでした
+Refreshed: {count} new	Actualisé : {count} nouveautés	Actualizado: {count} nuevos	Обновлено: {count} новых	已刷新：新增 {count} 项	更新完了：新着{count}件
+release	sortie	lanzamiento	релиз	发行版本	リリース
+releases	sorties	lanzamientos	релизы	发行版本	リリース
+Reload the server's library	Recharger la bibliothèque du serveur	Volver a cargar la biblioteca del servidor	Перезагрузить медиатеку сервера	重新加载服务器音乐库	サーバーのライブラリを再読み込み
+Remove “{name}”?	Supprimer « {name} » ?	¿Eliminar «{name}»?	Удалить «{name}»?	移除“{name}”？	「{name}」を削除しますか？
+Remove "{q}" from recent searches	Retirer « {q} » des recherches récentes	Quitar «{q}» de búsquedas recientes	Удалить «{q}» из недавних поисков	从最近搜索中移除“{q}”	「{q}」を最近の検索から削除
+Remove "{value}"?	Supprimer « {value} » ?	¿Eliminar «{value}»?	Удалить «{value}»?	移除“{value}”？	「{value}」を削除しますか？
+Remove {n}	Retirer {n}	Quitar {n}	Убрать {n}	移除 {n}	{n}件を削除
+Remove {name}	Retirer {name}	Quitar {name}	Убрать {name}	移除 {name}	{name}を削除
+Remove {title}	Retirer {title}	Quitar {title}	Убрать {title}	移除 {title}	{title}を削除
+Remove all ({count}, {sizeLine})	Tout retirer ({count}, {sizeLine})	Quitar todo ({count}, {sizeLine})	Убрать всё ({count}, {sizeLine})	全部移除（{count}，{sizeLine}）	すべて削除（{count}件、{sizeLine}）
+Remove from "{name}"	Retirer de « {name} »	Quitar de «{name}»	Убрать из «{name}»	从“{name}”移除	「{name}」から削除
+Remove these downloads?	Supprimer ces téléchargements ?	¿Eliminar estas descargas?	Удалить эти загрузки?	移除这些下载内容？	これらのダウンロードを削除しますか？
+Removed from "{name}"	Retiré de « {name} »	Quitado de «{name}»	Удалено из «{name}»	已从“{name}”移除	「{name}」から削除しました
+Removed from Songsta — files untouched	Retiré de Songsta, fichiers inchangés	Quitado de Songsta, archivos intactos	Убрано из Songsta, файлы не изменены	已从 Songsta 移除，文件未更改	Songstaから削除しました。ファイルはそのままです
+Rename "{value}"	Renommer « {value} »	Cambiar nombre de «{value}»	Переименовать «{value}»	重命名“{value}”	「{value}」の名前を変更
+Repeat: {repeat}	Répétition : {repeat}	Repetición: {repeat}	Повтор: {repeat}	循环：{repeat}	リピート：{repeat}
+Resize the side panel	Redimensionner le panneau latéral	Cambiar tamaño de la barra lateral	Изменить ширину боковой панели	调整侧边栏大小	サイドバーのサイズを変更
+Round	Arrondi	Redondo	Круглый	圆角	丸み
+Rubber band	Élastique	Elástico	Упругая анимация	弹性	ラバーバンド
+Same song	Même titre	Misma canción	Тот же трек	相同歌曲	同じ曲
+Save as list…	Enregistrer comme liste…	Guardar como lista…	Сохранить как список…	另存为列表…	リストとして保存…
+Save to your library	Enregistrer dans ta bibliothèque	Guardar en tu biblioteca	Сохранить в медиатеку	保存到音乐库	ライブラリに保存
+Saved "{name}" with {files} songs	« {name} » enregistré avec {files} titres	«{name}» guardado con {files} canciones	«{name}» сохранён, треков: {files}	已保存“{name}”，包含 {files} 首歌曲	「{name}」を{files}曲で保存しました
+Saved {count} to {pop}	{count} enregistrés dans {pop}	Se guardaron {count} en {pop}	Сохранено {count} в {pop}	已将 {count} 项保存到 {pop}	{count}件を{pop}に保存
+Saved the list of {count} songs	Liste de {count} titres enregistrée	Se guardó la lista de {count} canciones	Список из {count} треков сохранён	已保存 {count} 首歌曲的列表	{count}曲のリストを保存しました
+Saved: {value}	Enregistré : {value}	Guardado: {value}	Сохранено: {value}	已保存：{value}	保存しました：{value}
+Scroll shelf left	Faire défiler les albums vers la gauche	Desplazar estantería a la izquierda	Прокрутить полку влево	向左滚动唱片架	棚を左へスクロール
+Scroll shelf right	Faire défiler les albums vers la droite	Desplazar estantería a la derecha	Прокрутить полку вправо	向右滚动唱片架	棚を右へスクロール
+Search “{trim}”	Rechercher « {trim} »	Buscar «{trim}»	Поиск «{trim}»	搜索“{trim}”	「{trim}」を検索
+Second stream	Deuxième flux	Segunda reproducción	Второй поток	第二路播放	2つ目の再生
+Second stream · 	Deuxième flux · 	Segunda reproducción · 	Второй поток · 	第二路播放 · 	2つ目の再生・
+Second stream · playing	Deuxième flux · en lecture	Segunda reproducción · activa	Второй поток · играет	第二路播放 · 正在播放	2つ目の再生・再生中
+See which	Voir lesquels	Ver cuáles	Посмотреть какие	查看哪些	対象を確認
+Separate	Séparer	Separar	Разделить	分离	分ける
+Set up Songsta	Configurer Songsta	Configurar Songsta	Настроить Songsta	设置 Songsta	Songstaを設定
+Settings — Songsta {version} is out	Paramètres · Songsta {version} disponible	Ajustes · Songsta {version} disponible	Настройки · доступна Songsta {version}	设置 · Songsta {version} 已发布	設定・Songsta {version}が利用可能
+Shop links {value}	Liens vers les boutiques {value}	Enlaces a tiendas {value}	Ссылки на магазины {value}	商店链接 {value}	購入先リンク {value}
+Show {name} in your library	Afficher {name} dans ta bibliothèque	Mostrar {name} en tu biblioteca	Показать {name} в медиатеке	在音乐库中显示 {name}	ライブラリで{name}を表示
+Show {title} in its folder	Afficher {title} dans son dossier	Mostrar {title} en su carpeta	Показать {title} в папке	在文件夹中显示 {title}	{title}をフォルダー内で表示
+Show all {toLocaleString}	Afficher les {toLocaleString}	Mostrar los {toLocaleString}	Показать все {toLocaleString}	显示全部 {toLocaleString} 项	すべて表示（{toLocaleString}件）
+Show as “{name}”	Afficher sous le nom « {name} »	Mostrar como «{name}»	Показывать как «{name}»	显示为“{name}”	「{name}」として表示
+shows while music plays	s’affiche pendant la lecture	se muestra durante la reproducción	показывается во время воспроизведения	播放时显示	再生中に表示
+Skip silence	Ignorer les silences	Saltar silencios	Пропускать тишину	跳过静音	無音をスキップ
+Skipping ends repeat one	Le saut des silences désactive la répétition d’un titre	Saltar finales desactiva repetir una canción	Пропуск концов отключает повтор одного трека	跳过尾部静音时关闭单曲循环	曲の終端をスキップすると1曲リピートが解除されます
+Soft	Doux	Suave	Мягкий	柔和	ソフト
+Something went wrong	Un problème est survenu	Algo ha salido mal	Что-то пошло не так	出现了一点问题	問題が発生しました
+Song · {artist}	Titre · {artist}	Canción · {artist}	Трек · {artist}	歌曲 · {artist}	曲・{artist}
+Song details will show up here.	Les détails du titre apparaîtront ici.	Los detalles de la canción aparecerán aquí.	Здесь появятся сведения о треке.	歌曲详情会显示在这里。	曲の詳細がここに表示されます。
+Songs follow each other without a gap	Les titres s’enchaînent sans interruption	Las canciones siguen sin pausas	Треки идут друг за другом без пауз	歌曲之间无缝衔接	曲間に無音を入れずに再生
+Songs of theirs you like show up here.	Les titres de cet artiste que tu aimes apparaîtront ici.	Aquí aparecerán las canciones de este artista que te gusten.	Здесь появятся любимые треки этого исполнителя.	你喜欢的这位艺人的歌曲会显示在这里。	このアーティストのお気に入り曲がここに表示されます。
+Songs that match	Titres correspondants	Canciones coincidentes	Подходящие треки	匹配的歌曲	条件に合う曲
+Songs you have twice	Titres en double	Canciones duplicadas	Повторяющиеся треки	重复的歌曲	重複している曲
+Songs you hear here count on Jellyfin too	Les écoutes faites ici comptent aussi dans Jellyfin	Lo que escuchas aquí también cuenta en Jellyfin	Прослушивания здесь учитываются и в Jellyfin	在这里播放的歌曲也会计入 Jellyfin	ここでの再生はJellyfinにも反映されます
+Songs you like will show up here	Tes titres favoris apparaîtront ici	Aquí aparecerán las canciones que te gusten	Здесь появятся твои любимые треки	你喜欢的歌曲会显示在这里	お気に入りの曲がここに表示されます
+Songs{value}	Titres{value}	Canciones{value}	Треки{value}	歌曲{value}	曲{value}
+Songsta {value}	Songsta {value}	Songsta {value}	Songsta {value}	Songsta {value}	Songsta {value}
+Songsta {version} is out	Songsta {version} est disponible	Songsta {version} está disponible	Доступна Songsta {version}	Songsta {version} 已发布	Songsta {version}が公開されました
+Songsta {version} is out, more in Settings	Songsta {version} est disponible · détails dans Paramètres	Songsta {version} está disponible · detalles en Ajustes	Доступна Songsta {version} · подробнее в настройках	Songsta {version} 已发布，详情请见设置	Songsta {version}が公開されました。詳細は設定へ
+Songsta {version} is ready	Songsta {version} est prêt	Songsta {version} está listo	Songsta {version} готова к установке	Songsta {version} 已就绪	Songsta {version}をインストールできます
+Songsta {version} is ready, more in Settings	Songsta {version} est prêt · détails dans Paramètres	Songsta {version} está listo · detalles en Ajustes	Songsta {version} готова · подробнее в настройках	Songsta {version} 已就绪，详情请见设置	Songsta {version}の準備ができました。詳細は設定へ
+Songsta {version} is ready. It installs when you close Songsta.	Songsta {version} est prêt. L’installation démarre à la fermeture de Songsta.	Songsta {version} está listo. Se instalará al cerrar Songsta.	Songsta {version} готова. Установка начнётся после закрытия Songsta.	Songsta {version} 已就绪，关闭应用后将安装。	Songsta {version}の準備ができました。Songstaを閉じるとインストールします。
+Songsta on GitHub	Songsta sur GitHub	Songsta en GitHub	Songsta на GitHub	GitHub 上的 Songsta	GitHubのSongsta
+Songsta starts with Windows and opens its window	Songsta démarre avec Windows et ouvre sa fenêtre	Songsta se inicia con Windows y abre su ventana	Songsta запускается вместе с Windows и открывает окно	Songsta 随 Windows 启动并打开窗口	Windowsと一緒にSongstaを起動してウィンドウを開く
+Songsta's own	Propre à Songsta	Propio de Songsta	Собственный режим Songsta	Songsta 自有模式	Songsta独自
+Sort by {toLowerCase}	Trier par {toLowerCase}	Ordenar por {toLowerCase}	Сортировать по {toLowerCase}	按 {toLowerCase} 排序	{toLowerCase}で並び替え
+Sort: {value}	Tri : {value}	Orden: {value}	Сортировка: {value}	排序：{value}	並び替え：{value}
+Sorted by {sortLabel}	Trié par {sortLabel}	Ordenado por {sortLabel}	Сортировка по {sortLabel}	按 {sortLabel} 排序	{sortLabel}順
+Sorted by {toLowerCase}	Trié par {toLowerCase}	Ordenado por {toLowerCase}	Сортировка по {toLowerCase}	按 {toLowerCase} 排序	{toLowerCase}順
+Sorted by {toLowerCase}, {value}	Trié par {toLowerCase}, {value}	Ordenado por {toLowerCase}, {value}	Сортировка по {toLowerCase}, {value}	按 {toLowerCase} 排序，{value}	{toLowerCase}順、{value}
+Source	Source	Fuente	Источник	来源	ソース
+Speaker	Enceinte	Altavoz	Колонка	音箱	スピーカー
+Speaker {value}	Enceinte {value}	Altavoz {value}	Колонка {value}	音箱 {value}	スピーカー{value}
+Speakers, receivers and TVs	Enceintes, amplis et téléviseurs	Altavoces, receptores y televisores	Колонки, ресиверы и телевизоры	音箱、接收设备和电视	スピーカー・レシーバー・テレビ
+Square	Carré	Cuadrado	Квадратный	方形	四角
+Start a second stream	Démarrer un second flux	Iniciar una segunda reproducción	Запустить второй поток	开始第二路播放	2つ目の再生を開始
+Start over	Recommencer	Empezar de nuevo	Начать заново	重新开始	最初からやり直す
+Startup	Démarrage	Inicio	Запуск	启动	起動
+Startup & updates	Démarrage et mises à jour	Inicio y actualizaciones	Запуск и обновления	启动与更新	起動とアップデート
+Stop choosing	Terminer la sélection	Terminar selección	Завершить выбор	完成选择	選択を終了
+Stop keeping offline	Ne plus garder hors ligne	Dejar de guardar sin conexión	Больше не хранить офлайн	停止离线保留	オフライン保存を停止
+Stop playing here	Arrêter la lecture ici	Dejar de reproducir aquí	Остановить воспроизведение здесь	停止在此播放	ここでの再生を停止
+Stop playing on {name}	Arrêter la lecture sur {name}	Dejar de reproducir en {name}	Остановить воспроизведение на {name}	停止在 {name} 上播放	{name}での再生を停止
+Stop the music here	Arrêter la musique ici	Detener la música aquí	Остановить музыку здесь	停止在此播放音乐	ここで音楽を停止
+Switch off	Éteindre	Apagar	Выключить	关闭电源	電源をオフにする
+Switch receivers off afterwards	Éteindre les amplis après la lecture	Apagar receptores después	Выключать ресиверы после воспроизведения	播放结束后关闭接收设备	再生後にレシーバーの電源をオフ
+System default	Valeur du système	Predeterminado del sistema	Системное значение	系统默认	システム標準
+System default — {label}	Valeur du système — {label}	Predeterminado del sistema — {label}	Системное значение — {label}	系统默认 — {label}	システム標準 — {label}
+Take {value} off	Retirer {value}	Quitar {value}	Убрать {value}	移除 {value}	{value}を外す
+Take off the songs put on by hand	Retirer les titres ajoutés manuellement	Quitar las canciones añadidas manualmente	Убрать треки, добавленные вручную	移除手动添加的歌曲	手動で追加した曲を外す
+Take out of “{name}”	Retirer de « {name} »	Sacar de «{name}»	Убрать из «{name}»	从“{name}”中取出	「{name}」から取り出す
+Taut	Tendu	Tenso	Упругий	紧绷	張りのある
+Teal	Bleu sarcelle	Verde azulado	Бирюзовый	青绿色	ティール
+Technical details	Détails techniques	Detalles técnicos	Технические сведения	技术详情	技術的な詳細
+Tell me about new versions	M’avertir des nouvelles versions	Avisarme de nuevas versiones	Сообщать о новых версиях	通知我新版本	新しいバージョンを知らせる
+This app	Cette application	Esta aplicación	Это приложение	此应用	このアプリ
+This phone plays along	Ce téléphone joue aussi	Este teléfono también reproduce	Этот телефон играет вместе с остальными	此手机正在同步播放	このスマートフォンも同時再生中
+Timing of {device}	Synchronisation de {device}	Sincronización de {device}	Синхронизация {device}	{device} 的播放时序	{device}の同期タイミング
+Timing of {device}: {value}	Synchronisation de {device} : {value}	Sincronización de {device}: {value}	Синхронизация {device}: {value}	{device} 的播放时序：{value}	{device}の同期：{value}
+Timing: {value}	Synchronisation : {value}	Sincronización: {value}	Синхронизация: {value}	时序：{value}	同期：{value}
+To exit full screen, press	Pour quitter le plein écran, appuie sur	Para salir de pantalla completa, pulsa	Чтобы выйти из полноэкранного режима, нажми	退出全屏请按	全画面表示を終了するには
+Unpacking "{name}"…	Extraction de « {name} »…	Extrayendo «{name}»…	Распаковка «{name}»…	正在解压“{name}”…	「{name}」を展開中…
+Waiting for it to start · 	En attente du démarrage · 	Esperando a que inicie · 	Ожидание запуска · 	等待启动 · 	起動待ち・
+What was in “{name}” stands on its own again	Le contenu de « {name} » est à nouveau séparé	Lo que había en «{name}» vuelve a estar separado	Содержимое «{name}» снова отдельно	“{name}”中的内容已恢复为独立项目	「{name}」の内容を再び分離しました
