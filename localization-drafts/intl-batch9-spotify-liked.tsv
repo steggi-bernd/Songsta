@@ -1,0 +1,66 @@
+Liked	Favori	Me gusta	Нравится	已喜欢	お気に入り
+liked songs	titres favoris	canciones favoritas	любимые треки	喜欢的歌曲	お気に入りの曲
+Liked songs	Titres favoris	Canciones favoritas	Любимые треки	喜欢的歌曲	お気に入りの曲
+Liked songs by {name}	Titres favoris de {name}	Canciones favoritas de {name}	Любимые треки исполнителя {name}	喜欢的 {name} 的歌曲	{name}のお気に入りの曲
+No liked songs by {name}	Aucun titre favori de {name}	No tienes canciones favoritas de {name}	Нет любимых треков исполнителя {name}	还没有喜欢的 {name} 的歌曲	{name}のお気に入りの曲はまだありません
+Nothing liked yet	Pas encore de titres favoris	Todavía no hay canciones favoritas	Любимых треков пока нет	还没有喜欢的歌曲	お気に入りの曲はまだありません
+Open Liked Songs	Ouvrir les titres favoris	Abrir canciones favoritas	Открыть любимые треки	打开喜欢的歌曲	お気に入りの曲を開く
+Play Liked Songs	Écouter les titres favoris	Reproducir canciones favoritas	Воспроизвести любимые треки	播放喜欢的歌曲	お気に入りの曲を再生
+Save to Liked Songs	Ajouter aux titres favoris	Guardar en canciones favoritas	Добавить в любимые треки	保存到喜欢的歌曲	お気に入りの曲に保存
+Remove from Liked Songs	Retirer des titres favoris	Quitar de canciones favoritas	Убрать из любимых треков	从喜欢的歌曲中移除	お気に入りの曲から削除
+In Liked Songs	Dans les titres favoris	En canciones favoritas	В любимых треках	在喜欢的歌曲中	お気に入りの曲にあります
+Only Liked Songs	Seulement les titres favoris	Solo canciones favoritas	Только любимые треки	仅显示喜欢的歌曲	お気に入りの曲のみ
+Liked Songs ↔ favorites	Titres favoris ↔ favoris du serveur	Canciones favoritas ↔ favoritos del servidor	Любимые треки ↔ избранное на сервере	喜欢的歌曲 ↔ 服务器收藏	お気に入りの曲 ↔ サーバーのお気に入り
+Liked Songs and server favorites	Titres favoris et favoris du serveur	Canciones favoritas y favoritos del servidor	Любимые треки и избранное на сервере	喜欢的歌曲和服务器收藏	お気に入りの曲とサーバーのお気に入り
+Keep Liked Songs and the {servers} favorites the same	Synchroniser les titres favoris avec les favoris de {servers}	Sincronizar canciones favoritas con los favoritos de {servers}	Синхронизировать любимые треки с избранным на {servers}	让喜欢的歌曲与 {servers} 的收藏保持同步	お気に入りの曲を{servers}のお気に入りと同期
+Your Liked Songs now follow Spotify's order	Tes titres favoris suivent désormais l’ordre de Spotify	Tus canciones favoritas ya siguen el orden de Spotify	Любимые треки теперь идут в порядке Spotify	喜欢的歌曲已按 Spotify 的顺序排列	お気に入りの曲をSpotifyの順序に合わせました
+“{name}” now follows Spotify's order	« {name} » suit désormais l’ordre de Spotify	«{name}» ya sigue el orden de Spotify	«{name}» теперь идёт в порядке Spotify	“{name}”已按 Spotify 的顺序排列	「{name}」をSpotifyの順序に合わせました
+Your Liked Songs: which you have, which to buy	Tes titres favoris : ceux que tu as et ceux qui te manquent	Tus favoritas: cuáles tienes y cuáles te faltan	Любимые треки: что уже есть и что ещё докупить	喜欢的歌曲：已有的与待购买的	お気に入りの曲：持っている曲と購入候補
+Open in Spotify	Ouvrir dans Spotify	Abrir en Spotify	Открыть в Spotify	在 Spotify 中打开	Spotifyで開く
+Open {title} in Spotify	Ouvrir {title} dans Spotify	Abrir {title} en Spotify	Открыть {title} в Spotify	在 Spotify 中打开 {title}	{title}をSpotifyで開く
+Recover a Spotify playlist	Retrouver une playlist Spotify	Recuperar una lista de Spotify	Восстановить плейлист из Spotify	恢复 Spotify 播放列表	Spotifyのプレイリストを取り込む
+Missing — to buy	Manquants — à acheter	Faltan — para comprar	Нет в медиатеке — к покупке	缺失，待购买	未所持・購入候補
+Shop links for missing songs	Liens vers les boutiques pour les titres manquants	Tiendas para las canciones que faltan	Ссылки на магазины для отсутствующих треков	缺失歌曲的商店链接	未所持の曲の購入先
+Where to buy {title}	Où acheter {title}	Dónde comprar {title}	Где купить {title}	在哪里买 {title}	{title}の購入先
+Search on {store}	Chercher sur {store}	Buscar en {store}	Искать в {store}	在 {store} 上搜索	{store}で検索
+In the Spotify import's “to buy” list: searches on Qobuz, Bandcamp, 7digital and Amazon	Dans la liste « À acheter » de l’import Spotify : recherches sur Qobuz, Bandcamp, 7digital et Amazon	En la lista «Para comprar» de la importación de Spotify: búsquedas en Qobuz, Bandcamp, 7digital y Amazon	В списке «Купить» импорта Spotify: поиск в Qobuz, Bandcamp, 7digital и Amazon	Spotify 导入中的“待购买”列表：可在 Qobuz、Bandcamp、7digital 和 Amazon 搜索	Spotifyインポートの「購入候補」リストからQobuz、Bandcamp、7digital、Amazonを検索できます
+Added “{title}” to Liked Songs	« {title} » ajouté aux titres favoris	«{title}» añadida a canciones favoritas	«{title}» добавлен в любимые треки	已将“{title}”加入喜欢的歌曲	「{title}」をお気に入りの曲に追加しました
+“{title}” is already in your Liked Songs	« {title} » est déjà dans tes titres favoris	«{title}» ya está en tus canciones favoritas	«{title}» уже в любимых треках	“{title}”已在喜欢的歌曲中	「{title}」はすでにお気に入りの曲にあります
+Add {count} to Liked Songs	Ajouter {count} aux titres favoris	Añadir {count} a canciones favoritas	Добавить {count} в любимые треки	将 {count} 首加入喜欢的歌曲	{count}曲をお気に入りの曲に追加
+Added {added} {value} to Liked Songs, in Spotify's order	{added} {value} ajoutés aux favoris, dans l’ordre de Spotify	Se añadieron {added} {value} a favoritas en el orden de Spotify	Добавлено {added} {value} в любимые треки в порядке Spotify	已按 Spotify 的顺序将 {added} {value} 加入喜欢的歌曲	Spotifyの順序で{added} {value}をお気に入りの曲に追加しました
+Added {added} {value} to “{name}”, in Spotify's order	{added} {value} ajoutés à « {name} » dans l’ordre de Spotify	Se añadieron {added} {value} a «{name}» en el orden de Spotify	В «{name}» добавлено {added} {value} в порядке Spotify	已按 Spotify 的顺序将 {added} {value} 加入“{name}”	Spotifyの順序で{added} {value}を「{name}」に追加しました
+Add "{title}" to a new playlist.	Ajouter « {title} » à une nouvelle playlist.	Añadir «{title}» a una lista nueva.	Добавить «{title}» в новый плейлист.	将“{title}”加入新播放列表。	「{title}」を新しいプレイリストに追加します。
+Add {count} to “{name}”	Ajouter {count} à « {name} »	Añadir {count} a «{name}»	Добавить {count} в «{name}»	将 {count} 项加入“{name}”	{count}件を「{name}」に追加
+Add to "{name}"	Ajouter à « {name} »	Añadir a «{name}»	Добавить в «{name}»	加入“{name}”	「{name}」に追加
+Added “{title}” to “{name}”	« {title} » ajouté à « {name} »	«{title}» añadida a «{name}»	«{title}» добавлен в «{name}»	已将“{title}”加入“{name}”	「{title}」を「{name}」に追加しました
+Added to "{name}"	Ajouté à « {name} »	Añadido a «{name}»	Добавлено в «{name}»	已加入“{name}”	「{name}」に追加しました
+Already in "{name}"	Déjà dans « {name} »	Ya está en «{name}»	Уже есть в «{name}»	已在“{name}”中	すでに「{name}」にあります
+“{title}” is already in “{name}”	« {title} » est déjà dans « {name} »	«{title}» ya está en «{name}»	«{title}» уже есть в «{name}»	“{title}”已在“{name}”中	「{title}」はすでに「{name}」にあります
+“{title}” holds playlists — drop onto one of them	« {title} » contient des playlists : dépose le titre sur l’une d’elles	«{title}» contiene listas: arrastra la canción a una	В «{title}» есть плейлисты — перетащи трек в нужный	“{title}”中有播放列表，请将歌曲拖入其中一个	「{title}」にはプレイリストがあります。追加先に曲をドロップしてください
+Drag to a playlist to add this song	Dépose ce titre sur une playlist pour l’ajouter	Arrastra esta canción a una lista para añadirla	Перетащи трек в плейлист, чтобы добавить	将此歌曲拖到播放列表中即可添加	この曲をプレイリストにドラッグして追加
+Now playing view — drag to a playlist to add this song	Lecture en cours : dépose ce titre sur une playlist pour l’ajouter	Vista de reproducción: arrastra esta canción a una lista para añadirla	Экран воспроизведения — перетащи трек в плейлист, чтобы добавить	正在播放页面：将此歌曲拖到播放列表中即可添加	再生中画面：曲をプレイリストにドラッグして追加できます
+in the order you liked them	dans l’ordre où tu les as ajoutés aux favoris	en el orden en que te gustaron	в порядке добавления в любимые	按加入喜欢的顺序	お気に入りに追加した順
+in the playlist's order	dans l’ordre de la playlist	en el orden de la lista	в порядке плейлиста	按播放列表顺序	プレイリストの順序で
+in the file's order (no like dates)	dans l’ordre du fichier (sans dates de favoris)	en el orden del archivo (sin fechas de favoritos)	в порядке файла (даты добавления в любимые неизвестны)	按文件顺序（没有喜欢日期）	ファイルの順序で（日付情報なし）
+Back to your own order	Revenir à ton ordre personnalisé	Volver a tu propio orden	Вернуться к своему порядку	恢复你的自定义顺序	自分で決めた順序に戻す
+Order	Ordre	Orden	Порядок	顺序	順序
+Order by	Trier par	Ordenar por	Сортировать по	排序方式	並び順
+Order by {name}	Trier par {name}	Ordenar por {name}	Сортировать по {name}	按 {name} 排序	{name}で並び替え
+Order by title	Trier par titre	Ordenar por título	Сортировать по названию	按标题排序	タイトル順
+Order the list	Trier la liste	Ordenar la lista	Упорядочить список	排列列表	リストを並べ替え
+The list's own order	L’ordre propre à la liste	Orden propio de la lista	Исходный порядок списка	列表原有顺序	リスト内の順序
+Play in order	Écouter dans l’ordre	Reproducir en orden	Воспроизводить по порядку	按顺序播放	順番に再生
+Pinned — drag to reorder	Épinglé — fais glisser pour réorganiser	Fijado: arrastra para cambiar el orden	Закреплено — перетащи для изменения порядка	已固定，拖动可调整顺序	ピン留め済み・ドラッグして順序を変更
+Search {count} playlists	Rechercher dans {count} playlists	Buscar en {count} listas	Поиск по {count} плейлистам	搜索 {count} 个播放列表	{count}件のプレイリストを検索
+Find a song in this list	Trouver un titre dans cette liste	Buscar una canción en esta lista	Найти трек в списке	在此列表中查找歌曲	このリストで曲を探す
+Find in this list	Rechercher dans cette liste	Buscar en esta lista	Поиск по этому списку	在此列表中搜索	このリスト内を検索
+Nothing in this list by that name.	Aucun élément de cette liste ne porte ce nom.	No hay nada con ese nombre en esta lista.	В этом списке ничего с таким названием нет.	此列表中没有该名称的内容。	このリストにその名前の項目はありません。
+Let's find something for your playlist	Trouvons de quoi remplir ta playlist	Vamos a buscar música para tu lista	Давай найдём музыку для плейлиста	来为播放列表找点音乐吧	プレイリストに入れる曲を探しましょう
+It may have been deleted. Head back to your playlists to find the rest.	Elle a peut-être été supprimée. Reviens à tes playlists pour retrouver les autres.	Puede que se haya eliminado. Vuelve a tus listas para ver las demás.	Возможно, плейлист удалён. Вернись к списку плейлистов, чтобы увидеть остальные.	它可能已被删除。返回播放列表页面查看其他列表。	削除された可能性があります。ほかのプレイリストは一覧から確認できます。
+Empty folder — right-click a playlist in the sidebar and move it here.	Dossier vide : fais un clic droit sur une playlist dans la barre latérale pour la déplacer ici.	Carpeta vacía: haz clic derecho en una lista de la barra lateral para moverla aquí.	Папка пуста — нажми правой кнопкой на плейлисте в боковой панели и перенеси его сюда.	文件夹为空。在侧边栏右键点击播放列表，将它移动到这里。	フォルダーは空です。サイドバーのプレイリストを右クリックして、ここに移動できます。
+Right-click to rename or delete — or drop a playlist here to file it	Clic droit pour renommer ou supprimer, ou dépose une playlist ici pour la ranger	Haz clic derecho para renombrar o eliminar, o arrastra una lista aquí para guardarla	Нажми правой кнопкой, чтобы переименовать или удалить, либо перетащи сюда плейлист	右键可重命名或删除，也可以拖入播放列表进行整理	右クリックで名前変更や削除、プレイリストをここにドロップして整理
+Click the heart on any song — in the player, a playlist, or search — and it lands in this list. Or bring your Liked Songs over from Spotify.	Clique sur le cœur d’un titre, dans le lecteur, une playlist ou la recherche : il apparaîtra ici. Tu peux aussi importer tes favoris Spotify.	Pulsa el corazón de cualquier canción, en el reproductor, una lista o la búsqueda, para añadirla aquí. También puedes traer tus favoritas de Spotify.	Нажми сердечко у любого трека в плеере, плейлисте или поиске, и он появится здесь. Можно также перенести любимые треки из Spotify.	在播放器、播放列表或搜索结果中点击歌曲旁的爱心，就能把它加入这里。也可以从 Spotify 导入喜欢的歌曲。	プレーヤー、プレイリスト、検索画面で曲のハートを押すと、ここに追加できます。Spotifyのお気に入りも取り込めます。
+Keep as playlist	Garder comme playlist	Guardar como lista	Сохранить как плейлист	保存为播放列表	プレイリストとして保存
+Playlists and likes: in step	Playlists et favoris synchronisés	Listas y favoritos sincronizados	Плейлисты и любимые треки синхронизированы	播放列表与喜欢的歌曲已同步	プレイリストとお気に入りを同期
+Playlists and where you stopped	Playlists et position de lecture	Listas y punto de reproducción	Плейлисты и место остановки	播放列表与播放进度	プレイリストと再生位置
+The same playlists on all your devices, and pick up where you stopped	Les mêmes playlists sur tous tes appareils, et reprends la lecture là où tu l’as laissée	Las mismas listas en todos tus dispositivos y retoma donde lo dejaste	Одинаковые плейлисты на всех устройствах и продолжение с места остановки	所有设备保持相同播放列表，并可从上次停止的位置继续	すべてのデバイスで同じプレイリストを使い、前回の続きから再生できます
