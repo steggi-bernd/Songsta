@@ -1,0 +1,8405 @@
+{
+  "schema": "songsta.genre-graph/1",
+  "version": "0.1.0",
+  "status": "editorial-draft-not-live",
+  "created": "2026-11-23",
+  "description": "A curated, expandable DAG of music genres for local-library discovery and genre-aware mixes. The first parent drives navigation; secondary parents represent crossovers, and related links represent editorial sonic proximity, not historical lineage.",
+  "families": [
+    {
+      "id": "rock",
+      "name": "Rock",
+      "root": "rock"
+    },
+    {
+      "id": "metal",
+      "name": "Metal",
+      "root": "metal"
+    },
+    {
+      "id": "punk",
+      "name": "Punk & Hardcore",
+      "root": "punk-and-hardcore"
+    },
+    {
+      "id": "pop",
+      "name": "Pop",
+      "root": "pop"
+    },
+    {
+      "id": "hip-hop",
+      "name": "Hip-Hop",
+      "root": "hip-hop"
+    },
+    {
+      "id": "rnb-soul",
+      "name": "R&B & Soul",
+      "root": "r-and-b-and-soul"
+    },
+    {
+      "id": "funk-disco",
+      "name": "Funk & Disco",
+      "root": "funk-and-disco"
+    },
+    {
+      "id": "electronic",
+      "name": "Electronic",
+      "root": "electronic"
+    },
+    {
+      "id": "jazz",
+      "name": "Jazz",
+      "root": "jazz"
+    },
+    {
+      "id": "blues",
+      "name": "Blues",
+      "root": "blues"
+    },
+    {
+      "id": "folk",
+      "name": "Folk & Acoustic",
+      "root": "folk-and-acoustic"
+    },
+    {
+      "id": "country",
+      "name": "Country & Americana",
+      "root": "country-and-americana"
+    },
+    {
+      "id": "latin",
+      "name": "Latin",
+      "root": "latin"
+    },
+    {
+      "id": "caribbean",
+      "name": "Reggae & Caribbean",
+      "root": "reggae-and-caribbean"
+    },
+    {
+      "id": "african",
+      "name": "African Contemporary",
+      "root": "african-contemporary"
+    },
+    {
+      "id": "asian",
+      "name": "East & South Asian Styles",
+      "root": "east-and-south-asian-styles"
+    },
+    {
+      "id": "classical",
+      "name": "Classical",
+      "root": "classical"
+    },
+    {
+      "id": "soundtrack",
+      "name": "Soundtrack & Stage",
+      "root": "soundtrack-and-stage"
+    },
+    {
+      "id": "regional-traditional",
+      "name": "Regional & Traditional",
+      "root": "regional-and-traditional"
+    },
+    {
+      "id": "sacred",
+      "name": "Sacred & Spiritual",
+      "root": "sacred-and-spiritual"
+    },
+    {
+      "id": "experimental",
+      "name": "Experimental & Noise",
+      "root": "experimental-and-noise"
+    }
+  ],
+  "facets": {
+    "energy": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "mood": [
+      "calm",
+      "melancholic",
+      "uplifting",
+      "dreamy",
+      "dark",
+      "warm",
+      "aggressive",
+      "playful",
+      "focused",
+      "romantic"
+    ],
+    "setting": [
+      "focus",
+      "commute",
+      "workout",
+      "evening",
+      "party",
+      "background",
+      "sleep"
+    ],
+    "voice": [
+      "instrumental",
+      "vocals",
+      "choir",
+      "spoken"
+    ],
+    "texture": [
+      "acoustic",
+      "electric",
+      "electronic",
+      "orchestral",
+      "lo-fi-production",
+      "live-recording"
+    ],
+    "era": [
+      "1950s",
+      "1960s",
+      "1970s",
+      "1980s",
+      "1990s",
+      "2000s",
+      "2010s",
+      "2020s"
+    ]
+  },
+  "rankingGuidance": {
+    "direct": "1.00 exact song tag",
+    "descendant": "0.82 closer subgenre",
+    "parent": "0.48 broader subgenre / family (family root not sufficient on its own)",
+    "related": "up to 0.75 * editorial weight",
+    "secondary-parent": "0.42 hybrid affiliation",
+    "two-hop": "first hop * second hop * 0.62",
+    "genre-is-not-mood": "energy and mood come from audio analysis / explicit tags, not inferred solely from genre",
+    "library-only": "recommend only songs present and playable in the user's own library; let missing source tags remain searchable",
+    "unknown": "preserve unknown raw tags for search, never silently force them into Other",
+    "cold-start": "if fewer than eight suitable tracks, show a filtered list rather than a misleading playlist",
+    "variety": "diversify artists and albums; optionally order by existing flowOrder"
+  },
+  "genres": [
+    {
+      "id": "rock",
+      "name": "Rock",
+      "family": "rock",
+      "parents": [],
+      "aliases": [
+        "Rock Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "classic-rock",
+      "name": "Classic Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "blues-rock",
+      "name": "Blues Rock",
+      "family": "rock",
+      "parents": [
+        "classic-rock"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "hard-rock",
+          "weight": 0.83
+        },
+        {
+          "id": "electric-blues",
+          "weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "southern-rock",
+      "name": "Southern Rock",
+      "family": "rock",
+      "parents": [
+        "classic-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "roots-rock",
+      "name": "Roots Rock",
+      "family": "rock",
+      "parents": [
+        "classic-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "arena-rock",
+      "name": "Arena Rock",
+      "family": "rock",
+      "parents": [
+        "classic-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "aor",
+      "name": "AOR",
+      "family": "rock",
+      "parents": [
+        "classic-rock"
+      ],
+      "aliases": [
+        "Album-Oriented Rock"
+      ],
+      "related": []
+    },
+    {
+      "id": "soft-rock",
+      "name": "Soft Rock",
+      "family": "rock",
+      "parents": [
+        "classic-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "yacht-rock",
+      "name": "Yacht Rock",
+      "family": "rock",
+      "parents": [
+        "classic-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hard-rock",
+      "name": "Hard Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "blues-rock",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "glam-rock",
+      "name": "Glam Rock",
+      "family": "rock",
+      "parents": [
+        "hard-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "pub-rock",
+      "name": "Pub Rock",
+      "family": "rock",
+      "parents": [
+        "hard-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "alternative-rock",
+      "name": "Alternative Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [
+        "Alt Rock",
+        "Alternative"
+      ],
+      "related": [
+        {
+          "id": "indie-rock",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "indie-rock",
+      "name": "Indie Rock",
+      "family": "rock",
+      "parents": [
+        "alternative-rock"
+      ],
+      "aliases": [
+        "Indie"
+      ],
+      "related": [
+        {
+          "id": "alternative-rock",
+          "weight": 0.9
+        },
+        {
+          "id": "indie-pop",
+          "weight": 0.89
+        }
+      ]
+    },
+    {
+      "id": "jangle-pop",
+      "name": "Jangle Pop",
+      "family": "rock",
+      "parents": [
+        "indie-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "slacker-rock",
+      "name": "Slacker Rock",
+      "family": "rock",
+      "parents": [
+        "indie-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "lo-fi-rock",
+      "name": "Lo-Fi Rock",
+      "family": "rock",
+      "parents": [
+        "indie-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "grunge",
+      "name": "Grunge",
+      "family": "rock",
+      "parents": [
+        "alternative-rock"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "alternative-metal",
+          "weight": 0.68
+        }
+      ]
+    },
+    {
+      "id": "post-grunge",
+      "name": "Post-Grunge",
+      "family": "rock",
+      "parents": [
+        "alternative-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "noise-rock",
+      "name": "Noise Rock",
+      "family": "rock",
+      "parents": [
+        "alternative-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "shoegaze",
+      "name": "Shoegaze",
+      "family": "rock",
+      "parents": [
+        "alternative-rock",
+        "dream-pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "dream-pop",
+          "weight": 0.93
+        },
+        {
+          "id": "post-rock",
+          "weight": 0.75
+        }
+      ]
+    },
+    {
+      "id": "blackgaze",
+      "name": "Blackgaze",
+      "family": "rock",
+      "parents": [
+        "shoegaze",
+        "black-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dream-rock",
+      "name": "Dream Rock",
+      "family": "rock",
+      "parents": [
+        "alternative-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "britpop",
+      "name": "Britpop",
+      "family": "rock",
+      "parents": [
+        "alternative-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "garage-rock-revival",
+      "name": "Garage Rock Revival",
+      "family": "rock",
+      "parents": [
+        "alternative-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "progressive-rock",
+      "name": "Progressive Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "progressive-metal",
+          "weight": 0.85
+        },
+        {
+          "id": "jazz-fusion",
+          "weight": 0.76
+        }
+      ]
+    },
+    {
+      "id": "symphonic-rock",
+      "name": "Symphonic Rock",
+      "family": "rock",
+      "parents": [
+        "progressive-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "krautrock",
+      "name": "Krautrock",
+      "family": "rock",
+      "parents": [
+        "progressive-rock",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "canterbury-scene",
+      "name": "Canterbury Scene",
+      "family": "rock",
+      "parents": [
+        "progressive-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "math-rock",
+      "name": "Math Rock",
+      "family": "rock",
+      "parents": [
+        "progressive-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "neo-prog",
+      "name": "Neo-Prog",
+      "family": "rock",
+      "parents": [
+        "progressive-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "zeuhl",
+      "name": "Zeuhl",
+      "family": "rock",
+      "parents": [
+        "progressive-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "psychedelic-rock",
+      "name": "Psychedelic Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "acid-rock",
+      "name": "Acid Rock",
+      "family": "rock",
+      "parents": [
+        "psychedelic-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "space-rock",
+      "name": "Space Rock",
+      "family": "rock",
+      "parents": [
+        "psychedelic-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "stoner-rock",
+      "name": "Stoner Rock",
+      "family": "rock",
+      "parents": [
+        "psychedelic-rock"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "stoner-metal",
+          "weight": 0.94
+        }
+      ]
+    },
+    {
+      "id": "neo-psychedelia",
+      "name": "Neo-Psychedelia",
+      "family": "rock",
+      "parents": [
+        "psychedelic-rock",
+        "indie-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "art-rock",
+      "name": "Art Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "experimental-rock",
+      "name": "Experimental Rock",
+      "family": "rock",
+      "parents": [
+        "art-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "post-rock",
+      "name": "Post-Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [
+        "Post Rock"
+      ],
+      "related": [
+        {
+          "id": "shoegaze",
+          "weight": 0.75
+        },
+        {
+          "id": "ambient",
+          "weight": 0.67
+        }
+      ]
+    },
+    {
+      "id": "folk-rock",
+      "name": "Folk Rock",
+      "family": "rock",
+      "parents": [
+        "rock",
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "indie-folk",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "country-rock",
+      "name": "Country Rock",
+      "family": "rock",
+      "parents": [
+        "rock",
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "alt-country",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "id": "jazz-rock",
+      "name": "Jazz Rock",
+      "family": "rock",
+      "parents": [
+        "rock",
+        "jazz-fusion"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "electronic-rock",
+      "name": "Electronic Rock",
+      "family": "rock",
+      "parents": [
+        "rock",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gothic-rock",
+      "name": "Gothic Rock",
+      "family": "rock",
+      "parents": [
+        "rock",
+        "post-punk"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "post-punk",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "surf-rock",
+      "name": "Surf Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rockabilly",
+      "name": "Rockabilly",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "industrial-rock",
+      "name": "Industrial Rock",
+      "family": "rock",
+      "parents": [
+        "rock",
+        "industrial"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "anatolian-rock",
+      "name": "Anatolian Rock",
+      "family": "rock",
+      "parents": [
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "latin-rock",
+      "name": "Latin Rock",
+      "family": "rock",
+      "parents": [
+        "rock",
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "metal",
+      "name": "Metal",
+      "family": "metal",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "heavy-metal",
+      "name": "Heavy Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "traditional-heavy-metal",
+      "name": "Traditional Heavy Metal",
+      "family": "metal",
+      "parents": [
+        "heavy-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "nwobhm",
+      "name": "NWOBHM",
+      "family": "metal",
+      "parents": [
+        "heavy-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "speed-metal",
+      "name": "Speed Metal",
+      "family": "metal",
+      "parents": [
+        "heavy-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "power-metal",
+      "name": "Power Metal",
+      "family": "metal",
+      "parents": [
+        "heavy-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "symphonic-power-metal",
+      "name": "Symphonic Power Metal",
+      "family": "metal",
+      "parents": [
+        "power-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "glam-metal",
+      "name": "Glam Metal",
+      "family": "metal",
+      "parents": [
+        "heavy-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "thrash-metal",
+      "name": "Thrash Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "crossover-thrash",
+      "name": "Crossover Thrash",
+      "family": "metal",
+      "parents": [
+        "thrash-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "technical-thrash-metal",
+      "name": "Technical Thrash Metal",
+      "family": "metal",
+      "parents": [
+        "thrash-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "death-metal",
+      "name": "Death Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "melodic-death-metal",
+      "name": "Melodic Death Metal",
+      "family": "metal",
+      "parents": [
+        "death-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "technical-death-metal",
+      "name": "Technical Death Metal",
+      "family": "metal",
+      "parents": [
+        "death-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "brutal-death-metal",
+      "name": "Brutal Death Metal",
+      "family": "metal",
+      "parents": [
+        "death-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "progressive-death-metal",
+      "name": "Progressive Death Metal",
+      "family": "metal",
+      "parents": [
+        "death-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "deathgrind",
+      "name": "Deathgrind",
+      "family": "metal",
+      "parents": [
+        "death-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "black-metal",
+      "name": "Black Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [
+        "Blackmetal"
+      ],
+      "related": []
+    },
+    {
+      "id": "atmospheric-black-metal",
+      "name": "Atmospheric Black Metal",
+      "family": "metal",
+      "parents": [
+        "black-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "symphonic-black-metal",
+      "name": "Symphonic Black Metal",
+      "family": "metal",
+      "parents": [
+        "black-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "depressive-black-metal",
+      "name": "Depressive Black Metal",
+      "family": "metal",
+      "parents": [
+        "black-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "pagan-black-metal",
+      "name": "Pagan Black Metal",
+      "family": "metal",
+      "parents": [
+        "black-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "doom-metal",
+      "name": "Doom Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "funeral-doom-metal",
+      "name": "Funeral Doom Metal",
+      "family": "metal",
+      "parents": [
+        "doom-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "death-doom",
+      "name": "Death-Doom",
+      "family": "metal",
+      "parents": [
+        "doom-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sludge-metal",
+      "name": "Sludge Metal",
+      "family": "metal",
+      "parents": [
+        "doom-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "stoner-metal",
+      "name": "Stoner Metal",
+      "family": "metal",
+      "parents": [
+        "doom-metal"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "stoner-rock",
+          "weight": 0.94
+        }
+      ]
+    },
+    {
+      "id": "progressive-metal",
+      "name": "Progressive Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "progressive-rock",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "djent",
+      "name": "Djent",
+      "family": "metal",
+      "parents": [
+        "progressive-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "alternative-metal",
+      "name": "Alternative Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "grunge",
+          "weight": 0.68
+        },
+        {
+          "id": "nu-metal",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "nu-metal",
+      "name": "Nu Metal",
+      "family": "metal",
+      "parents": [
+        "alternative-metal"
+      ],
+      "aliases": [
+        "Nu-Metal"
+      ],
+      "related": [
+        {
+          "id": "alternative-metal",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "rap-metal",
+      "name": "Rap Metal",
+      "family": "metal",
+      "parents": [
+        "alternative-metal",
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "industrial-metal",
+      "name": "Industrial Metal",
+      "family": "metal",
+      "parents": [
+        "alternative-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gothic-metal",
+      "name": "Gothic Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "symphonic-metal",
+      "name": "Symphonic Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "folk-metal",
+      "name": "Folk Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "viking-metal",
+      "name": "Viking Metal",
+      "family": "metal",
+      "parents": [
+        "folk-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "celtic-metal",
+      "name": "Celtic Metal",
+      "family": "metal",
+      "parents": [
+        "folk-metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "metalcore",
+      "name": "Metalcore",
+      "family": "metal",
+      "parents": [
+        "metal",
+        "hardcore-punk"
+      ],
+      "aliases": [
+        "Metal Core"
+      ],
+      "related": [
+        {
+          "id": "post-hardcore",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "melodic-metalcore",
+      "name": "Melodic Metalcore",
+      "family": "metal",
+      "parents": [
+        "metalcore"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "progressive-metalcore",
+      "name": "Progressive Metalcore",
+      "family": "metal",
+      "parents": [
+        "metalcore"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "deathcore",
+      "name": "Deathcore",
+      "family": "metal",
+      "parents": [
+        "metalcore"
+      ],
+      "aliases": [
+        "Death Core"
+      ],
+      "related": []
+    },
+    {
+      "id": "grindcore",
+      "name": "Grindcore",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "powerviolence",
+          "weight": 0.84
+        }
+      ]
+    },
+    {
+      "id": "goregrind",
+      "name": "Goregrind",
+      "family": "metal",
+      "parents": [
+        "grindcore"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "avant-garde-metal",
+      "name": "Avant-Garde Metal",
+      "family": "metal",
+      "parents": [
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "punk-and-hardcore",
+      "name": "Punk & Hardcore",
+      "family": "punk",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "punk-rock",
+      "name": "Punk Rock",
+      "family": "punk",
+      "parents": [
+        "punk-and-hardcore"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "pop-punk",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "garage-punk",
+      "name": "Garage Punk",
+      "family": "punk",
+      "parents": [
+        "punk-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "street-punk",
+      "name": "Street Punk",
+      "family": "punk",
+      "parents": [
+        "punk-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "oi",
+      "name": "Oi!",
+      "family": "punk",
+      "parents": [
+        "punk-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "skate-punk",
+      "name": "Skate Punk",
+      "family": "punk",
+      "parents": [
+        "punk-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "pop-punk",
+      "name": "Pop Punk",
+      "family": "punk",
+      "parents": [
+        "punk-rock",
+        "pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "punk-rock",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "anarcho-punk",
+      "name": "Anarcho-Punk",
+      "family": "punk",
+      "parents": [
+        "punk-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "horror-punk",
+      "name": "Horror Punk",
+      "family": "punk",
+      "parents": [
+        "punk-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hardcore-punk",
+      "name": "Hardcore Punk",
+      "family": "punk",
+      "parents": [
+        "punk-and-hardcore",
+        "metalcore"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "melodic-hardcore",
+      "name": "Melodic Hardcore",
+      "family": "punk",
+      "parents": [
+        "hardcore-punk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "post-hardcore",
+      "name": "Post-Hardcore",
+      "family": "punk",
+      "parents": [
+        "hardcore-punk"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "metalcore",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "screamo",
+      "name": "Screamo",
+      "family": "punk",
+      "parents": [
+        "post-hardcore"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "emocore",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "emocore",
+      "name": "Emocore",
+      "family": "punk",
+      "parents": [
+        "post-hardcore"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "screamo",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "youth-crew",
+      "name": "Youth Crew",
+      "family": "punk",
+      "parents": [
+        "hardcore-punk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "d-beat",
+      "name": "D-Beat",
+      "family": "punk",
+      "parents": [
+        "hardcore-punk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "crust-punk",
+      "name": "Crust Punk",
+      "family": "punk",
+      "parents": [
+        "hardcore-punk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "powerviolence",
+      "name": "Powerviolence",
+      "family": "punk",
+      "parents": [
+        "hardcore-punk"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "grindcore",
+          "weight": 0.84
+        }
+      ]
+    },
+    {
+      "id": "post-punk",
+      "name": "Post-Punk",
+      "family": "punk",
+      "parents": [
+        "punk-and-hardcore",
+        "rock"
+      ],
+      "aliases": [
+        "Post Punk"
+      ],
+      "related": [
+        {
+          "id": "new-wave",
+          "weight": 0.95
+        },
+        {
+          "id": "gothic-rock",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "dance-punk",
+      "name": "Dance-Punk",
+      "family": "punk",
+      "parents": [
+        "post-punk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "coldwave",
+      "name": "Coldwave",
+      "family": "punk",
+      "parents": [
+        "post-punk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "darkwave",
+      "name": "Darkwave",
+      "family": "punk",
+      "parents": [
+        "post-punk",
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "new-wave",
+      "name": "New Wave",
+      "family": "punk",
+      "parents": [
+        "punk-and-hardcore"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "post-punk",
+          "weight": 0.95
+        },
+        {
+          "id": "synth-pop",
+          "weight": 0.94
+        }
+      ]
+    },
+    {
+      "id": "emo",
+      "name": "Emo",
+      "family": "punk",
+      "parents": [
+        "punk-and-hardcore"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "midwest-emo",
+          "weight": 0.96
+        }
+      ]
+    },
+    {
+      "id": "midwest-emo",
+      "name": "Midwest Emo",
+      "family": "punk",
+      "parents": [
+        "emo"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "emo",
+          "weight": 0.96
+        }
+      ]
+    },
+    {
+      "id": "emo-pop",
+      "name": "Emo Pop",
+      "family": "punk",
+      "parents": [
+        "emo",
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "riot-grrrl",
+      "name": "Riot Grrrl",
+      "family": "punk",
+      "parents": [
+        "punk-and-hardcore"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "psychobilly",
+      "name": "Psychobilly",
+      "family": "punk",
+      "parents": [
+        "punk-and-hardcore"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "pop",
+      "name": "Pop",
+      "family": "pop",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dance-pop",
+      "name": "Dance Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "k-pop",
+          "weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "electropop",
+      "name": "Electropop",
+      "family": "pop",
+      "parents": [
+        "dance-pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "synth-pop",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "europop",
+      "name": "Europop",
+      "family": "pop",
+      "parents": [
+        "dance-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "eurodance",
+      "name": "Eurodance",
+      "family": "pop",
+      "parents": [
+        "dance-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "synth-pop",
+      "name": "Synth-Pop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "new-wave"
+      ],
+      "aliases": [
+        "Synthpop",
+        "Synth Pop"
+      ],
+      "related": [
+        {
+          "id": "new-wave",
+          "weight": 0.94
+        },
+        {
+          "id": "electropop",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "futurepop",
+      "name": "Futurepop",
+      "family": "pop",
+      "parents": [
+        "synth-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "minimal-wave",
+      "name": "Minimal Wave",
+      "family": "pop",
+      "parents": [
+        "synth-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "indie-pop",
+      "name": "Indie Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "indie-rock",
+          "weight": 0.89
+        }
+      ]
+    },
+    {
+      "id": "twee-pop",
+      "name": "Twee Pop",
+      "family": "pop",
+      "parents": [
+        "indie-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bedroom-pop",
+      "name": "Bedroom Pop",
+      "family": "pop",
+      "parents": [
+        "indie-pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "dream-pop",
+          "weight": 0.7
+        }
+      ]
+    },
+    {
+      "id": "chamber-pop",
+      "name": "Chamber Pop",
+      "family": "pop",
+      "parents": [
+        "indie-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dream-pop",
+      "name": "Dream Pop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "shoegaze"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "shoegaze",
+          "weight": 0.93
+        },
+        {
+          "id": "bedroom-pop",
+          "weight": 0.7
+        }
+      ]
+    },
+    {
+      "id": "art-pop",
+      "name": "Art Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "alternative-pop",
+      "name": "Alternative Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hyperpop",
+      "name": "Hyperpop",
+      "family": "pop",
+      "parents": [
+        "alternative-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "glitch-pop",
+      "name": "Glitch Pop",
+      "family": "pop",
+      "parents": [
+        "alternative-pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "power-pop",
+      "name": "Power Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "pop-rock",
+      "name": "Pop Rock",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "christian-rock",
+          "weight": 0.65
+        }
+      ]
+    },
+    {
+      "id": "teen-pop",
+      "name": "Teen Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bubblegum-pop",
+      "name": "Bubblegum Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "adult-contemporary",
+      "name": "Adult Contemporary",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sunshine-pop",
+      "name": "Sunshine Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sophisti-pop",
+      "name": "Sophisti-Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "city-pop",
+      "name": "City Pop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "japanese-pop-styles"
+      ],
+      "aliases": [
+        "Japanese City Pop"
+      ],
+      "related": [
+        {
+          "id": "japanese-pop-styles",
+          "weight": 0.74
+        }
+      ]
+    },
+    {
+      "id": "k-pop",
+      "name": "K-Pop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [
+        "Kpop",
+        "K Pop"
+      ],
+      "related": [
+        {
+          "id": "dance-pop",
+          "weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "j-pop",
+      "name": "J-Pop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [
+        "Jpop",
+        "J Pop"
+      ],
+      "related": [
+        {
+          "id": "anime-music",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "c-pop",
+      "name": "C-Pop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [
+        "Cpop",
+        "C Pop"
+      ],
+      "related": []
+    },
+    {
+      "id": "mandopop",
+      "name": "Mandopop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "cantopop",
+      "name": "Cantopop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "schlager",
+      "name": "Schlager",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "deutschpop",
+      "name": "Deutschpop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chanson",
+      "name": "Chanson",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [
+        "Chansons"
+      ],
+      "related": []
+    },
+    {
+      "id": "french-pop",
+      "name": "French Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "disco-pop",
+      "name": "Disco Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "latin-pop",
+      "name": "Latin Pop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "afropop",
+      "name": "Afropop",
+      "family": "pop",
+      "parents": [
+        "pop",
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "afrobeats",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "vocal-pop",
+      "name": "Vocal Pop",
+      "family": "pop",
+      "parents": [
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hip-hop",
+      "name": "Hip-Hop",
+      "family": "hip-hop",
+      "parents": [],
+      "aliases": [
+        "Hip Hop",
+        "HipHop",
+        "Hip Hop / Rap",
+        "Hip-Hop/Rap",
+        "Rap/Hip-Hop",
+        "Rap"
+      ],
+      "related": [
+        {
+          "id": "k-hip-hop",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "old-school-hip-hop",
+      "name": "Old School Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "electro-hip-hop",
+      "name": "Electro Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "old-school-hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "boom-bap",
+      "name": "Boom Bap",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [
+        "Boom-Bap"
+      ],
+      "related": [
+        {
+          "id": "jazz-rap",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "jazz-rap",
+      "name": "Jazz Rap",
+      "family": "hip-hop",
+      "parents": [
+        "boom-bap",
+        "jazz"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "boom-bap",
+          "weight": 0.91
+        },
+        {
+          "id": "lo-fi-hip-hop",
+          "weight": 0.81
+        }
+      ]
+    },
+    {
+      "id": "conscious-hip-hop",
+      "name": "Conscious Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "boom-bap"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "east-coast-hip-hop",
+      "name": "East Coast Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "boom-bap"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "west-coast-hip-hop",
+      "name": "West Coast Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "g-funk",
+      "name": "G-Funk",
+      "family": "hip-hop",
+      "parents": [
+        "west-coast-hip-hop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "funk",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "hyphy",
+      "name": "Hyphy",
+      "family": "hip-hop",
+      "parents": [
+        "west-coast-hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "southern-hip-hop",
+      "name": "Southern Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "crunk",
+      "name": "Crunk",
+      "family": "hip-hop",
+      "parents": [
+        "southern-hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "snap-music",
+      "name": "Snap Music",
+      "family": "hip-hop",
+      "parents": [
+        "southern-hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bounce",
+      "name": "Bounce",
+      "family": "hip-hop",
+      "parents": [
+        "southern-hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "trap",
+      "name": "Trap",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "drill",
+          "weight": 0.83
+        },
+        {
+          "id": "phonk",
+          "weight": 0.79
+        },
+        {
+          "id": "latin-trap",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "cloud-rap",
+      "name": "Cloud Rap",
+      "family": "hip-hop",
+      "parents": [
+        "trap"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "emo-rap",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "drill",
+      "name": "Drill",
+      "family": "hip-hop",
+      "parents": [
+        "trap"
+      ],
+      "aliases": [
+        "Drill Rap"
+      ],
+      "related": [
+        {
+          "id": "trap",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "uk-drill",
+      "name": "UK Drill",
+      "family": "hip-hop",
+      "parents": [
+        "drill"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "grime",
+          "weight": 0.76
+        }
+      ]
+    },
+    {
+      "id": "brooklyn-drill",
+      "name": "Brooklyn Drill",
+      "family": "hip-hop",
+      "parents": [
+        "drill"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rage-rap",
+      "name": "Rage Rap",
+      "family": "hip-hop",
+      "parents": [
+        "trap"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "plugg",
+      "name": "Plugg",
+      "family": "hip-hop",
+      "parents": [
+        "trap"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "pluggnb",
+      "name": "Pluggnb",
+      "family": "hip-hop",
+      "parents": [
+        "trap"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "alternative-r-and-b",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "phonk",
+      "name": "Phonk",
+      "family": "hip-hop",
+      "parents": [
+        "trap",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "trap",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "alternative-hip-hop",
+      "name": "Alternative Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [
+        "Alternative Rap"
+      ],
+      "related": []
+    },
+    {
+      "id": "abstract-hip-hop",
+      "name": "Abstract Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "alternative-hip-hop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "trip-hop",
+          "weight": 0.81
+        }
+      ]
+    },
+    {
+      "id": "experimental-hip-hop",
+      "name": "Experimental Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "alternative-hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "indie-hip-hop",
+      "name": "Indie Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "alternative-hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "lo-fi-hip-hop",
+      "name": "Lo-Fi Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop",
+        "downtempo"
+      ],
+      "aliases": [
+        "Lofi Hip Hop",
+        "LoFi HipHop",
+        "Lofi Beats",
+        "Lo-Fi Beats"
+      ],
+      "related": [
+        {
+          "id": "jazz-rap",
+          "weight": 0.81
+        },
+        {
+          "id": "chillhop",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "chillhop",
+      "name": "Chillhop",
+      "family": "hip-hop",
+      "parents": [
+        "lo-fi-hip-hop",
+        "jazz"
+      ],
+      "aliases": [
+        "Chill Hop"
+      ],
+      "related": [
+        {
+          "id": "lo-fi-hip-hop",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "instrumental-hip-hop",
+      "name": "Instrumental Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "trip-hop",
+      "name": "Trip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop",
+        "downtempo"
+      ],
+      "aliases": [
+        "Trip Hop",
+        "Triphop"
+      ],
+      "related": [
+        {
+          "id": "downtempo",
+          "weight": 0.97
+        },
+        {
+          "id": "abstract-hip-hop",
+          "weight": 0.81
+        }
+      ]
+    },
+    {
+      "id": "horrorcore",
+      "name": "Horrorcore",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gangsta-rap",
+      "name": "Gangsta Rap",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "grime",
+      "name": "Grime",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop",
+        "uk-garage"
+      ],
+      "aliases": [
+        "UK Grime"
+      ],
+      "related": [
+        {
+          "id": "uk-garage",
+          "weight": 0.81
+        },
+        {
+          "id": "uk-drill",
+          "weight": 0.76
+        }
+      ]
+    },
+    {
+      "id": "uk-hip-hop",
+      "name": "UK Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "german-hip-hop",
+      "name": "German Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [
+        "Deutschrap",
+        "German Rap"
+      ],
+      "related": []
+    },
+    {
+      "id": "french-hip-hop",
+      "name": "French Hip-Hop",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [
+        "French Rap"
+      ],
+      "related": []
+    },
+    {
+      "id": "latin-trap",
+      "name": "Latin Trap",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop",
+        "latin"
+      ],
+      "aliases": [
+        "Trap Latino"
+      ],
+      "related": [
+        {
+          "id": "trap",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "afro-trap",
+      "name": "Afro Trap",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "emo-rap",
+      "name": "Emo Rap",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "cloud-rap",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "rap-rock",
+      "name": "Rap Rock",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop",
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rapcore",
+      "name": "Rapcore",
+      "family": "hip-hop",
+      "parents": [
+        "hip-hop",
+        "punk-and-hardcore"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "r-and-b-and-soul",
+      "name": "R&B & Soul",
+      "family": "rnb-soul",
+      "parents": [],
+      "aliases": [
+        "R&B/Soul"
+      ],
+      "related": []
+    },
+    {
+      "id": "rhythm-and-blues",
+      "name": "Rhythm & Blues",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul"
+      ],
+      "aliases": [
+        "RNB",
+        "R&B",
+        "R n B",
+        "RnB",
+        "Rhythm and Blues"
+      ],
+      "related": []
+    },
+    {
+      "id": "contemporary-r-and-b",
+      "name": "Contemporary R&B",
+      "family": "rnb-soul",
+      "parents": [
+        "rhythm-and-blues"
+      ],
+      "aliases": [
+        "Contemporary RnB"
+      ],
+      "related": [
+        {
+          "id": "new-jack-swing",
+          "weight": 0.84
+        }
+      ]
+    },
+    {
+      "id": "alternative-r-and-b",
+      "name": "Alternative R&B",
+      "family": "rnb-soul",
+      "parents": [
+        "contemporary-r-and-b"
+      ],
+      "aliases": [
+        "Alt R&B"
+      ],
+      "related": [
+        {
+          "id": "pluggnb",
+          "weight": 0.8
+        },
+        {
+          "id": "neo-soul",
+          "weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "pbr-and-b",
+      "name": "PBR&B",
+      "family": "rnb-soul",
+      "parents": [
+        "contemporary-r-and-b"
+      ],
+      "aliases": [
+        "PBRnB"
+      ],
+      "related": []
+    },
+    {
+      "id": "quiet-storm",
+      "name": "Quiet Storm",
+      "family": "rnb-soul",
+      "parents": [
+        "contemporary-r-and-b"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "new-jack-swing",
+      "name": "New Jack Swing",
+      "family": "rnb-soul",
+      "parents": [
+        "rhythm-and-blues"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "contemporary-r-and-b",
+          "weight": 0.84
+        }
+      ]
+    },
+    {
+      "id": "soul",
+      "name": "Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "classic-soul",
+      "name": "Classic Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "motown",
+      "name": "Motown",
+      "family": "rnb-soul",
+      "parents": [
+        "classic-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "northern-soul",
+      "name": "Northern Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "classic-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "southern-soul",
+      "name": "Southern Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "classic-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "neo-soul",
+      "name": "Neo-Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "soul"
+      ],
+      "aliases": [
+        "Neo Soul",
+        "Neosoul"
+      ],
+      "related": [
+        {
+          "id": "alternative-r-and-b",
+          "weight": 0.87
+        },
+        {
+          "id": "jazz-funk",
+          "weight": 0.7
+        }
+      ]
+    },
+    {
+      "id": "psychedelic-soul",
+      "name": "Psychedelic Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "blue-eyed-soul",
+      "name": "Blue-Eyed Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gospel-soul",
+      "name": "Gospel Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul",
+        "gospel"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "funk-soul",
+      "name": "Funk Soul",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul",
+        "funk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "soul-jazz",
+      "name": "Soul Jazz",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul",
+        "jazz"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "hard-bop",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "smooth-r-and-b",
+      "name": "Smooth R&B",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "doo-wop",
+      "name": "Doo-Wop",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "new-orleans-r-and-b",
+      "name": "New Orleans R&B",
+      "family": "rnb-soul",
+      "parents": [
+        "r-and-b-and-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "funk-and-disco",
+      "name": "Funk & Disco",
+      "family": "funk-disco",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "funk",
+      "name": "Funk",
+      "family": "funk-disco",
+      "parents": [
+        "funk-and-disco"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "g-funk",
+          "weight": 0.9
+        },
+        {
+          "id": "disco",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "p-funk",
+      "name": "P-Funk",
+      "family": "funk-disco",
+      "parents": [
+        "funk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jazz-funk",
+      "name": "Jazz-Funk",
+      "family": "funk-disco",
+      "parents": [
+        "funk",
+        "jazz"
+      ],
+      "aliases": [
+        "Jazz Funk"
+      ],
+      "related": [
+        {
+          "id": "neo-soul",
+          "weight": 0.7
+        },
+        {
+          "id": "jazz-fusion",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "afro-funk",
+      "name": "Afro-Funk",
+      "family": "funk-disco",
+      "parents": [
+        "funk",
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "afrobeat",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "funk-rock",
+      "name": "Funk Rock",
+      "family": "funk-disco",
+      "parents": [
+        "funk",
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "deep-funk",
+      "name": "Deep Funk",
+      "family": "funk-disco",
+      "parents": [
+        "funk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "boogie",
+      "name": "Boogie",
+      "family": "funk-disco",
+      "parents": [
+        "funk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "disco",
+      "name": "Disco",
+      "family": "funk-disco",
+      "parents": [
+        "funk-and-disco"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "funk",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "euro-disco",
+      "name": "Euro Disco",
+      "family": "funk-disco",
+      "parents": [
+        "disco"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "italo-disco",
+      "name": "Italo Disco",
+      "family": "funk-disco",
+      "parents": [
+        "disco"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "nu-disco",
+      "name": "Nu-Disco",
+      "family": "funk-disco",
+      "parents": [
+        "disco",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "funky-house",
+          "weight": 0.92
+        },
+        {
+          "id": "disco-house",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "space-disco",
+      "name": "Space Disco",
+      "family": "funk-disco",
+      "parents": [
+        "disco"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "disco-house",
+      "name": "Disco House",
+      "family": "funk-disco",
+      "parents": [
+        "disco",
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "french-house",
+          "weight": 0.9
+        },
+        {
+          "id": "nu-disco",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "post-disco",
+      "name": "Post-Disco",
+      "family": "funk-disco",
+      "parents": [
+        "funk-and-disco"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "funk-carioca",
+      "name": "Funk Carioca",
+      "family": "funk-disco",
+      "parents": [
+        "funk-and-disco",
+        "latin"
+      ],
+      "aliases": [
+        "Brazilian Funk",
+        "Funk Brasileiro"
+      ],
+      "related": []
+    },
+    {
+      "id": "baile-funk",
+      "name": "Baile Funk",
+      "family": "funk-disco",
+      "parents": [
+        "funk-and-disco",
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "electronic",
+      "name": "Electronic",
+      "family": "electronic",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "house",
+      "name": "House",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "House Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "chicago-house",
+      "name": "Chicago House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "detroit-techno",
+          "weight": 0.77
+        }
+      ]
+    },
+    {
+      "id": "deep-house",
+      "name": "Deep House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "soulful-house",
+          "weight": 0.89
+        },
+        {
+          "id": "organic-house",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "soulful-house",
+      "name": "Soulful House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "deep-house",
+          "weight": 0.89
+        }
+      ]
+    },
+    {
+      "id": "acid-house",
+      "name": "Acid House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "acid-techno",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "progressive-house",
+      "name": "Progressive House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "melodic-techno",
+          "weight": 0.88
+        },
+        {
+          "id": "progressive-trance",
+          "weight": 0.74
+        }
+      ]
+    },
+    {
+      "id": "tech-house",
+      "name": "Tech House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "minimal-techno",
+          "weight": 0.76
+        }
+      ]
+    },
+    {
+      "id": "minimal-house",
+      "name": "Minimal House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "tropical-house",
+      "name": "Tropical House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "future-house",
+      "name": "Future House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bass-house",
+      "name": "Bass House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "french-house",
+      "name": "French House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "disco-house",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "afro-house",
+      "name": "Afro House",
+      "family": "electronic",
+      "parents": [
+        "house",
+        "african-contemporary"
+      ],
+      "aliases": [
+        "Afrohouse"
+      ],
+      "related": [
+        {
+          "id": "amapiano",
+          "weight": 0.82
+        },
+        {
+          "id": "uk-funky",
+          "weight": 0.77
+        }
+      ]
+    },
+    {
+      "id": "amapiano",
+      "name": "Amapiano",
+      "family": "electronic",
+      "parents": [
+        "house",
+        "african-contemporary"
+      ],
+      "aliases": [
+        "Ama Piano"
+      ],
+      "related": [
+        {
+          "id": "afro-house",
+          "weight": 0.82
+        },
+        {
+          "id": "afrobeats",
+          "weight": 0.73
+        },
+        {
+          "id": "kwaito",
+          "weight": 0.72
+        }
+      ]
+    },
+    {
+      "id": "melodic-house",
+      "name": "Melodic House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "melodic-techno",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "organic-house",
+      "name": "Organic House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "deep-house",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "electro-house",
+      "name": "Electro House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "big-room-house",
+      "name": "Big Room House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [
+        "Big Room"
+      ],
+      "related": []
+    },
+    {
+      "id": "g-house",
+      "name": "G-House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "lo-fi-house",
+      "name": "Lo-Fi House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "funky-house",
+      "name": "Funky House",
+      "family": "electronic",
+      "parents": [
+        "house"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "nu-disco",
+          "weight": 0.92
+        }
+      ]
+    },
+    {
+      "id": "techno",
+      "name": "Techno",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "Techno Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "detroit-techno",
+      "name": "Detroit Techno",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "chicago-house",
+          "weight": 0.77
+        }
+      ]
+    },
+    {
+      "id": "minimal-techno",
+      "name": "Minimal Techno",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "tech-house",
+          "weight": 0.76
+        }
+      ]
+    },
+    {
+      "id": "dub-techno",
+      "name": "Dub Techno",
+      "family": "electronic",
+      "parents": [
+        "techno",
+        "dub"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "ambient-dub",
+          "weight": 0.89
+        }
+      ]
+    },
+    {
+      "id": "acid-techno",
+      "name": "Acid Techno",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "acid-house",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "industrial-techno",
+      "name": "Industrial Techno",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hard-techno",
+      "name": "Hard Techno",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "melodic-techno",
+      "name": "Melodic Techno",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "progressive-house",
+          "weight": 0.88
+        },
+        {
+          "id": "melodic-house",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "peak-time-techno",
+      "name": "Peak Time Techno",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "schranz",
+      "name": "Schranz",
+      "family": "electronic",
+      "parents": [
+        "techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "trance",
+      "name": "Trance",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "progressive-trance",
+      "name": "Progressive Trance",
+      "family": "electronic",
+      "parents": [
+        "trance"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "progressive-house",
+          "weight": 0.74
+        }
+      ]
+    },
+    {
+      "id": "uplifting-trance",
+      "name": "Uplifting Trance",
+      "family": "electronic",
+      "parents": [
+        "trance"
+      ],
+      "aliases": [
+        "Epic Trance"
+      ],
+      "related": [
+        {
+          "id": "vocal-trance",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "psytrance",
+      "name": "Psytrance",
+      "family": "electronic",
+      "parents": [
+        "trance"
+      ],
+      "aliases": [
+        "Psy Trance"
+      ],
+      "related": [
+        {
+          "id": "goa-trance",
+          "weight": 0.94
+        }
+      ]
+    },
+    {
+      "id": "goa-trance",
+      "name": "Goa Trance",
+      "family": "electronic",
+      "parents": [
+        "psytrance"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "psytrance",
+          "weight": 0.94
+        }
+      ]
+    },
+    {
+      "id": "full-on-psytrance",
+      "name": "Full-On Psytrance",
+      "family": "electronic",
+      "parents": [
+        "psytrance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "darkpsy",
+      "name": "Darkpsy",
+      "family": "electronic",
+      "parents": [
+        "psytrance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "forest-psytrance",
+      "name": "Forest Psytrance",
+      "family": "electronic",
+      "parents": [
+        "psytrance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "vocal-trance",
+      "name": "Vocal Trance",
+      "family": "electronic",
+      "parents": [
+        "trance"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "uplifting-trance",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "tech-trance",
+      "name": "Tech Trance",
+      "family": "electronic",
+      "parents": [
+        "trance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hard-trance",
+      "name": "Hard Trance",
+      "family": "electronic",
+      "parents": [
+        "trance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ambient-trance",
+      "name": "Ambient Trance",
+      "family": "electronic",
+      "parents": [
+        "trance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "drum-and-bass",
+      "name": "Drum & Bass",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "Drum and Bass",
+        "Drum n Bass",
+        "Drum'n'Bass",
+        "DnB",
+        "D&B"
+      ],
+      "related": [
+        {
+          "id": "jungle",
+          "weight": 0.94
+        }
+      ]
+    },
+    {
+      "id": "liquid-drum-and-bass",
+      "name": "Liquid Drum & Bass",
+      "family": "electronic",
+      "parents": [
+        "drum-and-bass"
+      ],
+      "aliases": [
+        "Liquid DnB",
+        "Liquid Funk"
+      ],
+      "related": [
+        {
+          "id": "atmospheric-drum-and-bass",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "neurofunk",
+      "name": "Neurofunk",
+      "family": "electronic",
+      "parents": [
+        "drum-and-bass"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jump-up",
+      "name": "Jump-Up",
+      "family": "electronic",
+      "parents": [
+        "drum-and-bass"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "atmospheric-drum-and-bass",
+      "name": "Atmospheric Drum & Bass",
+      "family": "electronic",
+      "parents": [
+        "drum-and-bass"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "liquid-drum-and-bass",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "techstep",
+      "name": "Techstep",
+      "family": "electronic",
+      "parents": [
+        "drum-and-bass"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "darkstep",
+      "name": "Darkstep",
+      "family": "electronic",
+      "parents": [
+        "drum-and-bass"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dancefloor-drum-and-bass",
+      "name": "Dancefloor Drum & Bass",
+      "family": "electronic",
+      "parents": [
+        "drum-and-bass"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jungle",
+      "name": "Jungle",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "Jungle Music"
+      ],
+      "related": [
+        {
+          "id": "drum-and-bass",
+          "weight": 0.94
+        },
+        {
+          "id": "breakcore",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "ragga-jungle",
+      "name": "Ragga Jungle",
+      "family": "electronic",
+      "parents": [
+        "jungle"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "dancehall",
+          "weight": 0.78
+        }
+      ]
+    },
+    {
+      "id": "breakbeat",
+      "name": "Breakbeat",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "big-beat",
+      "name": "Big Beat",
+      "family": "electronic",
+      "parents": [
+        "breakbeat"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "nu-skool-breaks",
+      "name": "Nu Skool Breaks",
+      "family": "electronic",
+      "parents": [
+        "breakbeat"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "breakcore",
+      "name": "Breakcore",
+      "family": "electronic",
+      "parents": [
+        "breakbeat"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "jungle",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "uk-garage",
+      "name": "UK Garage",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "UKG",
+        "Garage (UK)"
+      ],
+      "related": [
+        {
+          "id": "grime",
+          "weight": 0.81
+        },
+        {
+          "id": "2-step-garage",
+          "weight": 0.96
+        },
+        {
+          "id": "future-garage",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "2-step-garage",
+      "name": "2-Step Garage",
+      "family": "electronic",
+      "parents": [
+        "uk-garage"
+      ],
+      "aliases": [
+        "2 Step",
+        "2 Step Garage",
+        "2-Step",
+        "UK 2-Step"
+      ],
+      "related": [
+        {
+          "id": "uk-garage",
+          "weight": 0.96
+        }
+      ]
+    },
+    {
+      "id": "speed-garage",
+      "name": "Speed Garage",
+      "family": "electronic",
+      "parents": [
+        "uk-garage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bassline",
+      "name": "Bassline",
+      "family": "electronic",
+      "parents": [
+        "uk-garage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "uk-funky",
+      "name": "UK Funky",
+      "family": "electronic",
+      "parents": [
+        "uk-garage"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "afro-house",
+          "weight": 0.77
+        }
+      ]
+    },
+    {
+      "id": "uk-bass",
+      "name": "UK Bass",
+      "family": "electronic",
+      "parents": [
+        "uk-garage"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "dubstep",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "id": "dubstep",
+      "name": "Dubstep",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "Dub Step"
+      ],
+      "related": [
+        {
+          "id": "uk-bass",
+          "weight": 0.88
+        },
+        {
+          "id": "future-bass",
+          "weight": 0.7
+        }
+      ]
+    },
+    {
+      "id": "brostep",
+      "name": "Brostep",
+      "family": "electronic",
+      "parents": [
+        "dubstep"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "riddim",
+      "name": "Riddim",
+      "family": "electronic",
+      "parents": [
+        "dubstep"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "melodic-dubstep",
+      "name": "Melodic Dubstep",
+      "family": "electronic",
+      "parents": [
+        "dubstep"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "future-garage",
+      "name": "Future Garage",
+      "family": "electronic",
+      "parents": [
+        "dubstep"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "uk-garage",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "electro",
+      "name": "Electro",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "Electro Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "electroclash",
+      "name": "Electroclash",
+      "family": "electronic",
+      "parents": [
+        "electro"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hard-dance",
+      "name": "Hard Dance",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hardstyle",
+      "name": "Hardstyle",
+      "family": "electronic",
+      "parents": [
+        "hard-dance"
+      ],
+      "aliases": [
+        "Hard Style"
+      ],
+      "related": []
+    },
+    {
+      "id": "rawstyle",
+      "name": "Rawstyle",
+      "family": "electronic",
+      "parents": [
+        "hardstyle"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "euphoric-hardstyle",
+      "name": "Euphoric Hardstyle",
+      "family": "electronic",
+      "parents": [
+        "hardstyle"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hardcore-techno",
+      "name": "Hardcore Techno",
+      "family": "electronic",
+      "parents": [
+        "hard-dance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gabber",
+      "name": "Gabber",
+      "family": "electronic",
+      "parents": [
+        "hardcore-techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "happy-hardcore",
+      "name": "Happy Hardcore",
+      "family": "electronic",
+      "parents": [
+        "hardcore-techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "frenchcore",
+      "name": "Frenchcore",
+      "family": "electronic",
+      "parents": [
+        "hardcore-techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "uptempo-hardcore",
+      "name": "Uptempo Hardcore",
+      "family": "electronic",
+      "parents": [
+        "hardcore-techno"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jumpstyle",
+      "name": "Jumpstyle",
+      "family": "electronic",
+      "parents": [
+        "hard-dance"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "drumstep",
+      "name": "Drumstep",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "edm-trap",
+      "name": "EDM Trap",
+      "family": "electronic",
+      "parents": [
+        "electronic",
+        "trap"
+      ],
+      "aliases": [
+        "Electronic Trap",
+        "Trap EDM"
+      ],
+      "related": []
+    },
+    {
+      "id": "future-bass",
+      "name": "Future Bass",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "dubstep",
+          "weight": 0.7
+        }
+      ]
+    },
+    {
+      "id": "moombahton",
+      "name": "Moombahton",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "reggaeton",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "jersey-club",
+      "name": "Jersey Club",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "baltimore-club",
+          "weight": 0.92
+        }
+      ]
+    },
+    {
+      "id": "baltimore-club",
+      "name": "Baltimore Club",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "jersey-club",
+          "weight": 0.92
+        }
+      ]
+    },
+    {
+      "id": "footwork",
+      "name": "Footwork",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "juke",
+          "weight": 0.98
+        }
+      ]
+    },
+    {
+      "id": "juke",
+      "name": "Juke",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "footwork",
+          "weight": 0.98
+        }
+      ]
+    },
+    {
+      "id": "ghetto-house",
+      "name": "Ghetto House",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "downtempo",
+      "name": "Downtempo",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "trip-hop",
+          "weight": 0.97
+        },
+        {
+          "id": "ambient",
+          "weight": 0.73
+        }
+      ]
+    },
+    {
+      "id": "chillout",
+      "name": "Chillout",
+      "family": "electronic",
+      "parents": [
+        "downtempo"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "balearic",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "lounge",
+      "name": "Lounge",
+      "family": "electronic",
+      "parents": [
+        "downtempo"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "balearic",
+      "name": "Balearic",
+      "family": "electronic",
+      "parents": [
+        "downtempo"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "chillout",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "psybient",
+      "name": "Psybient",
+      "family": "electronic",
+      "parents": [
+        "downtempo"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ambient",
+      "name": "Ambient",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "Ambient Music"
+      ],
+      "related": [
+        {
+          "id": "post-rock",
+          "weight": 0.67
+        },
+        {
+          "id": "downtempo",
+          "weight": 0.73
+        },
+        {
+          "id": "drone",
+          "weight": 0.8
+        },
+        {
+          "id": "neoclassical",
+          "weight": 0.75
+        }
+      ]
+    },
+    {
+      "id": "dark-ambient",
+      "name": "Dark Ambient",
+      "family": "electronic",
+      "parents": [
+        "ambient",
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "drone",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "drone-ambient",
+      "name": "Drone Ambient",
+      "family": "electronic",
+      "parents": [
+        "ambient"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "space-ambient",
+      "name": "Space Ambient",
+      "family": "electronic",
+      "parents": [
+        "ambient"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ambient-dub",
+      "name": "Ambient Dub",
+      "family": "electronic",
+      "parents": [
+        "ambient",
+        "dub"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "dub-techno",
+          "weight": 0.89
+        }
+      ]
+    },
+    {
+      "id": "ambient-house",
+      "name": "Ambient House",
+      "family": "electronic",
+      "parents": [
+        "ambient",
+        "house"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "electronica",
+      "name": "Electronica",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [
+        "Electronic Listening Music"
+      ],
+      "related": [
+        {
+          "id": "idm",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "idm",
+      "name": "IDM",
+      "family": "electronic",
+      "parents": [
+        "electronica"
+      ],
+      "aliases": [
+        "Intelligent Dance Music"
+      ],
+      "related": [
+        {
+          "id": "electronica",
+          "weight": 0.91
+        },
+        {
+          "id": "glitch",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "glitch",
+      "name": "Glitch",
+      "family": "electronic",
+      "parents": [
+        "electronica"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "idm",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "microhouse",
+      "name": "Microhouse",
+      "family": "electronic",
+      "parents": [
+        "electronica"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "wonky",
+      "name": "Wonky",
+      "family": "electronic",
+      "parents": [
+        "electronica"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "synthwave",
+      "name": "Synthwave",
+      "family": "electronic",
+      "parents": [
+        "electronic",
+        "synth-pop"
+      ],
+      "aliases": [
+        "Synth Wave"
+      ],
+      "related": [
+        {
+          "id": "darksynth",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "retrowave",
+      "name": "Retrowave",
+      "family": "electronic",
+      "parents": [
+        "synthwave"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "darksynth",
+      "name": "Darksynth",
+      "family": "electronic",
+      "parents": [
+        "synthwave"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "synthwave",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "outrun",
+      "name": "Outrun",
+      "family": "electronic",
+      "parents": [
+        "synthwave"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "vaporwave",
+      "name": "Vaporwave",
+      "family": "electronic",
+      "parents": [
+        "synthwave",
+        "experimental"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "future-funk",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "future-funk",
+      "name": "Future Funk",
+      "family": "electronic",
+      "parents": [
+        "vaporwave",
+        "funk-and-disco"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "vaporwave",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "mallsoft",
+      "name": "Mallsoft",
+      "family": "electronic",
+      "parents": [
+        "vaporwave"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "new-age",
+      "name": "New Age",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chiptune",
+      "name": "Chiptune",
+      "family": "electronic",
+      "parents": [
+        "electronic",
+        "video-game-music"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "chiptune-soundtrack",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "indietronica",
+      "name": "Indietronica",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "folktronica",
+      "name": "Folktronica",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "leftfield-bass",
+      "name": "Leftfield Bass",
+      "family": "electronic",
+      "parents": [
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "witch-house",
+      "name": "Witch House",
+      "family": "electronic",
+      "parents": [
+        "electronic",
+        "darkwave"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jazz",
+      "name": "Jazz",
+      "family": "jazz",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "traditional-jazz",
+      "name": "Traditional Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dixieland",
+      "name": "Dixieland",
+      "family": "jazz",
+      "parents": [
+        "traditional-jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "new-orleans-jazz",
+      "name": "New Orleans Jazz",
+      "family": "jazz",
+      "parents": [
+        "traditional-jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ragtime-jazz",
+      "name": "Ragtime Jazz",
+      "family": "jazz",
+      "parents": [
+        "traditional-jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "swing",
+      "name": "Swing",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "big-band",
+      "name": "Big Band",
+      "family": "jazz",
+      "parents": [
+        "swing"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gypsy-jazz",
+      "name": "Gypsy Jazz",
+      "family": "jazz",
+      "parents": [
+        "swing"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bebop",
+      "name": "Bebop",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "hard-bop",
+      "name": "Hard Bop",
+      "family": "jazz",
+      "parents": [
+        "bebop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "soul-jazz",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "cool-jazz",
+      "name": "Cool Jazz",
+      "family": "jazz",
+      "parents": [
+        "bebop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "post-bop",
+      "name": "Post-Bop",
+      "family": "jazz",
+      "parents": [
+        "bebop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "modal-jazz",
+      "name": "Modal Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "free-jazz",
+      "name": "Free Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "free-improvisation",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "avant-garde-jazz",
+      "name": "Avant-Garde Jazz",
+      "family": "jazz",
+      "parents": [
+        "free-jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jazz-fusion",
+      "name": "Jazz Fusion",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "jazz-funk",
+          "weight": 0.91
+        },
+        {
+          "id": "progressive-rock",
+          "weight": 0.76
+        }
+      ]
+    },
+    {
+      "id": "jazz-funk-fusion",
+      "name": "Jazz-Funk Fusion",
+      "family": "jazz",
+      "parents": [
+        "jazz-fusion"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "smooth-jazz",
+      "name": "Smooth Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "acid-jazz",
+      "name": "Acid Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz",
+        "jazz-funk"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "nu-jazz",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "id": "nu-jazz",
+      "name": "Nu Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "acid-jazz",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "id": "spiritual-jazz",
+      "name": "Spiritual Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "vocal-jazz",
+      "name": "Vocal Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jazz-standards",
+      "name": "Jazz Standards",
+      "family": "jazz",
+      "parents": [
+        "vocal-jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "latin-jazz",
+      "name": "Latin Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "afro-cuban-jazz",
+      "name": "Afro-Cuban Jazz",
+      "family": "jazz",
+      "parents": [
+        "latin-jazz",
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "brazilian-jazz",
+      "name": "Brazilian Jazz",
+      "family": "jazz",
+      "parents": [
+        "latin-jazz"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "bossa-nova",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "contemporary-jazz",
+      "name": "Contemporary Jazz",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "third-stream",
+      "name": "Third Stream",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jazz-manouche",
+      "name": "Jazz Manouche",
+      "family": "jazz",
+      "parents": [
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "blues",
+      "name": "Blues",
+      "family": "blues",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "delta-blues",
+      "name": "Delta Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "country-blues",
+          "weight": 0.92
+        }
+      ]
+    },
+    {
+      "id": "chicago-blues",
+      "name": "Chicago Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "electric-blues",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "electric-blues",
+      "name": "Electric Blues",
+      "family": "blues",
+      "parents": [
+        "chicago-blues"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "chicago-blues",
+          "weight": 0.95
+        },
+        {
+          "id": "blues-rock",
+          "weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "texas-blues",
+      "name": "Texas Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "piedmont-blues",
+      "name": "Piedmont Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "country-blues",
+      "name": "Country Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "delta-blues",
+          "weight": 0.92
+        },
+        {
+          "id": "appalachian-folk",
+          "weight": 0.75
+        }
+      ]
+    },
+    {
+      "id": "acoustic-blues",
+      "name": "Acoustic Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "jump-blues",
+      "name": "Jump Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rhythm-blues",
+      "name": "Rhythm Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "soul-blues",
+      "name": "Soul Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "british-blues",
+      "name": "British Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "swamp-blues",
+      "name": "Swamp Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gospel-blues",
+      "name": "Gospel Blues",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "blues-folk",
+      "name": "Blues Folk",
+      "family": "blues",
+      "parents": [
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "folk-and-acoustic",
+      "name": "Folk & Acoustic",
+      "family": "folk",
+      "parents": [],
+      "aliases": [
+        "Folk Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "traditional-folk",
+      "name": "Traditional Folk",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "celtic-folk",
+      "name": "Celtic Folk",
+      "family": "folk",
+      "parents": [
+        "traditional-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "irish-folk",
+      "name": "Irish Folk",
+      "family": "folk",
+      "parents": [
+        "celtic-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "scottish-folk",
+      "name": "Scottish Folk",
+      "family": "folk",
+      "parents": [
+        "celtic-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "nordic-folk",
+      "name": "Nordic Folk",
+      "family": "folk",
+      "parents": [
+        "traditional-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "appalachian-folk",
+      "name": "Appalachian Folk",
+      "family": "folk",
+      "parents": [
+        "traditional-folk"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "country-blues",
+          "weight": 0.75
+        },
+        {
+          "id": "bluegrass",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "english-folk",
+      "name": "English Folk",
+      "family": "folk",
+      "parents": [
+        "traditional-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "balkan-folk",
+      "name": "Balkan Folk",
+      "family": "folk",
+      "parents": [
+        "traditional-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "contemporary-folk",
+      "name": "Contemporary Folk",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "indie-folk",
+      "name": "Indie Folk",
+      "family": "folk",
+      "parents": [
+        "contemporary-folk"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "folk-rock",
+          "weight": 0.8
+        },
+        {
+          "id": "folk-pop",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "alternative-folk",
+      "name": "Alternative Folk",
+      "family": "folk",
+      "parents": [
+        "contemporary-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "psychedelic-folk",
+      "name": "Psychedelic Folk",
+      "family": "folk",
+      "parents": [
+        "contemporary-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "anti-folk",
+      "name": "Anti-Folk",
+      "family": "folk",
+      "parents": [
+        "contemporary-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "freak-folk",
+      "name": "Freak Folk",
+      "family": "folk",
+      "parents": [
+        "contemporary-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "neofolk",
+      "name": "Neofolk",
+      "family": "folk",
+      "parents": [
+        "contemporary-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chamber-folk",
+      "name": "Chamber Folk",
+      "family": "folk",
+      "parents": [
+        "contemporary-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "singer-songwriter",
+      "name": "Singer/Songwriter",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic"
+      ],
+      "aliases": [
+        "Singer-Songwriter",
+        "Singer Songwriter"
+      ],
+      "related": []
+    },
+    {
+      "id": "acoustic-pop",
+      "name": "Acoustic Pop",
+      "family": "folk",
+      "parents": [
+        "singer-songwriter"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "liedermacher",
+      "name": "Liedermacher",
+      "family": "folk",
+      "parents": [
+        "singer-songwriter"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "folk-pop",
+      "name": "Folk-Pop",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "indie-folk",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "americana-folk",
+      "name": "Americana Folk",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bluegrass-folk",
+      "name": "Bluegrass Folk",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic",
+        "bluegrass"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "flamenco-folk",
+      "name": "Flamenco Folk",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic",
+        "flamenco"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "folk-punk",
+      "name": "Folk Punk",
+      "family": "folk",
+      "parents": [
+        "folk-and-acoustic",
+        "punk-rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "country-and-americana",
+      "name": "Country & Americana",
+      "family": "country",
+      "parents": [],
+      "aliases": [
+        "Country Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "traditional-country",
+      "name": "Traditional Country",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "honky-tonk",
+      "name": "Honky-Tonk",
+      "family": "country",
+      "parents": [
+        "traditional-country"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "western-swing",
+      "name": "Western Swing",
+      "family": "country",
+      "parents": [
+        "traditional-country"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "nashville-sound",
+      "name": "Nashville Sound",
+      "family": "country",
+      "parents": [
+        "traditional-country"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "outlaw-country",
+      "name": "Outlaw Country",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "alt-country",
+      "name": "Alt-Country",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "americana",
+          "weight": 0.88
+        },
+        {
+          "id": "country-rock",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "id": "americana",
+      "name": "Americana",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "alt-country",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "id": "red-dirt",
+      "name": "Red Dirt",
+      "family": "country",
+      "parents": [
+        "americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "roots-americana",
+      "name": "Roots Americana",
+      "family": "country",
+      "parents": [
+        "americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bluegrass",
+      "name": "Bluegrass",
+      "family": "country",
+      "parents": [
+        "country-and-americana",
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "appalachian-folk",
+          "weight": 0.86
+        }
+      ]
+    },
+    {
+      "id": "progressive-bluegrass",
+      "name": "Progressive Bluegrass",
+      "family": "country",
+      "parents": [
+        "bluegrass"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "country-pop",
+      "name": "Country Pop",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "contemporary-country",
+      "name": "Contemporary Country",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bro-country",
+      "name": "Bro-Country",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "country-rap",
+      "name": "Country Rap",
+      "family": "country",
+      "parents": [
+        "country-and-americana",
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "western-music",
+      "name": "Western Music",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "cajun",
+      "name": "Cajun",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "zydeco",
+      "name": "Zydeco",
+      "family": "country",
+      "parents": [
+        "country-and-americana"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "latin",
+      "name": "Latin",
+      "family": "latin",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "salsa",
+      "name": "Salsa",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "son-cubano",
+          "weight": 0.92
+        }
+      ]
+    },
+    {
+      "id": "salsa-dura",
+      "name": "Salsa Dura",
+      "family": "latin",
+      "parents": [
+        "salsa"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "salsa-romantica",
+      "name": "Salsa Romantica",
+      "family": "latin",
+      "parents": [
+        "salsa"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "son-cubano",
+      "name": "Son Cubano",
+      "family": "latin",
+      "parents": [
+        "salsa"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "salsa",
+          "weight": 0.92
+        }
+      ]
+    },
+    {
+      "id": "timba",
+      "name": "Timba",
+      "family": "latin",
+      "parents": [
+        "salsa"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bachata",
+      "name": "Bachata",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "merengue",
+          "weight": 0.72
+        }
+      ]
+    },
+    {
+      "id": "modern-bachata",
+      "name": "Modern Bachata",
+      "family": "latin",
+      "parents": [
+        "bachata"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "merengue",
+      "name": "Merengue",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "bachata",
+          "weight": 0.72
+        }
+      ]
+    },
+    {
+      "id": "reggaeton",
+      "name": "Reggaeton",
+      "family": "latin",
+      "parents": [
+        "latin",
+        "reggae-and-caribbean"
+      ],
+      "aliases": [
+        "Reggaetón"
+      ],
+      "related": [
+        {
+          "id": "moombahton",
+          "weight": 0.85
+        },
+        {
+          "id": "dembow",
+          "weight": 0.88
+        },
+        {
+          "id": "dancehall",
+          "weight": 0.75
+        }
+      ]
+    },
+    {
+      "id": "old-school-reggaeton",
+      "name": "Old School Reggaeton",
+      "family": "latin",
+      "parents": [
+        "reggaeton"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "latin-urban",
+      "name": "Latin Urban",
+      "family": "latin",
+      "parents": [
+        "reggaeton"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "cumbia",
+      "name": "Cumbia",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "digital-cumbia",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "colombian-cumbia",
+      "name": "Colombian Cumbia",
+      "family": "latin",
+      "parents": [
+        "cumbia"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "cumbia-sonidera",
+      "name": "Cumbia Sonidera",
+      "family": "latin",
+      "parents": [
+        "cumbia"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "cumbia-villera",
+      "name": "Cumbia Villera",
+      "family": "latin",
+      "parents": [
+        "cumbia"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "digital-cumbia",
+      "name": "Digital Cumbia",
+      "family": "latin",
+      "parents": [
+        "cumbia"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "cumbia",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "bossa-nova",
+      "name": "Bossa Nova",
+      "family": "latin",
+      "parents": [
+        "latin",
+        "jazz"
+      ],
+      "aliases": [
+        "Bossa"
+      ],
+      "related": [
+        {
+          "id": "brazilian-jazz",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "samba",
+      "name": "Samba",
+      "family": "latin",
+      "parents": [
+        "latin",
+        "brazilian-jazz"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "mpb",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "samba-pagode",
+      "name": "Samba Pagode",
+      "family": "latin",
+      "parents": [
+        "samba"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "samba-enredo",
+      "name": "Samba Enredo",
+      "family": "latin",
+      "parents": [
+        "samba"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "mpb",
+      "name": "MPB",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "samba",
+          "weight": 0.79
+        }
+      ]
+    },
+    {
+      "id": "tropicalia",
+      "name": "Tropicália",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [
+        "Tropicalia"
+      ],
+      "related": []
+    },
+    {
+      "id": "forro",
+      "name": "Forró",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [
+        "Forro"
+      ],
+      "related": []
+    },
+    {
+      "id": "sertanejo",
+      "name": "Sertanejo",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bolero",
+      "name": "Bolero",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "tango",
+      "name": "Tango",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "flamenco",
+      "name": "Flamenco",
+      "family": "latin",
+      "parents": [
+        "latin",
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rumba-flamenca",
+      "name": "Rumba Flamenca",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "mariachi",
+      "name": "Mariachi",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ranchera",
+      "name": "Ranchera",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "corrido",
+      "name": "Corrido",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "corridos-tumbados",
+      "name": "Corridos Tumbados",
+      "family": "latin",
+      "parents": [
+        "corrido"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "banda",
+      "name": "Banda",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "norteno",
+      "name": "Norteño",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "regional-mexican",
+      "name": "Regional Mexican",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dembow",
+      "name": "Dembow",
+      "family": "latin",
+      "parents": [
+        "latin",
+        "dancehall"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "reggaeton",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "id": "musica-urbana-latina",
+      "name": "Música Urbana Latina",
+      "family": "latin",
+      "parents": [
+        "latin"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "reggae-and-caribbean",
+      "name": "Reggae & Caribbean",
+      "family": "caribbean",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ska",
+      "name": "Ska",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [
+        "Ska Music"
+      ],
+      "related": [
+        {
+          "id": "rocksteady",
+          "weight": 0.96
+        }
+      ]
+    },
+    {
+      "id": "first-wave-ska",
+      "name": "First Wave Ska",
+      "family": "caribbean",
+      "parents": [
+        "ska"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "2-tone-ska",
+      "name": "2 Tone Ska",
+      "family": "caribbean",
+      "parents": [
+        "ska"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "third-wave-ska",
+      "name": "Third Wave Ska",
+      "family": "caribbean",
+      "parents": [
+        "ska"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rocksteady",
+      "name": "Rocksteady",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "ska",
+          "weight": 0.96
+        },
+        {
+          "id": "reggae",
+          "weight": 0.97
+        }
+      ]
+    },
+    {
+      "id": "reggae",
+      "name": "Reggae",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [
+        "Reggae Music"
+      ],
+      "related": [
+        {
+          "id": "rocksteady",
+          "weight": 0.97
+        },
+        {
+          "id": "dub",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "roots-reggae",
+      "name": "Roots Reggae",
+      "family": "caribbean",
+      "parents": [
+        "reggae"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "lovers-rock",
+      "name": "Lovers Rock",
+      "family": "caribbean",
+      "parents": [
+        "reggae"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dub",
+      "name": "Dub",
+      "family": "caribbean",
+      "parents": [
+        "reggae"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "reggae",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "id": "dub-poetry",
+      "name": "Dub Poetry",
+      "family": "caribbean",
+      "parents": [
+        "dub"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "reggae-fusion",
+      "name": "Reggae Fusion",
+      "family": "caribbean",
+      "parents": [
+        "reggae"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dancehall",
+      "name": "Dancehall",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [
+        "Dance Hall"
+      ],
+      "related": [
+        {
+          "id": "ragga-jungle",
+          "weight": 0.78
+        },
+        {
+          "id": "reggaeton",
+          "weight": 0.75
+        },
+        {
+          "id": "ragga",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "ragga",
+      "name": "Ragga",
+      "family": "caribbean",
+      "parents": [
+        "dancehall"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "dancehall",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "soca",
+      "name": "Soca",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "calypso",
+      "name": "Calypso",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "zouk",
+      "name": "Zouk",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "kompa",
+      "name": "Kompa",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bouyon",
+      "name": "Bouyon",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "mento",
+      "name": "Mento",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "afro-caribbean",
+      "name": "Afro-Caribbean",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chutney-music",
+      "name": "Chutney Music",
+      "family": "caribbean",
+      "parents": [
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "african-contemporary",
+      "name": "African Contemporary",
+      "family": "african",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "afrobeat",
+      "name": "Afrobeat",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "funk"
+      ],
+      "aliases": [
+        "Fela Afrobeat"
+      ],
+      "related": [
+        {
+          "id": "afro-funk",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "id": "afrobeats",
+      "name": "Afrobeats",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "pop"
+      ],
+      "aliases": [
+        "Afro Beats",
+        "Afro-Pop Nigeria"
+      ],
+      "related": [
+        {
+          "id": "amapiano",
+          "weight": 0.73
+        },
+        {
+          "id": "afro-fusion",
+          "weight": 0.94
+        },
+        {
+          "id": "afropop",
+          "weight": 0.85
+        }
+      ]
+    },
+    {
+      "id": "afro-fusion",
+      "name": "Afro-Fusion",
+      "family": "african",
+      "parents": [
+        "afrobeats"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "afrobeats",
+          "weight": 0.94
+        }
+      ]
+    },
+    {
+      "id": "afroswing",
+      "name": "Afroswing",
+      "family": "african",
+      "parents": [
+        "afrobeats"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "alte",
+      "name": "Alté",
+      "family": "african",
+      "parents": [
+        "afrobeats"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "highlife",
+      "name": "Highlife",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "hiplife",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "hiplife",
+      "name": "Hiplife",
+      "family": "african",
+      "parents": [
+        "highlife"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "highlife",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "juju",
+      "name": "Juju",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "fuji",
+      "name": "Fuji",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "mbalax",
+      "name": "Mbalax",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "soukous",
+      "name": "Soukous",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "ndombolo",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "ndombolo",
+      "name": "Ndombolo",
+      "family": "african",
+      "parents": [
+        "soukous"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "soukous",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "makossa",
+      "name": "Makossa",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "kizomba",
+      "name": "Kizomba",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "reggae-and-caribbean"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "kuduro",
+      "name": "Kuduro",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gqom",
+      "name": "Gqom",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "electronic"
+      ],
+      "aliases": [
+        "Gqomu"
+      ],
+      "related": []
+    },
+    {
+      "id": "kwaito",
+      "name": "Kwaito",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "amapiano",
+          "weight": 0.72
+        }
+      ]
+    },
+    {
+      "id": "african-gospel",
+      "name": "African Gospel",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "gospel"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ethio-jazz",
+      "name": "Ethio-Jazz",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "jazz"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "taarab",
+      "name": "Taarab",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gnawa",
+      "name": "Gnawa",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rai",
+      "name": "Raï",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [
+        "Rai"
+      ],
+      "related": []
+    },
+    {
+      "id": "chaabi",
+      "name": "Chaabi",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "desert-blues",
+      "name": "Desert Blues",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "malian-blues",
+      "name": "Malian Blues",
+      "family": "african",
+      "parents": [
+        "african-contemporary",
+        "blues"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bongo-flava",
+      "name": "Bongo Flava",
+      "family": "african",
+      "parents": [
+        "african-contemporary"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "east-and-south-asian-styles",
+      "name": "East & South Asian Styles",
+      "family": "asian",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "japanese-pop-styles",
+      "name": "Japanese Pop Styles",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "city-pop",
+          "weight": 0.74
+        }
+      ]
+    },
+    {
+      "id": "shibuya-kei",
+      "name": "Shibuya-Kei",
+      "family": "asian",
+      "parents": [
+        "japanese-pop-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "kayokyoku",
+      "name": "Kayōkyoku",
+      "family": "asian",
+      "parents": [
+        "japanese-pop-styles"
+      ],
+      "aliases": [
+        "Kayokyoku"
+      ],
+      "related": []
+    },
+    {
+      "id": "enka",
+      "name": "Enka",
+      "family": "asian",
+      "parents": [
+        "japanese-pop-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "visual-kei",
+      "name": "Visual Kei",
+      "family": "asian",
+      "parents": [
+        "japanese-pop-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "j-rock",
+      "name": "J-Rock",
+      "family": "asian",
+      "parents": [
+        "japanese-pop-styles",
+        "rock"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "korean-pop-styles",
+      "name": "Korean Pop Styles",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "k-indie",
+      "name": "K-Indie",
+      "family": "asian",
+      "parents": [
+        "korean-pop-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "korean-r-and-b",
+      "name": "Korean R&B",
+      "family": "asian",
+      "parents": [
+        "korean-pop-styles",
+        "r-and-b-and-soul"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "k-hip-hop",
+      "name": "K-Hip-Hop",
+      "family": "asian",
+      "parents": [
+        "korean-pop-styles",
+        "hip-hop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "hip-hop",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "trot",
+      "name": "Trot",
+      "family": "asian",
+      "parents": [
+        "korean-pop-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chinese-pop-styles",
+      "name": "Chinese Pop Styles",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chinese-rock",
+      "name": "Chinese Rock",
+      "family": "asian",
+      "parents": [
+        "chinese-pop-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chinese-hip-hop",
+      "name": "Chinese Hip-Hop",
+      "family": "asian",
+      "parents": [
+        "chinese-pop-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bollywood",
+      "name": "Bollywood",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles",
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "indian-pop",
+          "weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "filmi",
+      "name": "Filmi",
+      "family": "asian",
+      "parents": [
+        "bollywood"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "indian-pop",
+      "name": "Indian Pop",
+      "family": "asian",
+      "parents": [
+        "bollywood",
+        "pop"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "bollywood",
+          "weight": 0.87
+        }
+      ]
+    },
+    {
+      "id": "bhangra",
+      "name": "Bhangra",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bhangra-pop",
+      "name": "Bhangra Pop",
+      "family": "asian",
+      "parents": [
+        "bhangra"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "qawwali",
+      "name": "Qawwali",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles",
+        "sacred-and-spiritual"
+      ],
+      "aliases": [
+        "Kawwali"
+      ],
+      "related": []
+    },
+    {
+      "id": "hindustani-classical",
+      "name": "Hindustani Classical",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles",
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "carnatic-classical",
+      "name": "Carnatic Classical",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles",
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "anime-music",
+      "name": "Anime Music",
+      "family": "asian",
+      "parents": [
+        "east-and-south-asian-styles",
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "j-pop",
+          "weight": 0.82
+        }
+      ]
+    },
+    {
+      "id": "classical",
+      "name": "Classical",
+      "family": "classical",
+      "parents": [],
+      "aliases": [
+        "Klassik",
+        "Classical Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "medieval-music",
+      "name": "Medieval Music",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gregorian-chant",
+      "name": "Gregorian Chant",
+      "family": "classical",
+      "parents": [
+        "medieval-music",
+        "sacred-choral"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ars-nova",
+      "name": "Ars Nova",
+      "family": "classical",
+      "parents": [
+        "medieval-music"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "renaissance-music",
+      "name": "Renaissance Music",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "renaissance-polyphony",
+      "name": "Renaissance Polyphony",
+      "family": "classical",
+      "parents": [
+        "renaissance-music"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "baroque",
+      "name": "Baroque",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "baroque-chamber",
+      "name": "Baroque Chamber",
+      "family": "classical",
+      "parents": [
+        "baroque"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "baroque-opera",
+      "name": "Baroque Opera",
+      "family": "classical",
+      "parents": [
+        "baroque"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "classical-period",
+      "name": "Classical Period",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "classical-symphony",
+      "name": "Classical Symphony",
+      "family": "classical",
+      "parents": [
+        "classical-period"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "classical-chamber",
+      "name": "Classical Chamber",
+      "family": "classical",
+      "parents": [
+        "classical-period"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "romantic-classical",
+      "name": "Romantic Classical",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "romantic-symphony",
+      "name": "Romantic Symphony",
+      "family": "classical",
+      "parents": [
+        "romantic-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "romantic-piano",
+      "name": "Romantic Piano",
+      "family": "classical",
+      "parents": [
+        "romantic-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "romantic-opera",
+      "name": "Romantic Opera",
+      "family": "classical",
+      "parents": [
+        "romantic-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "early-modern-classical",
+      "name": "Early Modern Classical",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "impressionist-classical",
+      "name": "Impressionist Classical",
+      "family": "classical",
+      "parents": [
+        "early-modern-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "expressionist-classical",
+      "name": "Expressionist Classical",
+      "family": "classical",
+      "parents": [
+        "early-modern-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "serialism",
+      "name": "Serialism",
+      "family": "classical",
+      "parents": [
+        "early-modern-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "contemporary-classical",
+      "name": "Contemporary Classical",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "neoclassical",
+          "weight": 0.75
+        }
+      ]
+    },
+    {
+      "id": "minimalism-classical",
+      "name": "Minimalism Classical",
+      "family": "classical",
+      "parents": [
+        "contemporary-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "post-minimalism",
+      "name": "Post-Minimalism",
+      "family": "classical",
+      "parents": [
+        "minimalism-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "modern-orchestral",
+      "name": "Modern Orchestral",
+      "family": "classical",
+      "parents": [
+        "contemporary-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "electroacoustic-classical",
+      "name": "Electroacoustic Classical",
+      "family": "classical",
+      "parents": [
+        "contemporary-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "contemporary-chamber",
+      "name": "Contemporary Chamber",
+      "family": "classical",
+      "parents": [
+        "contemporary-classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "opera",
+      "name": "Opera",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "chamber-music",
+      "name": "Chamber Music",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "orchestral-music",
+      "name": "Orchestral Music",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "orchestral-film-score",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "choral-music",
+      "name": "Choral Music",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "solo-piano",
+      "name": "Solo Piano",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "solo-guitar-classical",
+      "name": "Solo Guitar Classical",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "neoclassical",
+      "name": "Neoclassical",
+      "family": "classical",
+      "parents": [
+        "classical",
+        "ambient"
+      ],
+      "aliases": [
+        "Neo Classical"
+      ],
+      "related": [
+        {
+          "id": "contemporary-classical",
+          "weight": 0.75
+        },
+        {
+          "id": "ambient",
+          "weight": 0.75
+        }
+      ]
+    },
+    {
+      "id": "classical-crossover",
+      "name": "Classical Crossover",
+      "family": "classical",
+      "parents": [
+        "classical"
+      ],
+      "aliases": [
+        "Crossover Classical"
+      ],
+      "related": []
+    },
+    {
+      "id": "soundtrack-and-stage",
+      "name": "Soundtrack & Stage",
+      "family": "soundtrack",
+      "parents": [],
+      "aliases": [
+        "Soundtrack",
+        "OST",
+        "Original Soundtrack",
+        "Soundtracks"
+      ],
+      "related": []
+    },
+    {
+      "id": "film-score",
+      "name": "Film Score",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage",
+        "classical"
+      ],
+      "aliases": [
+        "Movie Score",
+        "Film Music",
+        "Filmmusik"
+      ],
+      "related": []
+    },
+    {
+      "id": "orchestral-film-score",
+      "name": "Orchestral Film Score",
+      "family": "soundtrack",
+      "parents": [
+        "film-score",
+        "classical"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "orchestral-music",
+          "weight": 0.91
+        }
+      ]
+    },
+    {
+      "id": "electronic-film-score",
+      "name": "Electronic Film Score",
+      "family": "soundtrack",
+      "parents": [
+        "film-score",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "film-soundtrack",
+      "name": "Film Soundtrack",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "tv-soundtrack",
+      "name": "TV Soundtrack",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "video-game-music",
+      "name": "Video Game Music",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [
+        "Game Soundtrack",
+        "VGM",
+        "Video Game Soundtrack"
+      ],
+      "related": []
+    },
+    {
+      "id": "chiptune-soundtrack",
+      "name": "Chiptune Soundtrack",
+      "family": "soundtrack",
+      "parents": [
+        "video-game-music"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "chiptune",
+          "weight": 0.95
+        }
+      ]
+    },
+    {
+      "id": "orchestral-game-score",
+      "name": "Orchestral Game Score",
+      "family": "soundtrack",
+      "parents": [
+        "video-game-music"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ambient-game-score",
+      "name": "Ambient Game Score",
+      "family": "soundtrack",
+      "parents": [
+        "video-game-music"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "anime-soundtrack",
+      "name": "Anime Soundtrack",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage",
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "musical-theatre",
+      "name": "Musical Theatre",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "broadway",
+      "name": "Broadway",
+      "family": "soundtrack",
+      "parents": [
+        "musical-theatre"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "west-end-musical",
+      "name": "West End Musical",
+      "family": "soundtrack",
+      "parents": [
+        "musical-theatre"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "stage-music",
+      "name": "Stage Music",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "library-music",
+      "name": "Library Music",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "trailer-music",
+      "name": "Trailer Music",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sound-design-score",
+      "name": "Sound Design Score",
+      "family": "soundtrack",
+      "parents": [
+        "soundtrack-and-stage"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "regional-and-traditional",
+      "name": "Regional & Traditional",
+      "family": "regional-traditional",
+      "parents": [],
+      "aliases": [
+        "World Music",
+        "World",
+        "Ethnic Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "middle-eastern-traditional",
+      "name": "Middle Eastern Traditional",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "arabic-classical",
+      "name": "Arabic Classical",
+      "family": "regional-traditional",
+      "parents": [
+        "middle-eastern-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "turkish-classical",
+      "name": "Turkish Classical",
+      "family": "regional-traditional",
+      "parents": [
+        "middle-eastern-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "persian-classical",
+      "name": "Persian Classical",
+      "family": "regional-traditional",
+      "parents": [
+        "middle-eastern-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "anatolian-folk",
+      "name": "Anatolian Folk",
+      "family": "regional-traditional",
+      "parents": [
+        "middle-eastern-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "south-asian-traditional",
+      "name": "South Asian Traditional",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "raga",
+      "name": "Raga",
+      "family": "regional-traditional",
+      "parents": [
+        "south-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ghazal",
+      "name": "Ghazal",
+      "family": "regional-traditional",
+      "parents": [
+        "south-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "baul",
+      "name": "Baul",
+      "family": "regional-traditional",
+      "parents": [
+        "south-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rabindra-sangeet",
+      "name": "Rabindra Sangeet",
+      "family": "regional-traditional",
+      "parents": [
+        "south-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "east-asian-traditional",
+      "name": "East Asian Traditional",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gagaku",
+      "name": "Gagaku",
+      "family": "regional-traditional",
+      "parents": [
+        "east-asian-traditional",
+        "classical"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "minyo",
+      "name": "Minyo",
+      "family": "regional-traditional",
+      "parents": [
+        "east-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "guqin",
+      "name": "Guqin",
+      "family": "regional-traditional",
+      "parents": [
+        "east-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "pansori",
+      "name": "Pansori",
+      "family": "regional-traditional",
+      "parents": [
+        "east-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gamelan",
+      "name": "Gamelan",
+      "family": "regional-traditional",
+      "parents": [
+        "east-asian-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "african-traditional",
+      "name": "African Traditional",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "griot-music",
+      "name": "Griot Music",
+      "family": "regional-traditional",
+      "parents": [
+        "african-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "tuareg-traditional",
+      "name": "Tuareg Traditional",
+      "family": "regional-traditional",
+      "parents": [
+        "african-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "mbira-music",
+      "name": "Mbira Music",
+      "family": "regional-traditional",
+      "parents": [
+        "african-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "european-traditional",
+      "name": "European Traditional",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "klezmer",
+      "name": "Klezmer",
+      "family": "regional-traditional",
+      "parents": [
+        "european-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "fado",
+      "name": "Fado",
+      "family": "regional-traditional",
+      "parents": [
+        "european-traditional",
+        "folk-and-acoustic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "rebetiko",
+      "name": "Rebetiko",
+      "family": "regional-traditional",
+      "parents": [
+        "european-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "polka",
+      "name": "Polka",
+      "family": "regional-traditional",
+      "parents": [
+        "european-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "alpine-folk",
+      "name": "Alpine Folk",
+      "family": "regional-traditional",
+      "parents": [
+        "european-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "native-american-music",
+      "name": "Native American Music",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "andean-folk",
+      "name": "Andean Folk",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "huayno",
+      "name": "Huayno",
+      "family": "regional-traditional",
+      "parents": [
+        "andean-folk"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "oceanian-traditional",
+      "name": "Oceanian Traditional",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "global-fusion",
+      "name": "Global Fusion",
+      "family": "regional-traditional",
+      "parents": [
+        "regional-and-traditional"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ethno-electronic",
+      "name": "Ethno Electronic",
+      "family": "regional-traditional",
+      "parents": [
+        "global-fusion"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "world-fusion",
+      "name": "World Fusion",
+      "family": "regional-traditional",
+      "parents": [
+        "global-fusion",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sacred-and-spiritual",
+      "name": "Sacred & Spiritual",
+      "family": "sacred",
+      "parents": [],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "gospel",
+      "name": "Gospel",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual",
+        "r-and-b-and-soul"
+      ],
+      "aliases": [
+        "Gospel Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "traditional-gospel",
+      "name": "Traditional Gospel",
+      "family": "sacred",
+      "parents": [
+        "gospel"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "contemporary-gospel",
+      "name": "Contemporary Gospel",
+      "family": "sacred",
+      "parents": [
+        "gospel"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "black-gospel",
+      "name": "Black Gospel",
+      "family": "sacred",
+      "parents": [
+        "gospel"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "southern-gospel",
+      "name": "Southern Gospel",
+      "family": "sacred",
+      "parents": [
+        "gospel"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "christian-contemporary",
+      "name": "Christian Contemporary",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual"
+      ],
+      "aliases": [
+        "CCM"
+      ],
+      "related": []
+    },
+    {
+      "id": "worship",
+      "name": "Worship",
+      "family": "sacred",
+      "parents": [
+        "christian-contemporary",
+        "pop"
+      ],
+      "aliases": [
+        "Praise & Worship"
+      ],
+      "related": []
+    },
+    {
+      "id": "christian-rock",
+      "name": "Christian Rock",
+      "family": "sacred",
+      "parents": [
+        "christian-contemporary",
+        "rock"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "pop-rock",
+          "weight": 0.65
+        }
+      ]
+    },
+    {
+      "id": "christian-pop",
+      "name": "Christian Pop",
+      "family": "sacred",
+      "parents": [
+        "christian-contemporary",
+        "pop"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "spirituals",
+      "name": "Spirituals",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sacred-choral",
+      "name": "Sacred Choral",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sufi-music",
+      "name": "Sufi Music",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual",
+        "east-and-south-asian-styles"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "devotional-music",
+      "name": "Devotional Music",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "kirtan",
+      "name": "Kirtan",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "bhajan",
+      "name": "Bhajan",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "meditation-music",
+      "name": "Meditation Music",
+      "family": "sacred",
+      "parents": [
+        "sacred-and-spiritual"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "experimental-and-noise",
+      "name": "Experimental & Noise",
+      "family": "experimental",
+      "parents": [],
+      "aliases": [
+        "Experimental Music"
+      ],
+      "related": []
+    },
+    {
+      "id": "experimental",
+      "name": "Experimental",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "avant-garde",
+      "name": "Avant-Garde",
+      "family": "experimental",
+      "parents": [
+        "experimental"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "sound-collage",
+      "name": "Sound Collage",
+      "family": "experimental",
+      "parents": [
+        "experimental"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "musique-concrete",
+      "name": "Musique Concrète",
+      "family": "experimental",
+      "parents": [
+        "experimental"
+      ],
+      "aliases": [
+        "Musique Concrete"
+      ],
+      "related": []
+    },
+    {
+      "id": "electroacoustic-experimental",
+      "name": "Electroacoustic Experimental",
+      "family": "experimental",
+      "parents": [
+        "experimental"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "free-improvisation",
+      "name": "Free Improvisation",
+      "family": "experimental",
+      "parents": [
+        "experimental",
+        "free-jazz"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "free-jazz",
+          "weight": 0.83
+        }
+      ]
+    },
+    {
+      "id": "plunderphonics",
+      "name": "Plunderphonics",
+      "family": "experimental",
+      "parents": [
+        "experimental"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "noise",
+      "name": "Noise",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "harsh-noise",
+      "name": "Harsh Noise",
+      "family": "experimental",
+      "parents": [
+        "noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "harsh-noise-wall",
+      "name": "Harsh Noise Wall",
+      "family": "experimental",
+      "parents": [
+        "noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "power-electronics",
+      "name": "Power Electronics",
+      "family": "experimental",
+      "parents": [
+        "noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "drone",
+      "name": "Drone",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": [
+        {
+          "id": "ambient",
+          "weight": 0.8
+        },
+        {
+          "id": "dark-ambient",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "id": "drone-metal",
+      "name": "Drone Metal",
+      "family": "experimental",
+      "parents": [
+        "drone",
+        "metal"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "drone-folk",
+      "name": "Drone Folk",
+      "family": "experimental",
+      "parents": [
+        "drone"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "industrial",
+      "name": "Industrial",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "ebm",
+      "name": "EBM",
+      "family": "experimental",
+      "parents": [
+        "industrial",
+        "electronic"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "aggrotech",
+      "name": "Aggrotech",
+      "family": "experimental",
+      "parents": [
+        "ebm"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "dark-electro",
+      "name": "Dark Electro",
+      "family": "experimental",
+      "parents": [
+        "industrial"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "industrial-dance",
+      "name": "Industrial Dance",
+      "family": "experimental",
+      "parents": [
+        "industrial"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "post-industrial",
+      "name": "Post-Industrial",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "field-recording",
+      "name": "Field Recording",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "microsound",
+      "name": "Microsound",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": []
+    },
+    {
+      "id": "minimal-experimental",
+      "name": "Minimal Experimental",
+      "family": "experimental",
+      "parents": [
+        "experimental-and-noise"
+      ],
+      "aliases": [],
+      "related": []
+    }
+  ]
+}
