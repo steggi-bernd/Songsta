@@ -1,5 +1,5 @@
 /**
- * Draft semantic Replay copy: complete, independently translatable messages.
+ * Draft semantic Replay copy: complete, independently translatable messages in nine locales.
  * No run-time import: the current Replay screens still use legacy T("English").
  *
  * Use these keys in a future Replay copy-selection layer. Each story headline
@@ -74,6 +74,32 @@ export const REPLAY_HEADLINES: Record<SupportedLocale, ReplayCatalog> = {
     peakHour: "Tu hora punta musical: {time}.",
     weekHighlight: "Tu día con más música: {weekday}.",
     outro: "¿Otra vuelta más?",
+  },
+  it: {
+    introBalanced: "La tua musica. La tua storia.",
+    introExploring: "Un mese pieno di scoperte.",
+    introFavorites: "Certi brani non stancano mai.",
+    introLowActivity: "Un capitolo più tranquillo. Sempre tuo.",
+    topSongs: "I tuoi brani più ascoltati.",
+    newDiscoveries: "Qualche nuovo brano del cuore.",
+    topArtist: "Sotto i riflettori: {artist}.",
+    genreFocus: "Questo mese hai ascoltato soprattutto {genre}.",
+    peakHour: "La tua ora di musica: {time}.",
+    weekHighlight: "Il giorno più musicale? {weekday}.",
+    outro: "Pronto per un altro giro?",
+  },
+  "pt-BR": {
+    introBalanced: "Sua música. Sua história.",
+    introExploring: "Um mês cheio de descobertas.",
+    introFavorites: "Tem música que a gente nunca cansa de ouvir.",
+    introLowActivity: "Um capítulo mais tranquilo. Ainda assim, seu.",
+    topSongs: "Suas músicas mais ouvidas.",
+    newDiscoveries: "Algumas novas favoritas.",
+    topArtist: "Quem brilhou por aqui foi {artist}.",
+    genreFocus: "Neste mês, {genre} tocou bastante por aqui.",
+    peakHour: "Seu horário de ouvir música: {time}.",
+    weekHighlight: "O dia mais musical foi {weekday}.",
+    outro: "Bora ouvir mais?",
   },
   ru: {
     introBalanced: "Твоя музыка. Твоя история.",
