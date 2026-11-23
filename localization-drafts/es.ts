@@ -6,7 +6,7 @@ export const es: Record<string, string> = {
   " · with {names}": " · con {names}",
   " ({count} zones)": " ({count} zonas)",
   " ({months} months of history)": " ({months} meses de historial)",
-  "— nothing is lost": " — sin pérdida de calidad",
+  " — nothing is lost": " — sin pérdida de calidad",
   ", and {count} on the way": ", y {count} en camino",
   ", in the playlist's order": ", en el orden de la lista",
   ", newest like first": ", los más recientes primero",
