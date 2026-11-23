@@ -1,0 +1,246 @@
+Sync & devices	Sincronizzazione e dispositivi	Sincronização e dispositivos
+Sync and devices	Sincronizzazione e dispositivi	Sincronização e dispositivos
+Sync service	Servizio di sincronizzazione	Serviço de sincronização
+Sync service address	Indirizzo del servizio di sincronizzazione	Endereço do serviço de sincronização
+Synced	Sincronizzato	Sincronizado
+Synced lyrics	Testi sincronizzati	Letras sincronizadas
+System default	Predefinito del sistema	Padrão do sistema
+System default — {label}	Predefinito del sistema — {label}	Padrão do sistema — {label}
+Take {value} off	Rimuovi {value}	Remover {value}
+Take off the songs put on by hand	Rimuovi i brani aggiunti manualmente	Remover as músicas adicionadas manualmente
+Take off this album	Rimuovi questo album	Remover este álbum
+Take out of “{name}”	Rimuovi da «{name}»	Remover de “{name}”
+Taut	Teso	Tenso
+Teal	Verde acqua	Verde-azulado
+Technical details	Dettagli tecnici	Detalhes técnicos
+Tell me about new versions	Avvisami delle nuove versioni	Avisar sobre novas versões
+Tempo	Tempo	Ritmo
+That address didn't work	Questo indirizzo non ha funzionato	Esse endereço não funcionou
+That address doesn't work	Questo indirizzo non funziona	Esse endereço não funciona
+That backup comes from a newer Songsta. Update the app first, then import it.	Questo backup proviene da una versione più recente di Songsta. Aggiorna l'app prima di importarlo.	Esse backup veio de uma versão mais recente do Songsta. Atualize o aplicativo antes de importar.
+That backup comes from Songsta on a computer: it goes back in there, with Import data in its settings.	Questo backup proviene da Songsta su computer. Importalo lì da Impostazioni → Importa dati.	Esse backup veio do Songsta para computador. Importe nele em Configurações → Importar dados.
+That code doesn't fit, try again	Il codice non corrisponde, riprova	O código não confere. Tente de novo
+That did not work	Non ha funzionato	Não deu certo
+That file couldn't be read.	Impossibile leggere il file.	Não foi possível ler esse arquivo.
+That file is far too large for a Liked Songs export.	Il file è troppo grande per un'esportazione di Brani preferiti.	Esse arquivo é grande demais para uma exportação de músicas curtidas.
+That file is far too large for a playlist export.	Il file è troppo grande per un'esportazione di playlist.	Esse arquivo é grande demais para uma exportação de playlist.
+That file is too big to be a backup.	Il file è troppo grande per essere un backup.	Esse arquivo é grande demais para ser um backup.
+That file isn't a backup from Songsta on a phone.	Questo non è un backup di Songsta creato su un telefono.	Esse não é um backup do Songsta criado em um celular.
+That folder is already in your library	La cartella è già nella tua libreria	Essa pasta já está na sua biblioteca
+That picture can't be read	Impossibile leggere l'immagine	Não foi possível ler essa imagem
+That playlist has no songs in it	Questa playlist non contiene brani	Esta playlist não tem músicas
+That song is already in your local library	Il brano è già nella tua libreria locale	Essa música já está na sua biblioteca local
+The artist is spelled differently	Il nome dell'artista è scritto diversamente	O nome do artista está escrito de outra forma
+The best your connection carries, on mobile data up to AAC 256 kbps	La qualità migliore consentita dalla connessione; sui dati mobili fino ad AAC 256 kbps	A melhor qualidade que sua conexão permitir; em dados móveis até AAC 256 kbps
+The bigger the record, the more played then.	Più grande è il disco, più musica hai ascoltato in quel periodo.	Quanto maior o disco, mais música você ouviu nesse período.
+The branch starts here	La diramazione comincia qui	A ramificação começa aqui
+The code on {name}	Il codice su {name}	O código em {name}
+The colour of what's playing, what's on, likes and the main buttons	Il colore della riproduzione, degli elementi attivi, dei preferiti e dei pulsanti principali	A cor da música atual, dos itens ativos, das curtidas e dos botões principais
+The device didn't take that	Il dispositivo non ha accettato il comando	O dispositivo não aceitou o comando
+The download couldn't be removed	Impossibile rimuovere il download	Não foi possível remover o download
+The download didn't start	Il download non è iniziato	O download não começou
+The download stopped	Il download si è interrotto	O download parou
+The faces	Gli artisti	Os artistas
+The files themselves, FLAC stays FLAC	I file originali: FLAC rimane FLAC	Os arquivos originais: FLAC continua FLAC
+The firewall stays as it was, so {name} can't reach local files.	Il firewall rimane invariato, quindi {name} non può accedere ai file locali.	O firewall não será alterado, então {name} não poderá acessar arquivos locais.
+The input it's on right now	L'ingresso attualmente in uso	A entrada usada agora
+The interface's language. The app restarts for it; the music stops for a moment.	La lingua dell'interfaccia. L'app si riavvia e la musica si ferma per un momento.	O idioma da interface. O aplicativo reinicia e a música para por um instante.
+The length differs	La durata è diversa	A duração é diferente
+The library did not load	Impossibile caricare la libreria	Não foi possível carregar a biblioteca
+The list's own order	Ordine originale della lista	Ordem original da lista
+The name and picture the songs bring	Nome e immagine presenti nei brani	Nomes e imagens que vêm com as músicas
+The new colour shows after a restart. The music stops for a moment.	Il nuovo colore comparirà dopo il riavvio. La musica si ferma per un momento.	A nova cor aparecerá após reiniciar. A música para por um instante.
+The next song starts the moment this one ends — live albums and soundtracks run on	Il brano successivo inizia appena finisce questo: album dal vivo e colonne sonore continuano senza interruzioni	A próxima música começa assim que esta termina; álbuns ao vivo e trilhas sonoras seguem sem pausas
+The open databases had none either. A cover.jpg in the album's folder shows up on the next scan.	Neanche i database aperti hanno trovato una copertina. Un file cover.jpg nella cartella dell'album comparirà alla prossima scansione.	Nem os bancos de dados abertos encontraram uma capa. Um arquivo cover.jpg na pasta do álbum aparecerá na próxima verificação.
+The password is only sent to your server to sign in; Songsta keeps the session token, sealed by your operating system's keychain.	La password viene inviata soltanto al tuo server per l'accesso. Songsta conserva il token di sessione protetto dal portachiavi del sistema.	A senha só é enviada ao seu servidor para login. O Songsta guarda o token de sessão protegido pelo cofre de chaves do sistema.
+The phone answers your touches: pulled songs, buttons, likes, menus	Il telefono risponde ai tuoi tocchi: brani trascinati, pulsanti, preferiti e menu	O celular responde aos seus toques: músicas arrastadas, botões, curtidas e menus
+The pitch stays where it is	La tonalità rimane invariata	A tonalidade não muda
+the playlist	la playlist	a playlist
+the receiver	il ricevitore	o receiver
+The same list, from this song on	La stessa lista, a partire da questo brano	A mesma lista a partir desta música
+The same playlists on all your devices, and pick up where you stopped	Le stesse playlist su tutti i dispositivi, riprendendo da dove hai lasciato	As mesmas playlists em todos os dispositivos, continuando de onde você parou
+The server answered HTTP {status}	Il server ha risposto con HTTP {status}	O servidor respondeu com HTTP {status}
+The server did not answer	Il server non ha risposto	O servidor não respondeu
+The server did not answer in time	Il server non ha risposto in tempo	O servidor não respondeu a tempo
+The sync service isn't answering. Is it running on your server?	Il servizio di sincronizzazione non risponde. È in esecuzione sul server?	O serviço de sincronização não responde. Ele está rodando no seu servidor?
+The sync service needs an update	Il servizio di sincronizzazione deve essere aggiornato	O serviço de sincronização precisa ser atualizado
+The sync service refused this login	Il servizio di sincronizzazione ha rifiutato l'accesso	O serviço de sincronização recusou este login
+The title differs	Il titolo è diverso	O título é diferente
+The update is {size} MB.	L'aggiornamento occupa {size} MB.	A atualização ocupa {size} MB.
+The version, and where Songsta comes from	La versione e le origini di Songsta	A versão e a origem do Songsta
+Their tags name no album	I tag non indicano alcun album	As tags não indicam um álbum
+Their tags name no album, so they show on no album page. Put them on one by hand — or fix their tags.	I tag non indicano un album, quindi i brani non compaiono in nessuna pagina album. Aggiungili manualmente o correggi i tag.	As tags não indicam um álbum, então essas músicas não aparecem em páginas de álbuns. Adicione-as manualmente ou corrija as tags.
+Then the rest of “{name}” — {count} {value}	Poi il resto di «{name}» — {count} {value}	Depois o restante de “{name}” — {count} {value}
+These look like songs you have, but something differs. Same song → {value}; different → the shopping list; or choose the right song yourself.	Questi brani somigliano a quelli che possiedi, ma qualche dato è diverso. Stesso brano → {value}; diverso → lista acquisti; oppure scegli tu quello corretto.	Essas músicas parecem com as que você tem, mas há diferenças. Mesma música → {value}; diferente → lista de compras; ou escolha manualmente a música correta.
+They stay out of the genre pages and genre mixes.	Non compaiono nelle pagine e nei mix dei generi.	Elas ficam fora das páginas e mixes de gêneros.
+This app	Questa app	Este aplicativo
+This can't be undone. The tracks themselves aren't affected.	Non puoi annullare questa operazione. I file musicali non vengono modificati.	Não é possível desfazer. Os arquivos de música não serão alterados.
+This computer	Questo computer	Este computador
+This folder can't be reached right now. The list below is Songsta's last scan — rescan after reconnecting the drive, or remove the folder from Songsta.	La cartella non è raggiungibile. L'elenco qui sotto è dell'ultima scansione di Songsta: ricollega l'unità e ripeti la scansione, oppure rimuovi la cartella dall'app.	Esta pasta está inacessível. A lista abaixo é da última verificação do Songsta. Reconecte a unidade e verifique novamente ou remova a pasta do aplicativo.
+This mix is empty	Questo mix è vuoto	Este mix está vazio
+This month	Questo mese	Este mês
+This name is only used inside Songsta — the folder on disk keeps its own name.	Questo nome viene usato solo in Songsta; la cartella sul disco mantiene il nome originale.	Esse nome só é usado no Songsta; a pasta no disco mantém o nome original.
+this phone	questo telefono	este celular
+This phone	Questo telefono	Este celular
+This phone plays along	Questo telefono riproduce insieme agli altri	Este celular está tocando junto
+This player's volume is set on the player	Il volume si regola sul dispositivo stesso	O volume é ajustado no próprio dispositivo
+This playlist no longer exists	Questa playlist non esiste più	Esta playlist não existe mais
+This week	Questa settimana	Esta semana
+This year	Quest'anno	Este ano
+Thursday	Giovedì	Quinta-feira
+Tiles	Riquadri	Blocos
+Time	Ora	Hora
+Timer	Timer	Temporizador
+Timing of {device}	Sincronizzazione di {device}	Sincronização de {device}
+Timing of {device}: {value}	Sincronizzazione di {device}: {value}	Sincronização de {device}: {value}
+Timing: {value}	Sincronizzazione: {value}	Sincronização: {value}
+Title	Titolo	Título
+Title · by artist	Titolo · per artista	Título · por artista
+To check	Da verificare	Para conferir
+To exit full screen, press	Per uscire da schermo intero, premi	Para sair da tela cheia, pressione
+To play your local files on devices at home, they have to reach this computer. Windows' firewall stops that until you allow it, for your own network only. Windows asks you once.	Per riprodurre file locali sui dispositivi di casa, questi devono poter raggiungere il computer. Il firewall di Windows lo impedisce finché non autorizzi Songsta solo nella rete privata. Windows chiederà conferma una volta.	Para reproduzir arquivos locais nos dispositivos de casa, eles precisam acessar este computador. O firewall do Windows bloqueia isso até você permitir o Songsta apenas na rede privada. O Windows pedirá confirmação uma vez.
+Today	Oggi	Hoje
+Tracks will appear here.	I brani compariranno qui.	As músicas aparecerão aqui.
+Try again	Riprova	Tentar novamente
+Try again, or get it from the download page.	Riprova oppure scaricalo dalla pagina di download.	Tente novamente ou baixe pela página de downloads.
+Try another word.	Prova un'altra parola.	Tente outra palavra.
+Try downloading again	Riprova il download	Tentar baixar novamente
+Tuesday	Martedì	Terça-feira
+Type	Inserisci	Digitar
+Type a song, artist or album in the search field above.	Digita un brano, artista o album nella casella di ricerca in alto.	Digite uma música, artista ou álbum no campo de busca acima.
+Undo	Annulla	Desfazer
+Undo branch	Annulla diramazione	Desfazer ramificação
+unknown error	errore sconosciuto	erro desconhecido
+Unknown title	Titolo sconosciuto	Título desconhecido
+Unmute	Riattiva audio	Ativar som
+Unpack a store's ZIP (Bandcamp, Qobuz …) into a library folder — or drop it anywhere on Songsta	Estrai lo ZIP di Bandcamp, Qobuz o di un altro store in una cartella della libreria, oppure trascinalo su Songsta.	Extraia o ZIP do Bandcamp, Qobuz ou de outra loja numa pasta da biblioteca, ou arraste-o para o Songsta.
+Unpacking "{name}"…	Estrazione di «{name}»…	Extraindo “{name}”…
+Unpin	Rimuovi dai fissati	Desafixar
+Unpin album	Rimuovi album dai fissati	Desafixar álbum
+Unpin from Your Library	Rimuovi dai fissati della libreria	Desafixar da sua biblioteca
+Unpin playlist	Rimuovi playlist dai fissati	Desafixar playlist
+Unpinned	Rimosso dai fissati	Desafixado
+Until then, library order, groups and album edits stay on this device. To update it, run this in its folder on the server: {command}	Fino all'aggiornamento, l'ordine della libreria, i gruppi e le modifiche agli album rimangono sul dispositivo. Per aggiornare, esegui questo comando nella cartella del servizio sul server: {command}	Até a atualização, a ordem da biblioteca, os grupos e as edições de álbuns ficam neste dispositivo. Para atualizar, execute este comando na pasta do serviço no servidor: {command}
+Until then, library order, groups and album edits stay on this phone. To update it, run this in its folder on the server:	Fino all'aggiornamento, l'ordine della libreria, i gruppi e le modifiche agli album rimangono sul telefono. Per aggiornare, esegui questo nella cartella del servizio sul server:	Até a atualização, a ordem da biblioteca, os grupos e as edições de álbuns ficam neste celular. Para atualizar, execute o comando na pasta do serviço no servidor:
+Untitled playlist	Playlist senza titolo	Playlist sem título
+Upbeat Mix	Mix energico	Mix animado
+Update	Aggiorna	Atualizar
+Updated to Songsta {version}	Songsta aggiornato a {version}	Songsta atualizado para {version}
+Updates	Aggiornamenti	Atualizações
+Updates from inside the app	Aggiornamenti dall'app	Atualizações pelo aplicativo
+Use an API key instead	Usa invece una chiave API	Usar uma chave de API
+Use mobile data	Usa dati mobili	Usar dados móveis
+Use the + button above to create a playlist or a folder — or right-click any track and choose "New playlist…" to start one from a song you like.	Usa il pulsante + qui sopra per creare una playlist o una cartella. Oppure fai clic destro su un brano e scegli «Nuova playlist…» per iniziare da un brano che ti piace.	Use o botão + acima para criar uma playlist ou pasta. Ou clique com o botão direito numa música e escolha “Nova playlist…” para começar com uma música que você gosta.
+Use the older drifting-blob player backdrop	Usa il vecchio sfondo del lettore con forme fluttuanti	Usar o fundo antigo do player com formas flutuantes
+User name	Nome utente	Nome de usuário
+Various Artists	Artisti vari	Vários artistas
+version {version}	versione {version}	versão {version}
+Vibration	Vibrazione	Vibração
+Violet	Viola	Violeta
+Vocal	Vocale	Vocal
+Volume	Volume	Volume
+Volume {round} percent	Volume {round} percento	Volume {round} por cento
+Volume leveling	Livellamento del volume	Nivelamento de volume
+Volume on the device itself	Volume sul dispositivo stesso	Volume no próprio dispositivo
+Volume up	Alza volume	Aumentar volume
+Wait for Wi-Fi	Aspetta il Wi-Fi	Aguardar Wi-Fi
+Waiting for	In attesa di	Aguardando
+Waiting for {name} to start…	In attesa che {name} si avvii…	Aguardando {name} iniciar…
+Waiting for it to start · 	In attesa dell'avvio · 	Aguardando iniciar · 
+Waiting for Wi-Fi	In attesa del Wi-Fi	Aguardando Wi-Fi
+Waiting to download	In attesa di scaricare	Aguardando download
+Waits for a user, chosen below	In attesa di un utente da scegliere qui sotto	Aguardando você escolher um usuário abaixo
+Warm	Caldo	Quente
+was at {time}.	era alle {time}.	foi às {time}.
+was your day.	era il tuo giorno.	foi o seu dia.
+Watch folders	Controlla le cartelle	Monitorar pastas
+Wednesday	Mercoledì	Quarta-feira
+were new to you.	erano nuovi per te.	eram novidade para você.
+What do you want to play?	Cosa vuoi ascoltare?	O que você quer ouvir?
+What played in the last week stays out of that	I brani ascoltati nell'ultima settimana vengono esclusi	Músicas ouvidas na última semana ficam de fora
+What plays	Cosa viene riprodotto	O que está tocando
+What was in “{name}” stands on its own again	Il contenuto di «{name}» è di nuovo separato	O conteúdo de “{name}” foi separado novamente
+What you usually play around now	Quello che ascolti di solito a quest'ora	O que você costuma ouvir a esta hora
+What's new	Novità	Novidades
+What's playing now	Cosa viene riprodotto ora	O que está tocando agora
+Whatever you start next plays there	Il prossimo brano verrà riprodotto lì	A próxima música que você iniciar tocará lá
+When several devices play together and {device} sounds behind the others, play it earlier. If it's ahead, play it later.	Quando più dispositivi suonano insieme e {device} è in ritardo, anticipalo. Se è avanti, ritardalo.	Se vários dispositivos tocam juntos e {device} está atrasado, adiante a reprodução. Se está adiantado, atrase.
+When Songsta opens, and how it stays up to date	Quando si avvia Songsta e come si aggiorna	Quando o Songsta inicia e como se atualiza
+Where is {device} plugged in?	A quale ingresso è collegato {device}?	Em qual entrada {device} está conectado?
+Where it came from	Da dove viene	De onde veio
+Where it plays, how loud, and how it's shaped	Dove si riproduce, a che volume e con quali effetti	Onde toca, qual o volume e quais os ajustes de som
+Where to buy {title}	Dove acquistare {title}	Onde comprar {title}
+Where's your music?	Dov'è la tua musica?	Onde estão suas músicas?
+Which playlist?	Quale playlist?	Qual playlist?
+Which song in your library is	Quale brano della tua libreria è	Qual música da sua biblioteca é
+While Songsta runs on this computer, Discord also shows what plays on your other devices. Only the Discord app here gets title, artist and album. Covers come from MusicBrainz and iTunes, never from your server or your files.	Mentre Songsta è aperto sul computer, Discord mostra anche i brani riprodotti sugli altri dispositivi. Solo Discord su questo computer riceve titolo, artista e album. Le copertine vengono da MusicBrainz e iTunes, mai dai tuoi file o server.	Enquanto o Songsta roda neste computador, o Discord também mostra o que toca nos seus outros dispositivos. Apenas o Discord local recebe título, artista e álbum. As capas vêm do MusicBrainz e iTunes, nunca dos seus arquivos ou servidor.
+White	Bianco	Branco
+Width of the {name} column	Larghezza della colonna {name}	Largura da coluna {name}
+Windows is keeping {name} out	Windows blocca l'accesso di {name}	O Windows está bloqueando {name}
+Without one they sort last in an artist's discography.	Senza questa informazione, compaiono alla fine della discografia dell'artista.	Sem essa informação, aparecem no fim da discografia do artista.
+Words are on the way	Il testo sta arrivando	A letra está chegando
+Write a backup of your library and history	Crea un backup della libreria e della cronologia	Criar backup da biblioteca e do histórico
+Year	Anno	Ano
+Yes	Sì	Sim
+Yesterday	Ieri	Ontem
+Your listening, told as a story	La tua storia di ascolti, raccontata in musica	Sua história de reprodução, contada em músicas
+Your logins	I tuoi accessi	Seus logins
+Your mixes	I tuoi mix	Seus mixes
+Your music, your servers and your devices at home never need it. Covers your files lack, artist facts and lyrics come from open services on the internet: only song, album and artist names go there.	La tua musica, i server e i dispositivi di casa non ne hanno bisogno. Copertine, informazioni sugli artisti e testi mancanti arrivano da servizi aperti online: vengono inviati solo nomi di brani, album e artisti.	Suas músicas, servidores e dispositivos de casa não dependem disso. Capas, informações de artistas e letras que faltam vêm de serviços abertos na internet: apenas nomes de músicas, álbuns e artistas são enviados.
+Your own servers and devices	I tuoi server e dispositivi	Seus servidores e dispositivos
+Your prime time	La tua ora di punta	Seu horário de pico
+You have {version}.	Hai la versione {version}.	Você tem a versão {version}.
+You have {version}. Press to update.	Hai la versione {version}. Premi per aggiornare.	Você tem a versão {version}. Toque para atualizar.
+You have {version}. This opens the download page.	Hai la versione {version}. Si aprirà la pagina di download.	Você tem a versão {version}. Isso abre a página de downloads.
+You have every one of these songs.	Hai già tutti questi brani.	Você já tem todas essas músicas.
+You have Songsta {version}	Hai Songsta {version}	Você tem o Songsta {version}
+You have the newest version	Hai già la versione più recente	Você já tem a versão mais recente
+You're on mobile data	Stai usando i dati mobili	Você está usando dados móveis
+Your	Il tuo	Seu
+Your current library, playlists and history will be replaced by the backup's.	La libreria, le playlist e la cronologia attuali verranno sostituite con quelle del backup.	Sua biblioteca, playlists e histórico atuais serão substituídos pelos do backup.
+Your data	I tuoi dati	Seus dados
+Your data stays on your devices and your own server.	I tuoi dati restano sui tuoi dispositivi e sul tuo server.	Seus dados ficam nos seus dispositivos e no seu servidor.
+Your decisions ({count})	Le tue scelte ({count})	Suas escolhas ({count})
+Your downloads go too: {count}, {sizeLine}.	Verranno rimossi anche i download: {count}, {sizeLine}.	Seus downloads também serão removidos: {count}, {sizeLine}.
+Your folders	Le tue cartelle	Suas pastas
+Your folders, your servers, and what fills the gaps	Le tue cartelle, i tuoi server e le informazioni mancanti	Suas pastas, seus servidores e o que complementa os dados
+Your headphones — e.g. Sennheiser HD 650 (AutoEQ)	Le tue cuffie, ad esempio Sennheiser HD 650 (AutoEQ)	Seus fones de ouvido, por exemplo Sennheiser HD 650 (AutoEQ)
+Your imported collections	Le tue raccolte importate	Suas coleções importadas
+Your Jellyfin server. The music stays where it is.	Il tuo server Jellyfin. La musica rimane dov'è.	Seu servidor Jellyfin. As músicas ficam onde estão.
+Your library	La tua libreria	Sua biblioteca
+Your Library	La tua libreria	Sua biblioteca
+Your library is empty. Add a music folder or connect your media server — covers, artist photos, bios and lyrics are filled in from open databases.	La tua libreria è vuota. Aggiungi una cartella musicale o collega il server: Songsta completerà copertine, foto, biografie e testi grazie ai database aperti.	Sua biblioteca está vazia. Adicione uma pasta de músicas ou conecte um servidor: o Songsta completa capas, fotos de artistas, biografias e letras usando bancos de dados abertos.
+Your library looks tidy	La tua libreria è in ordine	Sua biblioteca está organizada
+Your library, playlists, history and settings on this device will be erased. This can't be undone. Your music files aren't touched.	La libreria, le playlist, la cronologia e le impostazioni su questo dispositivo verranno eliminate. Non puoi annullare. I file musicali rimarranno intatti.	A biblioteca, playlists, histórico e configurações deste dispositivo serão apagados. Não é possível desfazer. Seus arquivos de música não serão alterados.
+Your Liked Songs now follow Spotify's order	I tuoi Brani preferiti ora seguono l'ordine di Spotify	Suas músicas curtidas agora seguem a ordem do Spotify
+Your Liked Songs: which you have, which to buy	I tuoi Brani preferiti: quelli che hai e quelli da acquistare	Suas músicas curtidas: as que você tem e as que faltam comprar
+Your listening over time, and every listen — kept on this computer	I tuoi ascolti nel tempo e tutti i brani riprodotti, conservati su questo computer	Seu histórico de reprodução ao longo do tempo, guardado neste computador
+Your listening, backups, and a fresh start	I tuoi ascolti, i backup e un nuovo inizio	Seu histórico, backups e um novo começo
+Your most energetic songs	I tuoi brani più energici	Suas músicas mais animadas
+Your most played songs	I tuoi brani più ascoltati	Suas músicas mais ouvidas
+your music folder	la tua cartella musicale	sua pasta de músicas
+Your music from your folders and your own servers. Free software under the GPL-3.0, based on ByTune by rishiteja21.	La tua musica dalle cartelle e dai tuoi server. Software libero GPL-3.0, basato su ByTune di rishiteja21.	Suas músicas das suas pastas e servidores. Software livre sob a licença GPL-3.0, baseado no ByTune de rishiteja21.
+Your music, wherever you keep it. No account and no ads.	La tua musica, ovunque sia. Nessun account e nessuna pubblicità.	Sua música, onde quer que esteja. Sem conta e sem anúncios.
+your Navidrome or Subsonic server	il tuo server Navidrome o Subsonic	seu servidor Navidrome ou Subsonic
+Your other devices	Gli altri tuoi dispositivi	Seus outros dispositivos
+Your other devices, receivers and TVs, and Discord	Gli altri dispositivi, ricevitori, TV e Discord	Seus outros dispositivos, receivers, TVs e Discord
+Your own application	La tua applicazione	Seu próprio aplicativo
+Your own media server	Il tuo server multimediale	Seu servidor de mídia
+Your playlists	Le tue playlist	Suas playlists
+Your queue is empty.	La tua coda è vuota.	Sua fila está vazia.
+your server	il tuo server	seu servidor
+Your server is out of reach, and this isn't downloaded	Il server non è raggiungibile e questo brano non è scaricato	Seu servidor está inacessível e esta música não foi baixada
+Your server is out of reach. Downloaded music plays.	Il server non è raggiungibile. La musica scaricata continua a funzionare.	Seu servidor está inacessível. As músicas baixadas continuam tocando.
+Your server login	Accesso al tuo server	Login do seu servidor
+Your server: {done} of {total}	Il tuo server: {done} su {total}	Seu servidor: {done} de {total}
+Your song	Il tuo brano	Sua música
+Your speakers and receivers	I tuoi altoparlanti e ricevitori	Seus alto-falantes e receivers
+Your spellings	Le tue grafie	Suas grafias
+Your sync service	Il tuo servizio di sincronizzazione	Seu serviço de sincronização
+Your sync service and your music server are yours: what goes there stays at home, or wherever you run them.	Il servizio di sincronizzazione e il server musicale sono tuoi: i dati rimangono a casa o dove li gestisci.	O serviço de sincronização e o servidor de músicas são seus: os dados ficam na sua casa ou onde você os hospeda.
+Your sync service can't do that yet: it needs its update	Il tuo servizio di sincronizzazione deve essere aggiornato per questa funzione	Seu serviço de sincronização precisa de atualização para fazer isso
+Your sync service didn't answer. Try again later.	Il tuo servizio di sincronizzazione non risponde. Riprova più tardi.	Seu serviço de sincronização não responde. Tente novamente mais tarde.
+Your sync service is out of date: library order, groups and album edits stay on this device until it's updated. Settings say how.	Il servizio di sincronizzazione non è aggiornato: l'ordine della libreria, i gruppi e le modifiche agli album rimangono su questo dispositivo finché non lo aggiorni. Trovi le istruzioni nelle Impostazioni.	Seu serviço de sincronização está desatualizado: a ordem da biblioteca, os grupos e as edições de álbuns ficam neste dispositivo até atualizar. Veja como em Configurações.
+Your sync service is out of date: library order, groups and album edits stay on this phone until it's updated. Settings say how.	Il servizio di sincronizzazione non è aggiornato: l'ordine della libreria, i gruppi e le modifiche agli album rimangono su questo telefono finché non lo aggiorni. Trovi le istruzioni nelle Impostazioni.	Seu serviço de sincronização está desatualizado: a ordem da biblioteca, os grupos e as edições de álbuns ficam neste celular até atualizar. Veja como em Configurações.
+Your top artists	I tuoi artisti più ascoltati	Seus artistas mais ouvidos
+Your year,	Il tuo anno,	Seu ano,
