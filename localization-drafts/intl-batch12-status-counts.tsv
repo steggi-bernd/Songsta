@@ -1,0 +1,160 @@
+ — nothing is lost	 — sans aucune perte	 — sin pérdida de calidad	 — без потерь	 — 无损	 — ロスレス
+ — updated {fetched}	 — mis à jour {fetched}	 — actualizado {fetched}	 — обновлено {fetched}	 — 已更新 {fetched}	 — 更新：{fetched}
+ · first {limit} are kept	 · seuls les {limit} premiers sont gardés	 · se conservan los primeros {limit}	 · сохраняются первые {limit}	 · 仅保留前 {limit} 个	・最初の{limit}件を保持
+ · with {names}	 · avec {names}	 · con {names}	 · с {names}	 · 包括 {names}	・{names}を含む
+ ({count} zones)	 ({count} zones)	 ({count} zonas)	 ({count} зон)	（{count} 个区域）	（{count}ゾーン）
+ ({months} months of history)	 ({months} mois d’historique)	 ({months} meses de historial)	 ({months} месяцев истории)	（{months} 个月的历史记录）	（{months}か月分の履歴）
++{count} new since yesterday	+{count} depuis hier	+{count} desde ayer	+{count} новых со вчерашнего дня	比昨天新增 {count} 个	昨日から{count}件追加
+, and {count} on the way	, et {count} en attente	, y {count} en camino	, ещё {count} в пути	，还有 {count} 个正在处理	、さらに{count}件を処理中
+, in the playlist's order	, dans l’ordre de la playlist	, en el orden de la lista	, в порядке плейлиста	，按播放列表顺序	、プレイリストの順序で
+, newest like first	, favoris les plus récents d’abord	, los más recientes primero	, новые отметки «Нравится» первыми	，最近喜欢的排在前面	、最近のお気に入りを先頭に
+; the {count} still to check aren't added until you decide	 ; les {count} éléments à vérifier ne seront pas ajoutés avant ton choix	; los {count} pendientes de revisar no se añadirán hasta que decidas	; ещё {count} нужно проверить — они не будут добавлены без твоего решения	；还有 {count} 个待检查，你确认后才会添加	。残り{count}件は確認が必要です。決めるまで追加されません
+COMPUTER AT HOME	ORDINATEUR À LA MAISON	ORDENADOR DE CASA	ДОМАШНИЙ КОМПЬЮТЕР	家中的电脑	自宅のパソコン
+Couldn't start	Impossible de démarrer	No se pudo iniciar	Не удалось запустить	无法启动	起動できませんでした
+It answers while Songsta is open on it	Il reste accessible tant que Songsta y est ouvert	Responde mientras Songsta esté abierto en él	Доступен, пока на нём открыт Songsta	只要电脑上的 Songsta 保持打开，就能连接	Songstaが開いている間は接続できます
+Linked to {name}	Connecté à {name}	Conectado a {name}	Подключено к {name}	已连接到 {name}	{name}に接続済み
+Look at the code on the computer and try again.	Vérifie le code affiché sur l’ordinateur, puis réessaie.	Comprueba el código del ordenador e inténtalo de nuevo.	Проверь код на компьютере и попробуй ещё раз.	请查看电脑上的代码，然后重试。	パソコンに表示されているコードを確認して、もう一度試してください。
+Port {port} is taken by another program	Le port {port} est déjà utilisé par un autre programme	Otro programa ya utiliza el puerto {port}	Порт {port} уже занят другой программой	端口 {port} 已被其他程序占用	ポート{port}はほかのプログラムで使用中です
+Right-click → Download	Clic droit → Télécharger	Clic derecho → Descargar	Правая кнопка → Скачать	右键 → 下载	右クリック → ダウンロード
+Songs you play show up here, newest first.	Les titres écoutés apparaissent ici, les plus récents en premier.	Aquí aparecen las canciones que escuches, empezando por las más recientes.	Здесь появятся прослушанные треки — от новых к старым.	你播放过的歌曲会显示在这里，最新的排在前面。	再生した曲が新しい順に表示されます。
+Starts as soon as this computer can take connections	Démarre dès que cet ordinateur peut accepter des connexions	Se inicia en cuanto este ordenador puede aceptar conexiones	Запустится, как только компьютер сможет принимать подключения	电脑可以接受连接时便会启动	このパソコンが接続を受け付けられるようになると開始します
+Unlink from {name}?	Se déconnecter de {name} ?	¿Desvincular de {name}?	Отключиться от {name}?	解除与 {name} 的连接？	{name}との接続を解除しますか？
+{count} failed	{count} échecs	{count} errores	Ошибок: {count}	失败 {count} 个	失敗：{count}件
+{count} more on the way	Encore {count} en attente	Quedan {count} más	Ещё {count} в пути	还有 {count} 个正在处理	あと{count}件を処理中
+{name} didn't answer	{name} ne répond pas	{name} no responde	{name} не отвечает	{name} 没有响应	{name}から応答がありません
+{name} is no longer paired	{name} n’est plus associé	{name} ya no está emparejado	{name} больше не сопряжён	{name} 已取消配对	{name}とのペアリングが解除されました
+· {count} bands	· {count} bandes	· {count} bandas	· {count} полос	· {count} 个频段	・{count}バンド
+· {count} of {count2}	· {count} sur {count2}	· {count} de {count2}	· {count} из {count2}	· {count}/{count2}	・{count}/{count2}
+· marked different	· signalé comme différent	· marcado como distinto	· помечено как отличающееся	· 已标记为不同	・別のものとしてマーク
+"{title}" can't be reached right now — its drive or server is away	« {title} » est inaccessible : le disque ou le serveur est hors ligne	No se puede acceder a «{title}»: la unidad o el servidor no está disponible	«{title}» недоступен: диск или сервер отключён	暂时无法访问“{title}”：磁盘或服务器不在线	「{title}」にアクセスできません。ドライブかサーバーがオフラインです
+"{title}" can't be reached right now — its drive or server is away.	« {title} » est inaccessible : le disque ou le serveur est hors ligne.	No se puede acceder a «{title}»: la unidad o el servidor no está disponible.	«{title}» недоступен: диск или сервер отключён.	暂时无法访问“{title}”：磁盘或服务器不在线。	「{title}」にアクセスできません。ドライブかサーバーがオフラインです。
+"{title}" can't play on {playerName}	« {title} » ne peut pas être lu sur {playerName}	«{title}» no se puede reproducir en {playerName}	«{title}» нельзя воспроизвести на {playerName}	无法在 {playerName} 上播放“{title}”	「{title}」は{playerName}で再生できません
+“{title}” goes from this phone. It stays on your server.	« {title} » sera retiré de ce téléphone, mais restera sur ton serveur.	«{title}» se quitará de este teléfono, pero seguirá en tu servidor.	«{title}» будет удалён с телефона, но останется на сервере.	“{title}”会从手机移除，但仍保留在服务器上。	「{title}」はスマートフォンから削除されますが、サーバーには残ります。
+“{title}” is “{title2}” in your library	« {title} » correspond à « {title2} » dans ta bibliothèque	«{title}» aparece como «{title2}» en tu biblioteca	«{title}» в медиатеке называется «{title2}»	“{title}”在你的音乐库中对应“{title2}”	「{title}」はライブラリでは「{title2}」です
+“{title}” is its own album again	« {title} » est de nouveau un album distinct	«{title}» vuelve a ser un álbum independiente	«{title}» снова отдельный альбом	“{title}”已恢复为独立专辑	「{title}」を独立したアルバムに戻しました
+“{title}” is now part of “{title2}”	« {title} » fait maintenant partie de « {title2} »	«{title}» ahora forma parte de «{title2}»	«{title}» теперь часть «{title2}»	“{title}”现已归入“{title2}”	「{title}」を「{title2}」にまとめました
+“{title}” is skipped from now on	« {title} » sera désormais ignoré	A partir de ahora se omitirá «{title}»	«{title}» теперь будет пропускаться	今后将跳过“{title}”	今後「{title}」をスキップします
+“{title}” isn't measured yet	« {title} » n’a pas encore été analysé	«{title}» aún no se ha analizado	«{title}» ещё не проанализирован	“{title}”尚未分析	「{title}」はまだ解析されていません
+"{title}" isn't on this computer	« {title} » n’est pas sur cet ordinateur	«{title}» no está en este ordenador	«{title}» нет на этом компьютере	此电脑上没有“{title}”	「{title}」はこのパソコンにありません
+"{title}" isn't on this computer, so the next song plays	« {title} » n’est pas sur cet ordinateur. Le titre suivant va démarrer.	«{title}» no está en este ordenador, así que sonará la siguiente canción.	«{title}» нет на этом компьютере, поэтому включится следующий трек.	此电脑上没有“{title}”，将播放下一首。	「{title}」はこのパソコンにないため、次の曲を再生します
+“{title}” isn't on this phone	« {title} » n’est pas sur ce téléphone	«{title}» no está en este teléfono	«{title}» нет на этом телефоне	此手机上没有“{title}”	「{title}」はこのスマートフォンにありません
+“{title}” isn't on this phone, so the next song plays	« {title} » n’est pas sur ce téléphone. Le titre suivant va démarrer.	«{title}» no está en este teléfono, así que sonará la siguiente canción.	«{title}» нет на телефоне, поэтому включится следующий трек.	此手机上没有“{title}”，将播放下一首。	「{title}」はこのスマートフォンにないため、次の曲を再生します
+“{title}” plays again	« {title} » peut à nouveau être écouté	«{title}» vuelve a estar disponible	«{title}» снова можно слушать	“{title}”已恢复播放	「{title}」を再び再生できるようにしました
+{artist} · {count} song{value}	{artist} · {count} titre{value}	{artist} · {count} canción{value}	{artist} · {count} трек{value}	{artist} · {count} 首歌曲{value}	{artist}・{count}曲{value}
+{artist} · also as	{artist} · également sous le nom	{artist} · también como	{artist} · также известен как	{artist} · 也叫	{artist}・別名
+{artist}: open the artist	{artist} : ouvrir l’artiste	{artist}: abrir artista	{artist}: открыть страницу исполнителя	打开艺人 {artist}	{artist}のアーティストページを開く
+{count} · {count2} · {count3} in your library	{count} · {count2} · {count3} dans ta bibliothèque	{count} · {count2} · {count3} en tu biblioteca	{count} · {count2} · {count3} в медиатеке	音乐库中有 {count} · {count2} · {count3}	ライブラリ内：{count}・{count2}・{count3}
+{count} · {count2} in your library	{count} · {count2} dans ta bibliothèque	{count} · {count2} en tu biblioteca	{count} · {count2} в медиатеке	音乐库中有 {count} · {count2}	ライブラリ内：{count}・{count2}
+{count} · newest: {title}	{count} · plus récent : {title}	{count} · más reciente: {title}	{count} · последний: {title}	{count} · 最新：{title}	{count}件・最新：{title}
+{count} {value} by {name}	{count} {value} de {name}	{count} {value} de {name}	{count} {value} от {name}	{name} 的 {count} {value}	{name}の{count} {value}
+{count} {value}{value2} in your library	{count} {value}{value2} dans ta bibliothèque	{count} {value}{value2} en tu biblioteca	{count} {value}{value2} в медиатеке	音乐库中有 {count} {value}{value2}	ライブラリ内：{count} {value}{value2}
+{count} by {name}	{count} de {name}	{count} de {name}	{count} от {name}	{name} 的 {count}	{name}の{count}
+{count} by their lyrics	{count} trouvés par leurs paroles	{count} encontrados por la letra	{count} найдены по тексту песни	通过歌词找到 {count} 个	歌詞から{count}件見つかりました
+{count} chosen	{count} sélectionnés	{count} seleccionados	Выбрано: {count}	已选择 {count} 项	{count}件選択
+{count} days	{count} jours	{count} días	{count} дней	{count} 天	{count}日
+{count} didn't download	{count} téléchargements ont échoué	Fallaron {count} descargas	Не скачано: {count}	{count} 项下载失败	{count}件をダウンロードできませんでした
+{count} folder{value} on this device{value2}	{count} dossier{value} sur cet appareil{value2}	{count} carpeta{value} en este dispositivo{value2}	{count} папок{value} на устройстве{value2}	此设备上有 {count} 个文件夹{value}{value2}	このデバイスに{count}フォルダー{value}{value2}
+{count} for Wi-Fi	{count} en attente du Wi-Fi	{count} esperando Wi-Fi	{count} ожидают Wi-Fi	{count} 项等待 Wi-Fi	{count}件がWi-Fi待ち
+{count} from this phone. They stay on your server.	{count} retirés de ce téléphone. Ils restent sur ton serveur.	Se quitarán {count} de este teléfono. Se quedan en tu servidor.	{count} удаляются с телефона. На сервере они останутся.	将从此手机移除 {count} 项，服务器上的内容会保留。	このスマートフォンから{count}件を削除します。サーバーには残ります。
+{count} joined last — the newest is {title}.	{count} ajoutés récemment, dont {title} en dernier.	Se añadieron {count}; el más reciente es {title}.	Недавно добавлено {count}, последний — {title}.	最近加入了 {count} 项，最新的是 {title}。	最近{count}件追加されました。最新は{title}です。
+{count} min	{count} min	{count} min	{count} мин	{count} 分钟	{count}分
+{count} missing songs are downloading again	Nouvelle tentative pour {count} titres manquants	Se vuelven a descargar {count} canciones que faltan	Повторно скачиваются {count} недостающих треков	正在重新下载 {count} 首缺失的歌曲	不足していた{count}曲を再ダウンロード中
+{count} more	{count} de plus	{count} más	Ещё {count}	还有 {count} 个	ほかに{count}件
+{count} of its songs were	{count} de ses titres ont été	{count} de sus canciones fueron	{count} его треков были	其中 {count} 首歌曲	そのうち{count}曲が
+{count} on no album	{count} sans album	{count} sin álbum	{count} без альбома	{count} 首没有专辑	アルバム未設定：{count}曲
+{count} plays	{count} écoutes	{count} reproducciones	Прослушиваний: {count}	播放 {count} 次	{count}回再生
+{count} ready offline	{count} disponibles hors ligne	{count} disponibles sin conexión	{count} доступны без сети	{count} 项可离线使用	{count}件がオフラインで利用可能
+{count} song{value}	{count} titre{value}	{count} canción{value}	{count} трек{value}	{count} 首歌曲{value}	{count}曲{value}
+{count} song{value} · {path}	{count} titre{value} · {path}	{count} canción{value} · {path}	{count} трек{value} · {path}	{count} 首歌曲{value} · {path}	{count}曲{value}・{path}
+{count} songs downloaded	{count} titres téléchargés	Se descargaron {count} canciones	Скачано треков: {count}	已下载 {count} 首歌曲	{count}曲をダウンロードしました
+{count} songs found. Press to add another folder.	{count} titres trouvés. Appuie pour ajouter un autre dossier.	Se encontraron {count} canciones. Pulsa para añadir otra carpeta.	Найдено {count} треков. Нажми, чтобы добавить ещё одну папку.	找到 {count} 首歌曲。点按可添加其他文件夹。	{count}曲見つかりました。押すと別のフォルダーを追加できます。
+{count} songs measured here · {size} · start and progress under Library	{count} titres analysés ici · {size} · lancement et suivi dans Bibliothèque	{count} canciones analizadas aquí · {size} · inicio y progreso en Biblioteca	Здесь проанализировано {count} треков · {size} · запуск и прогресс в медиатеке	此处已分析 {count} 首歌曲 · {size} · 可在音乐库中开始或查看进度	ここで解析した曲：{count}曲・{size}・開始と進捗はライブラリで確認
+{count} songs stay, because they're on other downloaded lists too.	{count} titres restent car ils figurent aussi dans d’autres listes téléchargées.	Se conservan {count} canciones porque también están en otras listas descargadas.	{count} треков останутся, так как есть и в других скачанных плейлистах.	有 {count} 首歌曲还在其他已下载列表中，因此会保留。	{count}曲はほかのダウンロード済みリストにもあるため残ります。
+{count} songs, about {time} the first time.	{count} titres, environ {time} pour la première analyse.	{count} canciones; unas {time} la primera vez.	{count} треков, первая обработка займёт около {time}.	{count} 首歌曲，首次分析约需 {time}。	{count}曲・初回の解析は約{time}
+{count} songs, about {time} the first time. After that, only new songs are measured.	{count} titres : environ {time} la première fois. Ensuite, seuls les nouveaux seront analysés.	{count} canciones: unas {time} la primera vez. Después solo se analizarán las nuevas.	{count} треков: первый анализ займёт около {time}. Затем будут анализироваться только новые треки.	{count} 首歌曲，首次约需 {time}。之后只分析新歌曲。	{count}曲・初回は約{time}。その後は新しい曲だけ解析します。
+{done} of {total} songs measured · {time} to go	{done} titres sur {total} analysés · encore {time}	{done} de {total} canciones analizadas · quedan {time}	Проанализировано {done} из {total} треков · осталось {time}	已分析 {done}/{total} 首歌曲 · 还需 {time}	解析済み{done}/{total}曲・残り{time}
+{from} to {to}	de {from} à {to}	de {from} a {to}	от {from} до {to}	从 {from} 到 {to}	{from}から{to}まで
+{genre} · in your library	{genre} · dans ta bibliothèque	{genre} · en tu biblioteca	{genre} · в медиатеке	{genre} · 在你的音乐库中	{genre}・ライブラリ内
+{h} h {m} min	{h} h {m} min	{h} h {m} min	{h} ч {m} мин	{h} 小时 {m} 分钟	{h}時間{m}分
+{held} held back by your switches	{held} demandes bloquées par tes réglages	{held} solicitudes bloqueadas por tus ajustes	Заблокировано настройками: {held}	设置阻止了 {held} 次请求	設定により{held}件をブロック
+{n} bpm	{n} BPM	{n} BPM	{n} BPM	{n} BPM	{n} BPM
+{on} of {count} providers on	{on} fournisseurs actifs sur {count}	{on} de {count} proveedores activos	Активно поставщиков: {on} из {count}	已启用 {on}/{count} 个服务提供方	提供元：{count}件中{on}件が有効
+{time} heard by you	{time} écoutées par toi	{time} que has escuchado	Ты слушал {time}	你听了 {time}	再生時間：{time}
+{time} left	encore {time}	quedan {time}	Осталось {time}	还剩 {time}	残り{time}
+{year} has the most: {count}	{year} arrive en tête : {count}	{year} tiene más: {count}	Больше всего в {year} году: {count}	{year} 年最多：{count}	最多は{year}年：{count}
+1 fits	1 titre correspond	1 coincide	Подходит 1	找到 1 项	1件が一致
+about {count} hours	environ {count} heures	unas {count} horas	около {count} часов	约 {count} 小时	約{count}時間
+about {count} minutes	environ {count} minutes	unos {count} minutos	около {count} минут	约 {count} 分钟	約{count}分
+Albums: {count} new	Albums : {count} nouveaux	Álbumes: {count} nuevos	Новых альбомов: {count}	专辑：新增 {count} 张	アルバム：新着{count}件
+Answers are kept on this computer, so each thing is asked once.	Les réponses sont gardées sur cet ordinateur pour éviter les demandes répétées.	Las respuestas se guardan en este ordenador para no repetir consultas.	Ответы сохраняются на компьютере, чтобы не запрашивать одно и то же дважды.	查询结果缓存在电脑上，避免重复请求。	結果はこのパソコンに保存し、同じ問い合わせを繰り返しません。
+Asked once a day while Startup & updates allow it.	Vérification quotidienne si elle est autorisée dans Démarrage et mises à jour.	Se consulta una vez al día si está permitido en Inicio y actualizaciones.	Проверяется раз в день, если разрешено в разделе запуска и обновлений.	如果“启动与更新”允许，每天检查一次。	「起動と更新」で許可されている場合、1日1回確認します。
+Can't be read	Impossible à lire	No se puede leer	Не удаётся прочитать	无法读取	読み取れません
+Choose providers one by one	Choisir les services un par un	Elegir proveedores uno a uno	Выбрать сервисы по отдельности	逐个选择服务提供方	サービスを個別に選択
+Classic	Classique	Clásico	Классический	经典	クラシック
+Downloads: {count} tried again	Téléchargements : {count} nouvelles tentatives	Descargas: {count} reintentos	Загрузки: повторно {count}	下载：重试 {count} 项	ダウンロード：{count}件を再試行
+Everything that helps	Tout ce qui peut aider	Todo lo que ayuda	Всё полезное	所有有用内容	役立つものをすべて
+Fewer details	Moins de détails	Menos detalles	Меньше подробностей	收起详细信息	詳細を減らす
+Forget	Oublier	Olvidar	Забыть	忘记	記録を削除
+Go on	Continuer	Seguir	Продолжить	继续	続ける
+held back	bloqués	bloqueados	заблокировано	已阻止	ブロック済み
+Hide them	Les masquer	Ocultarlos	Скрыть их	隐藏这些内容	非表示にする
+Jump to {letter}	Aller à {letter}	Ir a {letter}	Перейти к {letter}	跳转至 {letter}	{letter}へ移動
+Jump to a letter	Aller à une lettre	Ir a una letra	Перейти к букве	跳转至字母	文字でジャンプ
+Kept on this computer	Conservé sur cet ordinateur	Guardado en este ordenador	Хранится на этом компьютере	保存在此电脑上	このパソコンに保存
+last asked {when}	dernière demande : {when}	última consulta: {when}	Последний запрос: {when}	上次查询：{when}	最終問い合わせ：{when}
+Less	Moins	Menos	Меньше	更少	少なく
+less than a minute	moins d’une minute	menos de un minuto	меньше минуты	不到一分钟	1分未満
+Let me choose	Me laisser choisir	Dejarme elegir	Я выберу сам	让我选择	自分で選ぶ
+Loading	Chargement	Cargando	Загрузка	加载中	読み込み中
+Look	Apparence	Aspecto	Внешний вид	外观	外観
+Look and app	Apparence et application	Aspecto y aplicación	Оформление и приложение	外观与应用	外観とアプリ
+Looking through your music…	Exploration de ta musique…	Explorando tu música…	Поиск по твоей музыке…	正在查看你的音乐…	音楽を確認中…
+Move…	Déplacer…	Mover…	Переместить…	移动…	移動…
+not asked since Songsta started	aucune demande depuis le lancement de Songsta	sin consultas desde que se inició Songsta	не запрашивалось с запуска Songsta	Songsta 启动以来未查询	Songstaの起動後、問い合わせなし
+Not linked	Non connecté	No vinculado	Не подключено	未关联	未リンク
+Nothing about you or your music	Aucune information sur toi ou ta musique	Ningún dato sobre ti ni tu música	Никаких сведений о тебе и твоей музыке	不涉及你或音乐的信息	あなたや音楽に関する情報なし
+Nothing but the request for its list	Uniquement la demande de sa liste	Solo la solicitud de su lista	Только запрос списка	仅发送获取列表的请求	リスト取得のリクエストのみ
+Nothing held back	Aucune demande bloquée	No hay solicitudes bloqueadas	Ничего не заблокировано	没有阻止任何请求	ブロックしたリクエストはありません
+of {total} so far	sur {total} pour le moment	de {total} hasta ahora	из {total} на данный момент	当前共 {total} 项	現時点で全{total}件中
+Pick the right one	Choisir le bon	Elegir el correcto	Выбрать подходящий	选择正确项	正しいものを選ぶ
+Play on several together	Écouter sur plusieurs appareils à la fois	Reproducir en varios dispositivos a la vez	Воспроизводить на нескольких устройствах	同时在多个设备上播放	複数のデバイスで同時再生
+playing	en cours de lecture	reproduciendo	воспроизводится	正在播放	再生中
+Popular with you	Souvent écoutés par toi	Popular entre tus escuchas	Часто у тебя звучат	你常听的	あなたがよく聴く曲
+Sends: {what}	Envoie : {what}	Envía: {what}	Отправляет: {what}	发送：{what}	送信内容：{what}
+So mixes play them less · {size}	Pour qu’ils reviennent moins dans les mix · {size}	Para que aparezcan menos en los mixes · {size}	Чтобы реже попадали в миксы · {size}	让这些歌曲在混音中更少出现 · {size}	ミックスでの登場頻度を下げます・{size}
+Song {n} of {total}	Titre {n} sur {total}	Canción {n} de {total}	Трек {n} из {total}	第 {n}/{total} 首歌曲	全{total}曲中{n}曲目
+Songs: {count} new	Titres : {count} nouveaux	Canciones: {count} nuevas	Новых треков: {count}	歌曲：新增 {count} 首	曲：新着{count}件
+Start now	Commencer	Empezar ahora	Начать сейчас	立即开始	今すぐ開始
+swipe to turn	balayer pour changer	desliza para cambiar	проведи, чтобы изменить	滑动切换	スワイプして切り替え
+Sync service: can't be reached	Service de synchronisation inaccessible	Servicio de sincronización inaccesible	Сервис синхронизации недоступен	无法连接同步服务	同期サービスに接続できません
+Take them off	Les retirer	Quitarlos	Убрать их	移除这些内容	取り除く
+The search page's recent searches · {size}	Recherches récentes · {size}	Búsquedas recientes · {size}	Недавние поиски · {size}	最近搜索 · {size}	最近の検索・{size}
+{count} to look at	{count} à vérifier	{count} por revisar	На проверку: {count}	待查看 {count} 项	確認するもの：{count}件
+{days} d {hours} h	{days} j {hours} h	{days} d {hours} h	{days} д {hours} ч	{days} 天 {hours} 小时	{days}日{hours}時間
+{done} of {total}	{done} sur {total}	{done} de {total}	{done} из {total}	{done}/{total}	{done}/{total}
+{found} in your library	{found} dans ta bibliothèque	{found} en tu biblioteca	В медиатеке: {found}	音乐库中有 {found}	ライブラリ内：{found}
+{found} in your library · {byLyrics} by their lyrics	{found} dans ta bibliothèque · {byLyrics} trouvés par les paroles	{found} en tu biblioteca · {byLyrics} encontrados por letra	В медиатеке: {found} · по тексту: {byLyrics}	音乐库中有 {found} · 通过歌词找到 {byLyrics}	ライブラリ内：{found}・歌詞から{byLyrics}
+{h} hr {m} min	{h} h {m} min	{h} h {m} min	{h} ч {m} мин	{h} 小时 {m} 分钟	{h}時間{m}分
+{hours} h {minutes} min	{hours} h {minutes} min	{hours} h {minutes} min	{hours} ч {minutes} мин	{hours} 小时 {minutes} 分钟	{hours}時間{minutes}分
+{hzLabel} hertz, {shown} decibels	{hzLabel} hertz, {shown} décibels	{hzLabel} hercios, {shown} decibelios	{hzLabel} Гц, {shown} дБ	{hzLabel} 赫兹，{shown} 分贝	{hzLabel}Hz、{shown}dB
+{m} min {sec} sec	{m} min {sec} s	{m} min {sec} s	{m} мин {sec} сек	{m} 分 {sec} 秒	{m}分{sec}秒
+{MAX_RESULTS} of {count}	{MAX_RESULTS} sur {count}	{MAX_RESULTS} de {count}	{MAX_RESULTS} из {count}	{MAX_RESULTS}/{count}	{MAX_RESULTS}/{count}
+{message} — check the ID	{message} — vérifie l’identifiant	{message} — comprueba el ID	{message} — проверь ID	{message} — 检查 ID	{message}・IDを確認してください
+{message} — connects once Discord is open	{message} — connexion dès l’ouverture de Discord	{message} — se conectará al abrir Discord	{message} — подключится после запуска Discord	{message} — 打开 Discord 后将连接	{message}・Discordを開くと接続します
+{ms} ms earlier	{ms} ms plus tôt	{ms} ms antes	на {ms} мс раньше	提前 {ms} 毫秒	{ms}ms早く
+{ms} ms later	{ms} ms plus tard	{ms} ms después	на {ms} мс позже	延后 {ms} 毫秒	{ms}ms遅く
+{n} {value} without an album again	{n} {value} de nouveau sans album	{n} {value} de nuevo sin álbum	{n} {value} снова без альбома	{n} {value} 重新变为无专辑	{n} {value}を再びアルバム未設定に
+{n} song{s}	{n} titre{s}	{n} canción{s}	{n} трек{s}	{n} 首歌曲{s}	{n}曲{s}
+{n} song{value} ready offline	{n} titre{value} disponibles hors ligne	{n} canción{value} listas sin conexión	{n} трек{value} доступны без сети	{n} 首歌曲{value} 可离线播放	{n}曲{value}をオフラインで再生できます
+{name} (edited)	{name} (modifié)	{name} (editado)	{name} (изменено)	{name}（已编辑）	{name}（編集済み）
+{name} can be switched off from here now	Tu peux désormais éteindre {name} depuis ici	Ahora puedes apagar {name} desde aquí	Теперь {name} можно выключить отсюда	现在可以从这里关闭 {name}	ここから{name}の電源を切れます
+{name} can't be reached right now	{name} est momentanément inaccessible	No se puede acceder a {name} ahora	{name} сейчас недоступен	暂时无法连接 {name}	現在{name}に接続できません
+{name} can't join	{name} ne peut pas rejoindre	{name} no puede unirse	{name} не может присоединиться	{name} 无法加入	{name}は参加できません
+{name} can't play along	{name} ne peut pas jouer en même temps	{name} no puede reproducir a la vez	{name} не может играть одновременно	{name} 无法同步播放	{name}は同時再生できません
+{name} converted to 24-bit / 176.4 kHz PCM	{name} converti en PCM 24 bits / 176,4 kHz	{name} convertido a PCM de 24 bits / 176,4 kHz	{name} преобразован в PCM 24 бит / 176,4 кГц	{name} 已转换为 24 位 / 176.4 kHz PCM	{name}を24ビット / 176.4 kHz PCMに変換
+{name} converted to FLAC by Jellyfin — nothing is lost	{name} converti en FLAC par Jellyfin, sans perte	Jellyfin convirtió {name} a FLAC sin pérdida	Jellyfin преобразовал {name} в FLAC без потерь	Jellyfin 已将 {name} 转换为无损 FLAC	Jellyfinが{name}をロスレスFLACに変換しました
+{name} didn't start. Is it switched on?	{name} n’a pas démarré. Est-il allumé ?	{name} no ha iniciado. ¿Está encendido?	{name} не запустился. Он включён?	{name} 未能启动。设备已开机吗？	{name}を起動できませんでした。電源は入っていますか？
+{name} didn't start. It may be off. The music is back here, paused	{name} n’a pas démarré. Il est peut-être éteint. La lecture est revenue ici, en pause.	{name} no ha iniciado. Puede estar apagado. La música ha vuelto aquí, en pausa.	{name} не запустился. Возможно, он выключен. Воспроизведение вернулось сюда и поставлено на паузу.	{name} 未能启动，可能已关机。音乐已切回本设备并暂停。	{name}を起動できませんでした。電源がオフかもしれません。再生はこのデバイスに戻り、一時停止しました
+{name} didn't switch to {input}	{name} n’a pas basculé sur {input}	{name} no cambió a {input}	{name} не переключился на {input}	{name} 未能切换至 {input}	{name}を{input}に切り替えられませんでした
+{name} didn't take that	{name} n’a pas accepté la commande	{name} no ha aceptado la orden	{name} не принял команду	{name} 未接受该操作	{name}が操作を受け付けませんでした
+{name} didn't take that code. Start again for a new one.	{name} n’a pas accepté le code. Recommence pour en obtenir un nouveau.	{name} no aceptó el código. Vuelve a empezar para generar uno nuevo.	{name} не принял код. Начни заново, чтобы получить новый.	{name} 不接受此代码。请重新开始以获取新代码。	{name}がコードを受け付けませんでした。最初からやり直して新しいコードを取得してください
