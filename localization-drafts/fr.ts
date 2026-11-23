@@ -6,7 +6,7 @@ export const fr: Record<string, string> = {
   " · with {names}": " · avec {names}",
   " ({count} zones)": " ({count} zones)",
   " ({months} months of history)": " ({months} mois d’historique)",
-  "— nothing is lost": " — sans aucune perte",
+  " — nothing is lost": " — sans aucune perte",
   ", and {count} on the way": ", et {count} en attente",
   ", in the playlist's order": ", dans l’ordre de la playlist",
   ", newest like first": ", favoris les plus récents d’abord",
