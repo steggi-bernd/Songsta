@@ -1,0 +1,200 @@
+Removes the folder from Songsta only — your files stay exactly where they are on disk.	Rimuove la cartella solo da Songsta: i tuoi file rimangono esattamente dove sono sul disco.	Remove a pasta apenas do Songsta: seus arquivos continuam exatamente onde estão no disco.
+Rename	Rinomina	Renomear
+Rename "{value}"	Rinomina «{value}»	Renomear “{value}”
+Rename album	Rinomina album	Renomear álbum
+Rename folder	Rinomina cartella	Renomear pasta
+Rename group	Rinomina gruppo	Renomear grupo
+Rename in Songsta	Rinomina in Songsta	Renomear no Songsta
+Rename playlist	Rinomina playlist	Renomear playlist
+Rename this device	Rinomina questo dispositivo	Renomear este dispositivo
+Rename…	Rinomina…	Renomear…
+Renamed	Rinominato	Renomeado
+Repeat	Ripeti	Repetir
+Repeat one	Ripeti uno	Repetir uma
+Repeat: {repeat}	Ripetizione: {repeat}	Repetição: {repeat}
+Replay · {period}	Replay · {period}	Replay · {period}
+Replay didn't load	Replay non si è caricato	Não foi possível carregar o Replay
+ReplayGain — songs play at the same loudness, their dynamics untouched	ReplayGain: brani allo stesso volume, senza alterarne la dinamica	ReplayGain: músicas com o mesmo volume, sem alterar a dinâmica
+Rescan	Ripeti scansione	Verificar novamente
+Rescan every folder	Ripeti scansione di tutte le cartelle	Verificar todas as pastas novamente
+Rescan failed	Scansione non riuscita	Falha na verificação
+Rescan library	Ripeti scansione della libreria	Verificar biblioteca novamente
+Rescanning local library…	Nuova scansione della libreria locale…	Verificando a biblioteca local novamente…
+Reset	Ripristina	Redefinir
+Reset app data	Azzera i dati dell'app	Redefinir dados do aplicativo
+Reset app data?	Azzerare i dati dell'app?	Redefinir os dados do aplicativo?
+Reset the app	Ripristina l'app	Redefinir o aplicativo
+Reset the app?	Ripristinare l'app?	Redefinir o aplicativo?
+Resize the side panel	Ridimensiona il pannello laterale	Redimensionar painel lateral
+Restart	Riavvia	Reiniciar
+Restart now	Riavvia ora	Reiniciar agora
+Restart the app?	Riavviare l'app?	Reiniciar o aplicativo?
+Restore	Ripristina	Restaurar
+Restore a backup, replacing what's here	Ripristina un backup sostituendo i dati attuali	Restaurar backup substituindo os dados atuais
+Right-click any track and choose Download — it lands here for offline playback.	Fai clic destro su un brano e scegli Scarica: lo troverai qui per ascoltarlo offline.	Clique com o botão direito numa música e escolha Baixar: ela aparecerá aqui para ouvir offline.
+Right-click to rename or delete — or drop a playlist here to file it	Clic destro per rinominare o eliminare, oppure trascina qui una playlist per organizzarla	Clique com o botão direito para renomear ou excluir, ou arraste uma playlist aqui para organizar
+Round	Arrotondato	Arredondado
+Rubber band	Elastico	Elástico
+Same seat	Lo stesso posto	O mesmo lugar
+Same song	Stesso brano	Mesma música
+Sample rate	Frequenza di campionamento	Taxa de amostragem
+Samples	Campioni	Amostras
+Saturday	Sabato	Sábado
+Save	Salva	Salvar
+Save as list…	Salva come lista…	Salvar como lista…
+Save to Liked Songs	Salva nei Brani preferiti	Salvar nas músicas curtidas
+Save to your library	Salva nella tua libreria	Salvar na sua biblioteca
+Saved "{name}" with {files} songs	«{name}» salvato con {files} brani	“{name}” salvo com {files} músicas
+Saved {count} to {pop}	Salvati {count} in {pop}	{count} salvos em {pop}
+Saved {value} songs — {notes} only on your server come back in Songsta; other players skip those	Salvati {value} brani: i {notes} presenti solo sul server torneranno in Songsta, mentre altri lettori li salteranno	{value} músicas salvas: as {notes} que existem apenas no servidor voltam no Songsta, mas outros players as pulam
+Saved as “{name}”	Salvato come «{name}»	Salvo como “{name}”
+Saved the list of {count} songs	Salvata la lista di {count} brani	Lista de {count} músicas salva
+Saved: {value}	Salvato: {value}	Salvo: {value}
+Scan failed	Scansione non riuscita	Falha na verificação
+Scanning…	Scansione in corso…	Verificando…
+Scroll shelf left	Scorri lo scaffale verso sinistra	Rolar a estante para a esquerda
+Scroll shelf right	Scorri lo scaffale verso destra	Rolar a estante para a direita
+Seamless albums	Album senza interruzioni	Álbuns sem pausas
+Search	Cerca	Buscar
+Search “{trim}”	Cerca «{trim}»	Buscar “{trim}”
+Search {count} playlists	Cerca in {count} playlist	Buscar em {count} playlists
+Search again	Cerca di nuovo	Buscar novamente
+Search albums	Cerca album	Buscar álbuns
+Search for something to play	Cerca qualcosa da ascoltare	Encontre algo para ouvir
+Search for songs	Cerca brani	Buscar músicas
+Search for songs you love, or browse Explore to discover something new — then right-click any track to add it here.	Cerca i brani che ami oppure esplora la tua musica per scoprirne di nuovi. Poi fai clic destro su un brano per aggiungerlo qui.	Busque suas músicas favoritas ou explore para descobrir novas. Depois, clique com o botão direito em uma música para adicioná-la aqui.
+Search in Liked Songs	Cerca nei Brani preferiti	Buscar nas músicas curtidas
+Search in this playlist	Cerca in questa playlist	Buscar nesta playlist
+Search links to Qobuz, Bandcamp, 7digital and Amazon	Link di ricerca per Qobuz, Bandcamp, 7digital e Amazon	Links de busca para Qobuz, Bandcamp, 7digital e Amazon
+Search looks through titles, artists and albums of your local files and your servers, and through the lyrics already on this computer.	La ricerca trova titoli, artisti e album dei file locali e dei server, oltre ai testi già presenti su questo computer.	A busca procura títulos, artistas e álbuns nos arquivos locais e servidores, além das letras já salvas neste computador.
+Search on {store}	Cerca su {store}	Buscar em {store}
+Search settings	Cerca nelle impostazioni	Buscar configurações
+Search suggestions	Suggerimenti di ricerca	Sugestões de busca
+Search this server	Cerca su questo server	Buscar neste servidor
+Search your files	Cerca nei tuoi file	Buscar nos seus arquivos
+Search your library	Cerca nella tua libreria	Buscar na sua biblioteca
+Searching the songbook	Ricerca nel catalogo dei brani	Buscando no catálogo de músicas
+Second stream	Secondo flusso	Segunda reprodução
+Second stream · 	Secondo flusso · 	Segunda reprodução · 
+Second stream · playing	Secondo flusso · in riproduzione	Segunda reprodução · tocando
+Second stream: what you start now plays here. {name} goes on by itself.	Secondo flusso: quello che avvii ora si riproduce qui. {name} continua per conto proprio.	Segunda reprodução: o que você iniciar agora toca aqui. {name} continua separadamente.
+See more	Mostra altro	Ver mais
+See which	Scopri quali	Ver quais
+Seek	Vai a una posizione nel brano	Avançar ou voltar na música
+Separate	Separa	Separar
+SERVER	SERVER	SERVIDOR
+Server address	Indirizzo del server	Endereço do servidor
+Server sync	Sincronizzazione del server	Sincronização do servidor
+Set up a local folder first	Configura prima una cartella locale	Configure uma pasta local primeiro
+Set up Songsta	Configura Songsta	Configurar Songsta
+Settings	Impostazioni	Configurações
+Settings — Songsta {version} is out	Impostazioni · disponibile Songsta {version}	Configurações · Songsta {version} disponível
+Shop links {value}	Link per gli acquisti {value}	Links de compra {value}
+Shop links for missing songs	Link per acquistare brani mancanti	Links para comprar músicas que faltam
+Show {name} in your library	Mostra {name} nella tua libreria	Mostrar {name} na sua biblioteca
+Show {title} in its folder	Mostra {title} nella cartella	Mostrar {title} na pasta
+Show all	Mostra tutto	Mostrar tudo
+Show all {toLocaleString}	Mostra tutti i {toLocaleString}	Mostrar todos os {toLocaleString}
+Show as “{name}”	Mostra come «{name}»	Mostrar como “{name}”
+Show as list	Mostra come lista	Mostrar como lista
+Show as tiles	Mostra come riquadri	Mostrar como blocos
+Show Cyrillic lyrics in Latin letters too	Mostra anche i testi cirillici in caratteri latini	Mostrar letras em cirílico também em caracteres latinos
+Show discography	Mostra discografia	Mostrar discografia
+Show fewer	Mostra meno	Mostrar menos
+Show in folder	Mostra nella cartella	Mostrar na pasta
+Show less	Mostra meno	Mostrar menos
+Show more	Mostra altro	Mostrar mais
+Show the song playing now as your Discord status	Mostra il brano in riproduzione nello stato Discord	Mostrar a música atual no status do Discord
+Show them	Mostrali	Mostrar
+shows while music plays	mostrato mentre la musica è in riproduzione	aparece enquanto a música toca
+Shuffle	Riproduzione casuale	Aleatório
+Shuffle play	Riproduzione casuale	Reprodução aleatória
+Sign in with a user instead	Accedi con un utente	Entrar com um usuário
+Sign out	Esci dall'account	Sair da conta
+Sign out?	Uscire dall'account?	Sair da conta?
+Signed in with an API key, which belongs to no user: whose favorites and plays these are	Hai effettuato l'accesso con una chiave API non associata a un utente. A quale utente appartengono preferiti e ascolti?	Você entrou com uma chave de API que não pertence a um usuário. De quem são as curtidas e as reproduções?
+Single	Singolo	Single
+Singles & EPs	Singoli ed EP	Singles e EPs
+Skip silence	Salta silenzio	Pular silêncio
+Skipping ends repeat one	Saltare la fine silenziosa disattiva la ripetizione del singolo brano	Pular o silêncio final desativa a repetição de uma música
+Smart playlist	Playlist intelligente	Playlist inteligente
+Smart playlist not found	Playlist intelligente non trovata	Playlist inteligente não encontrada
+So you can see and steer what plays on your devices, and how downloads are going. Nothing else comes this way.	Per vedere e controllare cosa viene riprodotto sui dispositivi e l'avanzamento dei download. Nessun altro dato passa da questa connessione.	Para ver e controlar o que toca nos seus dispositivos e o andamento dos downloads. Nenhum outro dado passa por essa conexão.
+Soft	Morbido	Suave
+Something went wrong	Qualcosa è andato storto	Algo deu errado
+song	brano	música
+Song · {artist}	Brano · {artist}	Música · {artist}
+Song details will show up here.	Qui compariranno i dettagli del brano.	Os detalhes da música aparecerão aqui.
+song is	brano è	música é
+song matches	brano corrisponde	música corresponde
+song waits	brano in attesa	música aguardando
+songs	brani	músicas
+SONGS	BRANI	MÚSICAS
+Songs added to queue	Brani aggiunti alla coda	Músicas adicionadas à fila
+songs are	brani sono	músicas são
+Songs follow each other without a gap	I brani si susseguono senza pause	As músicas tocam uma após a outra sem intervalo
+songs match	brani corrispondono	músicas correspondem
+Songs not in your library{value}. The list saves as a spreadsheet that opens in Excel. Have one under another name? Use “I have it…”. Bought one? Drop the store's ZIP anywhere on Songsta.	Brani mancanti dalla tua libreria{value}. Puoi salvare la lista come foglio di calcolo per Excel. Hai già un brano con un altro nome? Scegli «Ce l'ho già…». Ne hai acquistato uno? Trascina lo ZIP dello store in Songsta.	Músicas que faltam na sua biblioteca{value}. Você pode salvar a lista como planilha para abrir no Excel. Tem uma música com outro nome? Escolha “Eu já tenho…”. Comprou uma? Arraste o ZIP da loja para o Songsta.
+Songs of one album play on without a fade: live albums, DJ mixes, songs that run into each other	I brani di un album si susseguono senza dissolvenze: ideale per concerti, mix DJ e brani continui	Músicas de um álbum tocam sem transições: ideal para álbuns ao vivo, mixes de DJ e faixas contínuas
+Songs of theirs you like show up here.	Qui compariranno i brani preferiti di questo artista.	As músicas curtidas deste artista aparecerão aqui.
+Songs that match	Brani corrispondenti	Músicas correspondentes
+songs wait	brani in attesa	músicas aguardando
+Songs whose tags name no album gather here, to be put on one.	I brani senza album nei tag vengono raccolti qui per essere assegnati a un album.	Músicas sem álbum nas tags ficam reunidas aqui para você atribuir a um álbum.
+Songs without an album	Brani senza album	Músicas sem álbum
+Songs you have twice	Brani duplicati	Músicas duplicadas
+Songs you haven't played yet	Brani mai riprodotti	Músicas ainda não ouvidas
+Songs you hear here count on Jellyfin too	Gli ascolti qui vengono conteggiati anche su Jellyfin	As músicas ouvidas aqui também contam no Jellyfin
+Songs you like will show up here	Qui compariranno i brani che ti piacciono	Suas músicas curtidas aparecerão aqui
+Songs{value}	Brani{value}	Músicas{value}
+Songsta {value}	Songsta {value}	Songsta {value}
+Songsta {version} is out	Disponibile Songsta {version}	Songsta {version} disponível
+Songsta {version} is out, more in Settings	Disponibile Songsta {version}; dettagli nelle Impostazioni	Songsta {version} disponível; detalhes em Configurações
+Songsta {version} is ready	Songsta {version} pronto	Songsta {version} pronto
+Songsta {version} is ready, more in Settings	Songsta {version} pronto; dettagli nelle Impostazioni	Songsta {version} pronto; detalhes em Configurações
+Songsta {version} is ready. It installs when you close Songsta.	Songsta {version} è pronto. Si installerà quando chiuderai Songsta.	Songsta {version} está pronto. Será instalado quando você fechar o Songsta.
+Songsta hit an unexpected error. Your library is safe — reloading usually fixes it.	Songsta ha riscontrato un errore inatteso. La libreria è al sicuro: di solito basta ricaricare.	O Songsta encontrou um erro inesperado. Sua biblioteca está segura; recarregar geralmente resolve.
+Songsta keeps only a hashed sign-in token (the Subsonic standard), sealed by your operating system's keychain — never the password itself.	Songsta salva solo un token di accesso con hash (standard Subsonic), protetto dal portachiavi del sistema, mai la password.	O Songsta guarda apenas um token de login com hash (padrão Subsonic), protegido pelo cofre de chaves do sistema, nunca a senha.
+Songsta on GitHub	Songsta su GitHub	Songsta no GitHub
+Songsta plays the best copy. The others only take up space — clear them away in their folder if you like.	Songsta riproduce la copia migliore. Le altre occupano solo spazio: se vuoi, eliminale dalla loro cartella.	O Songsta reproduz a melhor cópia. As outras só ocupam espaço; se quiser, você pode removê-las da pasta.
+SONGSTA REPLAY	SONGSTA REPLAY	SONGSTA REPLAY
+Songsta starts anew with it now.	Songsta ora si riavvia con questi dati.	O Songsta vai reiniciar com esses dados.
+Songsta starts anew with it now. Android lets it read a music folder only once it's picked again: add {folders} under Music on this phone.	Songsta si riavvia con questi dati. Android richiede di selezionare di nuovo le cartelle musicali: aggiungi {folders} in Musica su questo telefono.	O Songsta vai reiniciar com esses dados. O Android exige que você selecione novamente as pastas de música: adicione {folders} em Música neste celular.
+Songsta starts with Windows and opens its window	Songsta si avvia con Windows e apre la sua finestra	O Songsta inicia com o Windows e abre a janela
+Songsta's own	Proprio di Songsta	Do próprio Songsta
+Sort by	Ordina per	Ordenar por
+Sort by {toLowerCase}	Ordina per {toLowerCase}	Ordenar por {toLowerCase}
+Sort: {value}	Ordine: {value}	Ordenação: {value}
+Sorted by {sortLabel}	Ordinato per {sortLabel}	Ordenado por {sortLabel}
+Sorted by {toLowerCase}	Ordinato per {toLowerCase}	Ordenado por {toLowerCase}
+Sorted by {toLowerCase}, {value}	Ordinato per {toLowerCase}, {value}	Ordenado por {toLowerCase}, {value}
+Sound	Suono	Som
+Sound analysis	Analisi audio	Análise de áudio
+Source	Origine	Origem
+Speaker	Altoparlante	Alto-falante
+Speaker {value}	Altoparlante {value}	Alto-falante {value}
+Speakers, receivers and TVs	Altoparlanti, ricevitori e TV	Alto-falantes, receivers e TVs
+Spotify's own data download	Download dei dati da Spotify	Baixar seus dados pelo Spotify
+Square	Quadrato	Quadrado
+Start a second stream	Avvia secondo flusso	Iniciar segunda reprodução
+Start over	Ricomincia	Começar de novo
+Startup	Avvio	Inicialização
+Startup & updates	Avvio e aggiornamenti	Inicialização e atualizações
+still quiet.	ancora tranquillo.	ainda tranquilo.
+Stop choosing	Termina selezione	Concluir seleção
+Stop downloading	Interrompi download	Parar download
+Stop keeping offline	Non conservare più offline	Parar de manter offline
+Stop playing here	Interrompi riproduzione qui	Parar reprodução aqui
+Stop playing on {name}	Interrompi riproduzione su {name}	Parar reprodução em {name}
+Stop the music here	Ferma la musica qui	Parar a música aqui
+Stop these downloads?	Interrompere questi download?	Parar estes downloads?
+Stop waiting for Wi-Fi	Smetti di aspettare il Wi-Fi	Parar de esperar pelo Wi-Fi
+Streaming quality	Qualità streaming	Qualidade de streaming
+Sunday	Domenica	Domingo
+swipe.branch	gesto.dirama	gesto.ramificar
+swipe.mute	gesto.escludi	gesto.silenciar
+swipe.queue	gesto.coda	gesto.fila
+swipe.undo	gesto.annulla	gesto.desfazer
+swipe.unmute	gesto.ripristina	gesto.reativar
+Switch off	Spegni	Desligar
+Switch receivers off afterwards	Spegni i ricevitori alla fine	Desligar receivers depois
+Switched off in Windows' startup apps. Switch it on here to allow it again.	Disattivato nelle app di avvio di Windows. Attivalo qui per consentirne di nuovo l'avvio.	Desativado nos aplicativos de inicialização do Windows. Ative aqui para permitir a inicialização novamente.
