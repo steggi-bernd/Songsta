@@ -1,0 +1,98 @@
+(recommended): open	(conseillé) : ouvrir	(recomendado): abrir	(рекомендуется): открыть	（推荐）：打开	（推奨）：開く
+driving	en voiture	conduciendo	за рулём	驾驶中	運転中
+mostly between {from} and {to}	surtout entre {from} et {to}	sobre todo entre {from} y {to}	чаще всего с {from} до {to}	主要集中在 {from} 至 {to}	主に{from}〜{to}
+Paused · {done} of {total} songs measured	En pause · {done} titres analysés sur {total}	En pausa · {done} de {total} canciones analizadas	Пауза · обработано {done} из {total} треков	已暂停 · 已分析 {done}/{total} 首歌曲	一時停止中・{done}/{total}曲を解析済み
+Sealed by your operating system's keychain; never in a backup	Protégé par le coffre de ton système, jamais inclus dans les sauvegardes	Protegido por el llavero del sistema; nunca en la copia de seguridad	Защищено хранилищем ключей системы и не попадает в резервные копии	由系统密钥链保护，不会包含在备份中	OSのキーチェーンで保護され、バックアップには含まれません
+{device} goes off along with the receiver.	{device} s’éteint avec l’ampli.	{device} se apaga junto con el receptor.	{device} выключается вместе с ресивером.	{device} 会与接收设备一起关闭。	{device}はレシーバーと一緒に電源が切れます。
+{deviceName} plays along	{deviceName} joue aussi	{deviceName} reproduce a la vez	{deviceName} играет вместе с остальными	{deviceName} 正在同步播放	{deviceName}も同時再生中
+← Clear filter: {value}	← Retirer le filtre : {value}	← Quitar filtro: {value}	← Убрать фильтр: {value}	← 清除筛选：{value}	← フィルターを解除：{value}
+−11 LUFS (loud)	−11 LUFS (fort)	−11 LUFS (alto)	−11 LUFS (громко)	−11 LUFS（响亮）	−11 LUFS（大きめ）
+−14 LUFS (like Spotify)	−14 LUFS (comme Spotify)	−14 LUFS (como Spotify)	−14 LUFS (как в Spotify)	−14 LUFS（类似 Spotify）	−14 LUFS（Spotifyと同程度）
+10-band, {value}	10 bandes, {value}	10 bandas, {value}	10 полос, {value}	10 段，{value}	10バンド、{value}
+2 · Choose the file	2 · Choisir le fichier	2 · Elegir archivo	2 · Выбери файл	2 · 选择文件	2・ファイルを選択
+about {time}	environ {time}	aproximadamente {time}	около {time}	约 {time}	約{time}
+all	tout	todo	всё	全部	すべて
+All of them are playing.	Tous les appareils sont en lecture.	Todos están reproduciendo.	Все устройства воспроизводят музыку.	所有设备都在播放。	すべてのデバイスで再生中です。
+Almost found the words	Paroles presque trouvées	Letra casi encontrada	Текст почти найден	歌词快找到了	歌詞をもう少しで取得できます
+Also here: {quality} — {localPath}	Aussi ici : {quality} — {localPath}	También aquí: {quality} — {localPath}	Также здесь: {quality} — {localPath}	本地也有：{quality} — {localPath}	ここにもあります：{quality} — {localPath}
+Always the file itself, nothing converted	Toujours le fichier original, sans conversion	Siempre el archivo original, sin conversión	Всегда исходный файл, без преобразования	始终使用原始文件，不做转换	変換せず、常に元のファイルを再生
+and	et	y	и	和	と
+Back to on time	Revenir à la synchronisation normale	Volver al tiempo normal	Вернуться к обычному времени	恢复正常同步	標準の同期タイミングに戻す
+Backup restored{value}. Reloading…	Sauvegarde restaurée{value}. Redémarrage…	Copia restaurada{value}. Recargando…	Копия восстановлена{value}. Перезагрузка…	已恢复备份{value}。正在重新加载…	バックアップを復元しました{value}。再読み込み中…
+Backup saved as {name}	Sauvegarde enregistrée sous {name}	Copia guardada como {name}	Резервная копия сохранена как {name}	备份已保存为 {name}	バックアップを{name}として保存しました
+Both ways with {servers}	Dans les deux sens avec {servers}	En ambos sentidos con {servers}	В обе стороны с {servers}	与 {servers} 双向同步	{servers}と双方向同期
+Button to Songsta's page	Bouton vers la page de Songsta	Botón a la página de Songsta	Кнопка перехода на страницу Songsta	前往 Songsta 页面的按钮	Songstaのページへのボタン
+Change the rules, or add music that fits them.	Modifie les règles ou ajoute de la musique qui y correspond.	Cambia las reglas o añade música que encaje.	Измени правила или добавь подходящую музыку.	调整规则，或添加符合条件的音乐。	ルールを変更するか、条件に合う音楽を追加してください。
+Choose a song or list: it plays on	Choisis un titre ou une liste : lecture sur	Elige una canción o lista: sonará en	Выбери трек или список: воспроизведение на	选择歌曲或列表：播放设备为	曲やリストを選択：再生先は
+Choose music for {deviceName}	Choisir de la musique pour {deviceName}	Elegir música para {deviceName}	Выбрать музыку для {deviceName}	为 {deviceName} 选择音乐	{deviceName}で再生する音楽を選択
+Clips, recordings and voice notes stay out	Les extraits, enregistrements et mémos vocaux sont exclus	Se excluyen clips, grabaciones y notas de voz	Клипы, записи и голосовые заметки исключаются	排除片段、录音和语音备忘录	短いクリップ・録音・ボイスメモを除外
+Close Songsta and open it again to finish.	Ferme Songsta, puis ouvre-le à nouveau pour terminer.	Cierra Songsta y vuelve a abrirlo para terminar.	Закрой Songsta и открой снова, чтобы завершить.	关闭并重新打开 Songsta 以完成操作。	完了するにはSongstaを閉じて開き直してください。
+converted to FLAC for playback{value}	converti en FLAC pour la lecture{value}	convertido a FLAC para reproducir{value}	преобразовано в FLAC для воспроизведения{value}	已转换为 FLAC 进行播放{value}	再生用にFLACへ変換{value}
+Dashboard → API Keys	Tableau de bord → Clés API	Panel → Claves API	Панель управления → API-ключи	控制面板 → API 密钥	ダッシュボード → APIキー
+Delete "{name}"?	Supprimer « {name} » ?	¿Eliminar «{name}»?	Удалить «{name}»?	删除“{name}”？	「{name}」を削除しますか？
+Delete “{name}”?	Supprimer « {name} » ?	¿Eliminar «{name}»?	Удалить «{name}»?	删除“{name}”？	「{name}」を削除しますか？
+Discography{value}	Discographie{value}	Discografía{value}	Дискография{value}	作品目录{value}	ディスコグラフィー{value}
+Disconnect Jellyfin?	Se déconnecter de Jellyfin ?	¿Desconectar Jellyfin?	Отключиться от Jellyfin?	断开 Jellyfin 连接？	Jellyfinとの接続を解除しますか？
+Discord Application ID	Identifiant d’application Discord	ID de aplicación de Discord	ID приложения Discord	Discord 应用 ID	DiscordアプリケーションID
+Discord doesn't know this Application ID	Discord ne reconnaît pas cet identifiant d’application	Discord no reconoce este ID de aplicación	Discord не распознаёт ID приложения	Discord 无法识别该应用 ID	DiscordがこのアプリケーションIDを認識しません
+Discord isn't running	Discord n’est pas ouvert	Discord no está abierto	Discord не запущен	Discord 尚未运行	Discordが起動していません
+Discord refused the connection	Discord a refusé la connexion	Discord rechazó la conexión	Discord отклонил подключение	Discord 拒绝连接	Discordが接続を拒否しました
+Discord status	Statut Discord	Estado de Discord	Статус Discord	Discord 状态	Discordステータス
+Discord was closed	Discord a été fermé	Se ha cerrado Discord	Discord был закрыт	Discord 已关闭	Discordが終了しました
+Drag onto a sidebar folder to file it there	Glisse vers un dossier de la barre latérale pour le ranger	Arrastra a una carpeta lateral para guardarlo allí	Перетащи в папку на боковой панели	拖入侧边栏文件夹即可整理	サイドバーのフォルダーにドラッグして整理
+Drag to change the width; double-click to reset it	Glisse pour modifier la largeur ; double-clic pour réinitialiser	Arrastra para cambiar el ancho; doble clic para restablecer	Перетащи для изменения ширины; двойной щелчок для сброса	拖动调整宽度，双击恢复默认	ドラッグで幅を変更、ダブルクリックでリセット
+Drag to resize · double-click for the standard width	Glisse pour redimensionner · double-clic pour la largeur standard	Arrastra para cambiar tamaño · doble clic para el ancho estándar	Перетащи для изменения размера · двойной щелчок для стандартной ширины	拖动调整大小 · 双击恢复默认宽度	ドラッグでサイズ変更・ダブルクリックで標準幅
+Drop a store's ZIP here to add the album to your library	Dépose ici un ZIP de boutique pour ajouter l’album à ta bibliothèque	Arrastra aquí el ZIP de una tienda para añadir el álbum a tu biblioteca	Перетащи сюда ZIP из магазина, чтобы добавить альбом	将商店下载的 ZIP 拖到这里，以将专辑加入音乐库	ストアのZIPをここにドロップしてアルバムをライブラリに追加
+Drop some audio files in and rescan.	Ajoute quelques fichiers audio, puis relance l’analyse.	Añade archivos de audio y vuelve a escanear.	Добавь аудиофайлы и повтори сканирование.	添加一些音频文件后重新扫描。	音声ファイルを追加してから再スキャンしてください。
+DSD converted to FLAC by Jellyfin	DSD converti en FLAC par Jellyfin	DSD convertido a FLAC por Jellyfin	DSD преобразован в FLAC через Jellyfin	Jellyfin 已将 DSD 转换为 FLAC	JellyfinがDSDをFLACに変換
+e.g. 1234567890123456789	par ex. 1234567890123456789	p. ej. 1234567890123456789	например, 1234567890123456789	例如 1234567890123456789	例：1234567890123456789
+e.g. rock	par ex. rock	p. ej. rock	например, рок	例如摇滚	例：ロック
+edited album	album modifié	álbum editado	изменённый альбом	已编辑的专辑	編集済みアルバム
+edited albums	albums modifiés	álbumes editados	изменённые альбомы	已编辑的专辑	編集済みアルバム
+End the second stream	Arrêter le second flux	Detener la segunda reproducción	Остановить второй поток	结束第二路播放	2つ目の再生を終了
+Enter another address	Saisir une autre adresse	Introducir otra dirección	Ввести другой адрес	输入其他地址	別のアドレスを入力
+Enter Full screen	Passer en plein écran	Entrar en pantalla completa	Перейти в полноэкранный режим	进入全屏	全画面表示
+Entered by you	Saisi par toi	Introducido por ti	Введено вручную	由你输入	手動入力
+Exit Full screen	Quitter le plein écran	Salir de pantalla completa	Выйти из полноэкранного режима	退出全屏	全画面表示を終了
+Fade {seconds} s	Fondu {seconds} s	Fundido {seconds} s	Затухание {seconds} с	淡入淡出 {seconds} 秒	フェード {seconds}秒
+Fetching the verses	Recherche des paroles…	Buscando la letra…	Поиск текста песни…	正在获取歌词…	歌詞を取得中…
+file	fichier	archivo	файл	文件	ファイル
+files	fichiers	archivos	файлы	文件	ファイル
+Filter {tab}	Filtrer {tab}	Filtrar {tab}	Фильтр: {tab}	筛选 {tab}	{tab}を絞り込む
+Filter non-music audio	Filtrer les fichiers non musicaux	Filtrar audio que no sea música	Исключать немузыкальные аудиофайлы	过滤非音乐音频	音楽以外の音声を除外
+Find something to like	Trouvons quelque chose à aimer	Busca algo que te guste	Найди что-нибудь по душе	来找点喜欢的音乐	好きな音楽を探そう
+Finding the right words	Recherche des bonnes paroles…	Buscando la letra adecuada…	Поиск подходящего текста…	正在查找对应歌词…	合う歌詞を探しています…
+Finding the words	Recherche des paroles…	Buscando la letra…	Поиск текста песни…	正在查找歌词…	歌詞を探しています…
+Fine-tune timing	Ajuster précisément la synchronisation	Ajustar tiempo con precisión	Точно настроить время	微调时间	タイミングを微調整
+Fine-tune timing…	Ajuster précisément la synchronisation…	Ajustar tiempo con precisión…	Точно настроить время…	微调时间…	タイミングを微調整…
+Following the system default	Suit les réglages par défaut du système	Sigue la configuración del sistema	Используется системное значение	跟随系统默认设置	システムの標準設定に従う
+Gestures	Gestes	Gestos	Жесты	手势	ジェスチャー
+GitHub didn't answer. Try again later.	GitHub ne répond pas. Réessaie plus tard.	GitHub no responde. Inténtalo más tarde.	GitHub не отвечает. Попробуй позже.	GitHub 没有响应，请稍后重试。	GitHubが応答しません。後でもう一度試してください。
+Go to {name}	Aller à {name}	Ir a {name}	Перейти к {name}	前往 {name}	{name}へ移動
+group	groupe	grupo	группа	分组	グループ
+Group · {count}	Groupe · {count}	Grupo · {count}	Группа · {count}	分组 · {count}	グループ・{count}
+Group {count}	Groupe {count}	Grupo {count}	Группа {count}	分组 {count}	グループ{count}
+groups	groupes	grupos	группы	分组	グループ
+High shelf	Filtre en plateau aigu	Filtro shelving de agudos	Высокочастотный полочный фильтр	高频搁架滤波	ハイシェルフ
+Highlight the current line and auto-scroll	Mettre la ligne en cours en évidence et défiler automatiquement	Resaltar línea actual y desplazar automáticamente	Выделять текущую строку и прокручивать автоматически	高亮当前歌词行并自动滚动	現在の行を強調して自動スクロール
+Highlight the current line and follow it	Mettre la ligne en cours en évidence et la suivre	Resaltar línea actual y seguirla	Выделять текущую строку и следить за ней	高亮并跟随当前歌词行	現在の行を強調して追従
+How a pulled song feels	Sensations lors du déplacement d’un titre	Cómo se siente al arrastrar una canción	Отклик при перетаскивании трека	拖动歌曲时的手感	曲をドラッグしたときの感触
+How round panels, cards and menus are	Arrondi des panneaux, cartes et menus	Redondez de paneles, tarjetas y menús	Скругление панелей, карточек и меню	面板、卡片和菜单的圆角程度	パネル・カード・メニューの角丸
+I have it…	Je l’ai déjà…	Ya la tengo…	У меня это есть…	我已经有了…	持っています…
+In your library	Dans ta bibliothèque	En tu biblioteca	В твоей медиатеке	在你的音乐库中	ライブラリにあります
+JUMP BACK IN	REPRENDRE L’ÉCOUTE	VOLVER A ESCUCHAR	ВЕРНУТЬСЯ К МУЗЫКЕ	继续听音乐	続きを聴く
+Jump here	Aller ici	Ir aquí	Перейти сюда	跳转到这里	ここへ移動
+Jump over silent intros and gaps	Passer les introductions et pauses silencieuses	Saltar introducciones y pausas silenciosas	Пропускать тихие вступления и паузы	跳过安静的前奏和间隔	無音のイントロや間をスキップ
+Keep on	Continuer	Continuar	Продолжать	继续	続ける
+Keep the spotlight on the current line	Garder la ligne actuelle en évidence	Mantener resaltada la línea actual	Держать текущую строку выделенной	持续高亮当前歌词行	現在の行を強調し続ける
+Later	Plus tard	Más tarde	Позже	稍后	後で
+Latin	Latin	Latino	Латиница	拉丁字母	ラテン文字
+Legacy mesh gradient	Ancien dégradé maillé	Degradado de malla clásico	Старый сетчатый градиент	旧版网格渐变	旧メッシュグラデーション
+Limit to	Limiter à	Limitar a	Ограничить до	限制为	制限する
+Lines that follow the song	Des lignes qui suivent la musique	Líneas que siguen la canción	Строки в такт музыке	与歌曲同步的歌词行	曲に合わせて進む歌詞
+Lining up the lyrics	Synchronisation des paroles…	Sincronizando la letra…	Синхронизация текста…	正在对齐歌词…	歌詞の同期を調整中…
+Liquid glass	Verre liquide	Cristal líquido	Жидкое стекло	液态玻璃	リキッドグラス
+Look again ({count})	Rechercher à nouveau ({count})	Buscar de nuevo ({count})	Повторить поиск ({count})	重新搜索（{count}）	もう一度検索（{count}）
+Look through the whole library	Parcourir toute la bibliothèque	Explorar toda la biblioteca	Просмотреть всю медиатеку	浏览整个音乐库	ライブラリ全体を探す
+Looking for it…	Recherche en cours…	Buscando…	Поиск…	正在查找…	探しています…
+Looking…	Recherche…	Buscando…	Поиск…	正在搜索…	検索中…
