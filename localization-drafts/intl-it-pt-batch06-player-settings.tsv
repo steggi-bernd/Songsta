@@ -1,0 +1,200 @@
+Couldn't read that playlist	Impossibile leggere la playlist	Não foi possível ler a playlist
+Couldn't remove the folder	Impossibile rimuovere la cartella	Não foi possível remover a pasta
+Couldn't rename	Impossibile rinominare	Não foi possível renomear
+Couldn't reset app data	Impossibile azzerare i dati dell'app	Não foi possível redefinir os dados do aplicativo
+Couldn't save the list	Impossibile salvare la lista	Não foi possível salvar a lista
+Couldn't save the listening history	Impossibile salvare la cronologia di ascolto	Não foi possível salvar o histórico de reprodução
+Couldn't save the playlist	Impossibile salvare la playlist	Não foi possível salvar a playlist
+Couldn't save the user	Impossibile salvare l'utente	Não foi possível salvar o usuário
+Couldn't start {name}	Impossibile avviare {name}	Não foi possível iniciar {name}
+couldn't stop.	non riuscivi a smettere di ascoltare.	você não conseguia parar de ouvir.
+Couldn't update to Songsta {version}	Impossibile aggiornare Songsta alla versione {version}	Não foi possível atualizar o Songsta para {version}
+Count plays on the server	Conta gli ascolti sul server	Contar reproduções no servidor
+Counted on this phone only, since Replay arrived here.	Conteggiati solo su questo telefono, da quando è arrivato Replay.	Contados apenas neste celular desde que o Replay chegou aqui.
+Covers your files lack, album names and artist bios come from open databases: MusicBrainz, Cover Art Archive, iTunes Search and Wikipedia/Wikidata. Answers are cached on this device.	Le copertine mancanti, i nomi degli album e le biografie degli artisti arrivano da database aperti: MusicBrainz, Cover Art Archive, iTunes Search e Wikipedia/Wikidata. I risultati vengono salvati sul dispositivo.	Capas que faltam, nomes de álbuns e biografias de artistas vêm de bancos de dados abertos: MusicBrainz, Cover Art Archive, iTunes Search e Wikipedia/Wikidata. Os resultados ficam salvos neste dispositivo.
+Create	Crea	Criar
+Create a playlist with songs	Crea una playlist con i brani	Criar uma playlist com músicas
+Create an application	Crea un'applicazione	Criar um aplicativo
+Create folder	Crea cartella	Criar pasta
+Create playlist	Crea playlist	Criar playlist
+Create playlist or folder	Crea playlist o cartella	Criar playlist ou pasta
+Crossfade	Dissolvenza tra brani	Transição gradual
+Custom	Personalizzato	Personalizado
+Custom order	Ordine personalizzato	Ordem personalizada
+Cut crossfades and motion through the app	Riduci dissolvenze e animazioni nell'app	Reduzir transições e animações do aplicativo
+Cyrillic in Latin letters	Traslitterazione latina del cirillico	Cirílico em caracteres latinos
+Danger zone	Operazioni delicate	Área de risco
+Dashboard → API Keys	Pannello di controllo → Chiavi API	Painel → Chaves de API
+Date added	Data di aggiunta	Data de adição
+Delete	Elimina	Excluir
+Delete "{name}"?	Eliminare «{name}»?	Excluir “{name}”?
+Delete “{name}”?	Eliminare «{name}»?	Excluir “{name}”?
+Delete folder	Elimina cartella	Excluir pasta
+Delete playlist	Elimina playlist	Excluir playlist
+Delete smart playlist	Elimina playlist intelligente	Excluir playlist inteligente
+Denon and Marantz go off 30 seconds after the music has left them, unless you stop it or they're doing something else	Denon e Marantz si spengono 30 secondi dopo aver terminato la musica, a meno che tu non lo impedisca o stiano facendo altro.	Denon e Marantz desligam 30 segundos depois de parar de tocar música, a menos que você desative essa função ou estejam fazendo outra coisa.
+device	dispositivo	dispositivo
+Device at {host}	Dispositivo all'indirizzo {host}	Dispositivo em {host}
+devices	dispositivi	dispositivos
+Devices	Dispositivi	Dispositivos
+Didn't download	Download non riuscito	Não foi baixado
+Different	Diverso	Diferente
+Dim the other lines	Attenua le altre righe	Escurecer as outras linhas
+Disable repeat	Disattiva ripetizione	Desativar repetição
+Disable Shuffle	Disattiva riproduzione casuale	Desativar reprodução aleatória
+Disabled: uses the crossfade above	Disattivato: usa la dissolvenza impostata sopra	Desativado: usa a transição definida acima
+Discography	Discografia	Discografia
+Discography{value}	Discografia{value}	Discografia{value}
+Disconnect	Scollega	Desconectar
+Disconnect Jellyfin?	Scollegare Jellyfin?	Desconectar o Jellyfin?
+Disconnect the server?	Scollegare il server?	Desconectar o servidor?
+Discord Application ID	ID applicazione Discord	ID do aplicativo Discord
+Discord Developer Portal → New Application → name it → copy its Application ID (free)	Portale sviluppatori Discord → Nuova applicazione → assegna un nome → copia l'ID applicazione (gratuito)	Portal de desenvolvedores do Discord → Novo aplicativo → dê um nome → copie o ID do aplicativo (grátis)
+Discord doesn't know this Application ID	Discord non riconosce questo ID applicazione	O Discord não reconhece este ID de aplicativo
+Discord isn't running	Discord non è in esecuzione	O Discord não está aberto
+Discord refused the connection	Discord ha rifiutato la connessione	O Discord recusou a conexão
+Discord shows your application's name in “Listening to …”, so call it Songsta, for example.	Discord mostra il nome dell'applicazione in «In ascolto di …»: per esempio puoi chiamarla Songsta.	O Discord mostra o nome do seu aplicativo em “Ouvindo…”, então você pode chamá-lo de Songsta.
+Discord status	Stato Discord	Status do Discord
+Discord was closed	Discord è stato chiuso	O Discord foi fechado
+Dismiss	Ignora	Dispensar
+Dismiss notification	Nascondi notifica	Dispensar notificação
+Display	Aspetto	Tela
+Dissolve group	Sciogli il gruppo	Desfazer grupo
+Don't repeat suggestions	Non ripetere i suggerimenti	Não repetir sugestões
+Done	Fatto	Concluído
+download	scarica	baixar
+Download	Scarica	Baixar
+Download {title} for offline listening	Scarica {title} per l'ascolto offline	Baixar {title} para ouvir offline
+Download failed	Download non riuscito	Falha no download
+Download failed — try again	Download non riuscito: riprova	Falha no download: tente novamente
+Download failed: {value}	Download non riuscito: {value}	Falha no download: {value}
+Download for offline	Scarica per l'ascolto offline	Baixar para ouvir offline
+Download for offline — {count} {value} only on the server	Scarica per l'ascolto offline · {count} {value} solo sul server	Baixar para ouvir offline · {count} {value} apenas no servidor
+Download over mobile data	Scarica con dati mobili	Baixar usando dados móveis
+Download page	Pagina di download	Página de download
+Download removed	Download rimosso	Download removido
+Downloaded	Scaricato	Baixado
+Downloading	Download in corso	Baixando
+Downloading "{title}" into the folder	Download di «{title}» nella cartella	Baixando “{title}” para a pasta
+Downloading {count}	Download di {count} elementi	Baixando {count} itens
+Downloading {count} song{value} for offline listening	Download di {count} brani{value} per l'ascolto offline	Baixando {count} músicas{value} para ouvir offline
+Downloading {count}…	Download di {count} elementi…	Baixando {count} itens…
+Downloading {percent}%	Download: {percent}%	Baixando: {percent}%
+Downloading Songsta {version}	Download di Songsta {version}	Baixando Songsta {version}
+Downloading takes about 1.5 MB a minute of music, or wait for Wi-Fi.	Il download usa circa 1,5 MB per minuto di musica. Puoi anche aspettare il Wi-Fi.	O download usa cerca de 1,5 MB por minuto de música. Você também pode esperar pelo Wi-Fi.
+Downloading the files themselves takes about 10 MB a minute of music, or wait for Wi-Fi.	Scaricare i file originali usa circa 10 MB per minuto di musica. Puoi aspettare il Wi-Fi.	Baixar os arquivos originais usa cerca de 10 MB por minuto de música. Você pode esperar pelo Wi-Fi.
+Downloading…	Download in corso…	Baixando…
+downloads	download	downloads
+Downloads	Download	Downloads
+Downloads, folders, settings and your login go from this phone. Your server and your files stay as they are.	Download, cartelle, impostazioni e dati di accesso verranno rimossi dal telefono. Il server e i file musicali rimangono intatti.	Downloads, pastas, configurações e dados de acesso serão removidos deste celular. Seu servidor e seus arquivos de música não serão alterados.
+Drag onto a sidebar folder to file it there	Trascina su una cartella della barra laterale per spostare lì l'elemento	Arraste para uma pasta do painel lateral para guardar lá
+Drag to a playlist to add this song	Trascina su una playlist per aggiungere questo brano	Arraste para uma playlist para adicionar esta música
+Drag to change the width; double-click to reset it	Trascina per cambiare larghezza; doppio clic per ripristinarla	Arraste para mudar a largura; clique duas vezes para redefinir
+Drag to resize · double-click for the standard width	Trascina per ridimensionare · doppio clic per la larghezza standard	Arraste para redimensionar · dois cliques para voltar à largura padrão
+Drop a store's ZIP here to add the album to your library	Trascina qui lo ZIP acquistato da uno store per aggiungere l'album alla libreria	Arraste aqui o ZIP de uma loja para adicionar o álbum à biblioteca
+Drop some audio files in and rescan.	Aggiungi file audio e ripeti la scansione.	Adicione arquivos de áudio e faça outra verificação.
+DSD converted to FLAC by Jellyfin	DSD convertito in FLAC da Jellyfin	DSD convertido para FLAC pelo Jellyfin
+Duration	Durata	Duração
+e.g. 1234567890123456789	es. 1234567890123456789	ex.: 1234567890123456789
+e.g. rock	es. rock	ex.: rock
+Each ray is an hour of the day, as long as you listened then. Point at one.	Ogni raggio rappresenta un'ora; la lunghezza indica quanto hai ascoltato. Passa sopra per i dettagli.	Cada raio representa uma hora; seu comprimento mostra quanto você ouviu. Passe o cursor para ver os detalhes.
+Earlier	Prima	Anteriormente
+Edit album	Modifica album	Editar álbum
+Edit album…	Modifica album…	Editar álbum…
+Edit rules	Modifica regole	Editar regras
+Edit smart playlist	Modifica playlist intelligente	Editar playlist inteligente
+edited album	album modificato	álbum editado
+edited albums	album modificati	álbuns editados
+Either is fine, or both. You can add the other one later in Settings.	Puoi scegliere una delle due opzioni o entrambe. Potrai aggiungere l'altra più tardi in Impostazioni.	Você pode escolher uma opção ou as duas. Depois, poderá adicionar a outra em Configurações.
+Empty folder — right-click a playlist in the sidebar and move it here.	Cartella vuota: fai clic destro su una playlist nella barra laterale per spostarla qui.	Pasta vazia: clique com o botão direito numa playlist no painel lateral para movê-la para cá.
+Empty: on the same machine as your Jellyfin server, port 8196.	Lascia vuoto se il servizio è sullo stesso computer di Jellyfin, porta 8196.	Deixe vazio se o serviço roda no mesmo computador do Jellyfin, porta 8196.
+Empty: on your Jellyfin server	Lascia vuoto se il servizio è sul server Jellyfin	Deixe vazio se o serviço roda no seu servidor Jellyfin
+Enable repeat	Attiva ripetizione	Ativar repetição
+Enable repeat one	Attiva ripetizione del brano	Ativar repetição de uma música
+Enable Shuffle	Attiva riproduzione casuale	Ativar reprodução aleatória
+Enabled: transitions decided per track pair	Attivo: transizioni decise per ogni coppia di brani	Ativado: transições definidas para cada par de músicas
+End the second stream	Termina il secondo flusso	Encerrar a segunda reprodução
+Enter another address	Inserisci un altro indirizzo	Digitar outro endereço
+Enter Full screen	Passa a schermo intero	Entrar em tela cheia
+Entered by you	Inserito da te	Digitado por você
+Equalizer on	Equalizzatore attivo	Equalizador ligado
+Erase library, playlists, history and settings on this device	Elimina libreria, playlist, cronologia e impostazioni da questo dispositivo	Apagar biblioteca, playlists, histórico e configurações deste dispositivo
+Even out loud and quiet	Uniforma i passaggi forti e piano	Equilibrar partes altas e baixas
+Evened out	Volume uniformato	Volume equilibrado
+Evening	Sera	Noite
+Every song as loud as it was mastered	Ogni brano al volume originale	Cada música no volume original
+Every song is on an album	Tutti i brani sono associati a un album	Todas as músicas estão em álbuns
+Every song on an album, no artist under two spellings, no album in parts, no song twice on this computer, and every album has its cover, year and genre.	Ogni brano in un album, nessun artista duplicato con grafie diverse, nessun album diviso o brano doppio sul computer. Ogni album ha copertina, anno e genere.	Todas as músicas em álbuns, sem artistas duplicados por grafias diferentes, sem álbuns divididos ou músicas duplicadas neste computador. Cada álbum tem capa, ano e gênero.
+Everything	Tutto	Tudo
+Everything here is muted	Tutti i brani qui sono esclusi	Todas as músicas aqui foram silenciadas
+Everything imported · {count} song{value}	Importazione completata · {count} brani{value}	Importação concluída · {count} músicas{value}
+Everything is up to date	È tutto aggiornato	Tudo está atualizado
+Exit Full screen	Esci da schermo intero	Sair da tela cheia
+Expand Your Library	Espandi La tua libreria	Expandir Sua biblioteca
+Explore	Esplora	Explorar
+Export as M3U…	Esporta come M3U…	Exportar como M3U…
+Export data	Esporta dati	Exportar dados
+Export failed	Esportazione non riuscita	Falha na exportação
+Export the playlist	Esporta la playlist	Exportar playlist
+Export…	Esporta…	Exportar…
+Fade {seconds} s	Dissolvenza {seconds} s	Transição {seconds} s
+Fade between songs	Dissolvenza tra brani	Transição entre músicas
+Fetches new versions in the background. They install when you close Songsta.	Scarica nuove versioni in background; vengono installate quando chiudi Songsta.	Baixa novas versões em segundo plano; elas são instaladas quando você fecha o Songsta.
+Fetches new versions on Wi-Fi. Android asks you before one goes in.	Scarica nuove versioni tramite Wi-Fi. Android chiede conferma prima di installarle.	Baixa versões novas pelo Wi-Fi. O Android pede confirmação antes de instalar.
+Fetching the verses	Ricerca del testo…	Buscando os versos…
+file	file	arquivo
+files	file	arquivos
+Fill glass surfaces solid instead of blurring	Rendi opache le superfici in vetro invece di sfocarle	Usar superfícies sólidas em vez do efeito de vidro desfocado
+Fills itself from rules	Si riempie automaticamente in base alle regole	É preenchida automaticamente pelas regras
+Filter {tab}	Filtra {tab}	Filtrar {tab}
+Filter non-music audio	Escludi audio non musicale	Filtrar áudio que não é música
+Find a song in this list	Trova un brano in questa lista	Encontrar música nesta lista
+Find in this list	Cerca in questa lista	Buscar nesta lista
+Find something to download	Trova qualcosa da scaricare	Encontre algo para baixar
+Find something to like	Trova qualcosa che ti piaccia	Encontre algo para curtir
+Finding the right words	Cerchiamo il testo giusto…	Procurando a letra certa…
+Finding the words	Ricerca del testo…	Procurando a letra…
+Fine-tune timing	Regola la sincronizzazione	Ajustar a sincronização
+Fine-tune timing…	Regola la sincronizzazione…	Ajustar a sincronização…
+Five you	Cinque brani che	Cinco que você
+Flat	Piatto	Plano
+folder	cartella	pasta
+Folder	Cartella	Pasta
+Folder missing — check the drive, or remove it from Songsta	Cartella non trovata: controlla l'unità o rimuovila da Songsta	Pasta não encontrada: confira a unidade ou remova a pasta do Songsta
+Folder name	Nome cartella	Nome da pasta
+folders	cartelle	pastas
+Folders on this device	Cartelle su questo dispositivo	Pastas neste dispositivo
+Folders on this phone · {count}	Cartelle su questo telefono · {count}	Pastas neste celular · {count}
+Follow the system	Segui il sistema	Seguir o sistema
+Following the system default	Impostazione predefinita del sistema	Seguindo o padrão do sistema
+For this phone and whatever is connected to it. Speakers on your network have their own sound settings.	Vale per questo telefono e ciò che gli è collegato. Gli altoparlanti di rete hanno impostazioni audio proprie.	Vale para este celular e os aparelhos conectados a ele. Alto-falantes de rede têm suas próprias configurações de som.
+Forget the file — your decisions stay for the next export	Dimentica il file: le tue decisioni rimangono per la prossima esportazione	Esquecer o arquivo: suas escolhas são mantidas para a próxima exportação
+Format	Formato	Formato
+Found {name}	Trovato {name}	Encontrado {name}
+Frequency response	Risposta in frequenza	Resposta de frequência
+Friday	Venerdì	Sexta-feira
+From {date}: {holds}.	Dal {date}: {holds}.	Desde {date}: {holds}.
+From a file exported on a phone, in place of what's here	Da un file esportato su un telefono, al posto dei dati attuali	De um arquivo exportado no celular, substituindo os dados atuais
+From an M3U file — foobar2000, VLC …	Da un file M3U — foobar2000, VLC…	De um arquivo M3U — foobar2000, VLC…
+From its export — the songs you have, in order	Da un'esportazione: i brani che possiedi, nel loro ordine	Da uma exportação: as músicas que você tem, na ordem original
+From your application's General Information page	Dalla pagina General Information della tua applicazione	Da página General Information do seu aplicativo
+Gapless playback	Riproduzione senza interruzioni	Reprodução sem intervalos
+Gestures	Gesti	Gestos
+Get started	Inizia	Começar
+GitHub didn't answer. Try again later.	GitHub non risponde. Riprova più tardi.	O GitHub não responde. Tente novamente mais tarde.
+Give it another try.	Riprova.	Tente novamente.
+Give your folder a name.	Dai un nome alla cartella.	Dê um nome à pasta.
+Give your group a name.	Dai un nome al gruppo.	Dê um nome ao grupo.
+Give your playlist a name.	Dai un nome alla playlist.	Dê um nome à playlist.
+Gives less and kicks less; let go it comes home without going past it	Movimento più morbido e meno rimbalzi; quando lasci torna a posto senza superarlo	O movimento é mais suave e quica menos; ao soltar, volta ao lugar sem passar do ponto
+Go back	Indietro	Voltar
+Go forward	Avanti	Avançar
+Go to {album}	Vai a {album}	Ir para {album}
+Go to {name}	Vai a {name}	Ir para {name}
+Go to album	Vai all'album	Ir para o álbum
+Go to another song while one is on repeat, and the whole list repeats from there	Se cambi brano mentre ne stai ripetendo uno, viene ripetuta l'intera lista a partire dal nuovo brano.	Se mudar de música durante a repetição de uma só, a lista inteira será repetida a partir dessa música.
+Go to artist	Vai all'artista	Ir para o artista
+Good afternoon	Buon pomeriggio	Boa tarde
+Good evening	Buonasera	Boa noite
+Good morning	Buongiorno	Bom dia
+Green	Verde	Verde
