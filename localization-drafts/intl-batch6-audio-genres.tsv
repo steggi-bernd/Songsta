@@ -1,0 +1,79 @@
+Sound	Son	Sonido	Звук	声音	サウンド
+Sound analysis	Analyse sonore	Análisis de sonido	Анализ звука	声音分析	音響解析
+Loudness and sound	Volume perçu et son	Sonoridad y sonido	Громкость и звук	响度与音质	音量感とサウンド
+Volume leveling	Égalisation du volume	Normalización del volumen	Выравнивание громкости	音量均衡	音量の均一化
+Volume on the device itself	Volume réglé sur l’appareil	Volumen del propio dispositivo	Громкость на самом устройстве	在设备上调节音量	デバイス本体で音量を調整
+Volume up	Monter le volume	Subir volumen	Увеличить громкость	调高音量	音量を上げる
+Volume {round} percent	Volume : {round} %	Volumen: {round} %	Громкость: {round} %	音量：{round}%	音量：{round}%
+Equalizer on	Égaliseur activé	Ecualizador activado	Эквалайзер включён	均衡器已开启	イコライザーがオンです
+Frequency response	Réponse en fréquence	Respuesta de frecuencia	Частотная характеристика	频率响应	周波数特性
+Parametric · AutoEQ	Paramétrique · AutoEQ	Paramétrico · AutoEQ	Параметрический · AutoEQ	参数均衡 · AutoEQ	パラメトリック・AutoEQ
+Parametric, {peqName}	Paramétrique, {peqName}	Paramétrico, {peqName}	Параметрический, {peqName}	参数均衡：{peqName}	パラメトリック：{peqName}
+AutoEQ profile loaded: {name}	Profil AutoEQ chargé : {name}	Perfil AutoEQ cargado: {name}	Профиль AutoEQ загружен: {name}	已加载 AutoEQ 配置：{name}	AutoEQプロファイルを読み込みました：{name}
+10-band EQ, or a parametric EQ with AutoEQ headphone corrections	Égaliseur 10 bandes ou égaliseur paramétrique avec correction casque AutoEQ	Ecualizador de 10 bandas o paramétrico con corrección de auriculares AutoEQ	10-полосный эквалайзер или параметрический эквалайзер с коррекцией наушников AutoEQ	10 段均衡器，或带 AutoEQ 耳机校正的参数均衡器	10バンドEQ、またはAutoEQのヘッドホン補正に対応したパラメトリックEQ
+Leveling target	Niveau cible	Nivel objetivo	Целевой уровень	目标响度	目標音量
+Even out loud and quiet	Équilibrer les passages forts et faibles	Equilibrar partes fuertes y suaves	Сгладить разницу между громкими и тихими фрагментами	平衡响亮与轻柔的片段	大きな音と小さな音を均等にする
+Evened out	Volume égalisé	Volumen nivelado	Громкость выровнена	音量已均衡	音量を均一化
+Every song as loud as it was mastered	Respecter le volume d’origine de chaque titre	Cada canción a su volumen original	Сохранять исходную громкость каждого трека	按每首歌原始响度播放	曲ごとの元の音量を保つ
+Keep the player bar free of the volume slider	Masquer le curseur de volume de la barre de lecture	Ocultar volumen en la barra del reproductor	Скрыть ползунок громкости на панели плеера	在播放器栏隐藏音量滑块	プレーヤーバーの音量スライダーを隠す
+This player's volume is set on the player	Le volume de ce lecteur se règle directement dessus	El volumen de este reproductor se ajusta en el propio dispositivo	Громкость этого плеера регулируется на самом устройстве	此播放器的音量需在设备上调节	このプレーヤーの音量は本体で調整します
+24-bit output	Sortie 24 bits	Salida de 24 bits	24-битный вывод	24 位输出	24ビット出力
+Hi-Res lossless	Haute résolution sans perte	Alta resolución sin pérdida	Hi-Res без потерь	高解析度无损	ハイレゾ・ロスレス
+A small copy (128 kbps) that saves data	Une version légère (128 kb/s) pour économiser les données	Una copia ligera (128 kbps) para ahorrar datos	Облегчённая версия (128 кбит/с) для экономии трафика	节省流量的轻量版本（128 kbps）	通信量を抑える軽量版（128 kbps）
+A small copy, 128 kbps, that saves data	Une version légère à 128 kb/s pour économiser les données	Una copia ligera a 128 kbps para ahorrar datos	Облегчённая версия 128 кбит/с для экономии трафика	节省流量的 128 kbps 轻量版本	通信量を抑える128 kbpsの軽量版
+Pitch-preserving tempo for everything you play	Changer le tempo sans modifier la hauteur des notes	Cambiar el tempo sin alterar el tono	Менять темп без изменения высоты звука	调整播放速度而不改变音高	音程を変えずに再生速度を調整
+Tempo	Tempo	Tempo	Темп	节奏	テンポ
+Tempo window	Plage de tempo	Rango de tempo	Диапазон темпа	节奏范围	テンポ範囲
+Tempo window ± {bpm} BPM	Plage de tempo ± {bpm} BPM	Rango de tempo ± {bpm} BPM	Диапазон темпа ± {bpm} BPM	节奏范围 ± {bpm} BPM	テンポ範囲 ± {bpm} BPM
+Same tempo	Même tempo	Mismo tempo	Тот же темп	相同节奏	同じテンポ
+Same key	Même tonalité	Misma tonalidad	Та же тональность	相同调性	同じキー
+Same energy	Même énergie	Misma energía	Та же энергия	相近能量	同じエネルギー
+Energy	Énergie	Energía	Энергия	能量	エネルギー
+Key	Tonalité	Tonalidad	Тональность	调性	キー
+Correct the key	Corriger la tonalité	Corregir tonalidad	Исправить тональность	修正调性	キーを修正
+Give the key back to the measurement	Rétablir la tonalité mesurée	Restaurar tonalidad detectada	Вернуть определённую тональность	恢复分析测得的调性	解析で検出したキーに戻す
+Measured: {key}	Mesuré : {key}	Detectado: {key}	Определено: {key}	检测结果：{key}	解析結果：{key}
+The key is now {key}	La tonalité est maintenant {key}	La tonalidad ahora es {key}	Теперь тональность: {key}	调性现为 {key}	キーを{key}に変更しました
+Pick the song's key on the Camelot wheel	Choisis la tonalité du titre sur la roue de Camelot	Elige la tonalidad en la rueda Camelot	Выбери тональность трека на колесе Камелота	在 Camelot 调性轮上选择歌曲调性	Camelotホイールで曲のキーを選択
+The Camelot wheel: pick a key to find songs that fit it	Roue de Camelot : choisis une tonalité pour trouver des titres qui s’accordent	Rueda Camelot: elige una tonalidad para encontrar canciones compatibles	Колесо Камелота: выбери тональность, чтобы найти подходящие треки	Camelot 调性轮：选择调性，查找相配的歌曲	Camelotホイールでキーを選び、合う曲を探します
+Neighbour {key}	Tonalité voisine : {key}	Tonalidad vecina: {key}	Соседняя тональность: {key}	相邻调性：{key}	隣のキー：{key}
+Partner {key}	Tonalité compatible : {key}	Tonalidad compatible: {key}	Совместимая тональность: {key}	相容调性：{key}	相性のよいキー：{key}
+The key on the Camelot wheel	La tonalité sur la roue de Camelot	Tonalidad en la rueda Camelot	Тональность на колесе Камелота	Camelot 调性轮上的调性	Camelotホイールのキー
+The analysis heard another key? Pick the right one on the wheel	L’analyse a choisi une autre tonalité ? Corrige-la sur la roue.	¿El análisis detectó otra tonalidad? Elige la correcta en la rueda.	Анализ определил другую тональность? Выбери нужную на колесе.	分析检测到不同的调性？可在调性轮上选择正确的。	解析で違うキーが検出されましたか？ホイールで正しいキーを選べます。
+Flow (tempo, key, energy)	Enchaînement (tempo, tonalité, énergie)	Flujo (tempo, tonalidad, energía)	Плавный поток (темп, тональность, энергия)	流畅衔接（节奏、调性、能量）	曲の流れ（テンポ・キー・エネルギー）
+Order the songs so each leads into the next: close in key and tempo, the energy rising and easing off	Organiser les titres pour qu’ils s’enchaînent naturellement : tonalités et tempos proches, énergie qui monte et redescend	Ordenar las canciones para que encajen: tonalidades y tempos cercanos, con subidas y bajadas de energía	Выстроить треки так, чтобы они плавно переходили друг в друга: близкий темп и тональность, с подъёмами и спадами энергии	按调性和节奏相近的顺序排列歌曲，让能量自然起伏、衔接更顺畅	キーとテンポが近い曲をつなぎ、盛り上がりと落ち着きに流れを作ります
+Klingt wie finds the songs in your library that sound like the one playing: by tempo, key and energy.	« Klingt wie » trouve dans ta bibliothèque des titres proches de celui qui joue, selon le tempo, la tonalité et l’énergie.	«Klingt wie» encuentra en tu biblioteca canciones parecidas a la que suena según el tempo, la tonalidad y la energía.	«Klingt wie» ищет в медиатеке треки, похожие на текущий по темпу, тональности и энергии.	“Klingt wie”根据节奏、调性和能量，在音乐库中寻找与当前歌曲相似的曲目。	「Klingt wie」はテンポ・キー・エネルギーを手がかりに、再生中の曲に近い曲をライブラリから探します。
+Sounds like	Ressemble à	Suena como	Похоже на	听起来像	似たサウンド
+SOUNDS LIKE	RESSEMBLE À	SUENA COMO	ПОХОЖЕ НА	听起来像	似たサウンド
+Sounds like this one	Comme ce titre	Como esta canción	Похоже на этот трек	与这首歌相似	この曲に似たサウンド
+Sounds like {name}	Dans le style de {name}	Suena como {name}	Похоже на {name}	听起来像 {name}	{name}に似たサウンド
+Sounds like {title}	Dans le style de {title}	Suena como {title}	Похоже на {title}	听起来像 {title}	{title}に似たサウンド
+Made from how it sounds	Créé à partir du son	Creado según su sonido	Подобрано по звучанию	根据声音特征生成	音の特徴から作成
+Songs that sound like theirs, by tempo and key	Des titres qui leur ressemblent par le tempo et la tonalité	Canciones parecidas por tempo y tonalidad	Похожие по темпу и тональности треки	节奏与调性相近的歌曲	テンポとキーが近い曲
+Sort flowing	Trier pour un enchaînement fluide	Ordenar para que fluya	Выстроить плавно	按流畅衔接排序	曲の流れに沿って並べる
+Flowing	Fluide	Fluido	Плавно	流畅	なめらかな流れ
+calm	calme	tranquilo	спокойно	平静	穏やか
+lively	dynamique	animado	энергично	活跃	にぎやか
+Mood	Ambiance	Estado de ánimo	Настроение	心情	ムード
+Similar	Similaire	Similar	Похожее	相似	似ている
+Calmer	Plus calme	Más tranquilo	Спокойнее	更舒缓	もっと穏やか
+No song of yours in {key} is measured yet	Aucun de tes titres en {key} n’a encore été analysé	Aún no se ha analizado ninguna canción tuya en {key}	Ни один твой трек в тональности {key} пока не проанализирован	你还没有分析出调性为 {key} 的歌曲	キーが{key}の曲はまだ解析されていません
+Nothing in your library fits this closely. Try another way to match, or a wider tempo window under Advanced.	Aucun titre de ta bibliothèque ne correspond aussi précisément. Essaie un autre critère ou élargis la plage de tempo dans les options avancées.	No hay canciones que encajen tan bien. Prueba otro criterio o amplía el rango de tempo en Opciones avanzadas.	В медиатеке нет настолько близких совпадений. Попробуй другой критерий или расширь диапазон темпа в дополнительных настройках.	音乐库中暂时没有如此接近的歌曲。可尝试其他匹配方式，或在高级设置中扩大节奏范围。	ライブラリに十分近い曲がありません。別の条件を試すか、詳細設定でテンポ範囲を広げてください。
+No songs in this genre	Aucun titre dans ce genre	No hay canciones de este género	Нет треков этого жанра	此流派中没有歌曲	このジャンルの曲はありません
+Smarter album genres	Genres d’albums plus précis	Géneros de álbumes más precisos	Более точные жанры альбомов	更准确的专辑流派	アルバムのジャンルをより正確に
+Your genres, sorted	Tes genres, bien organisés	Tus géneros, organizados	Твои жанры по порядку	整理好的音乐流派	ジャンルを整理
+genre	genre	género	жанр	流派	ジャンル
+genres	genres	géneros	жанры	流派	ジャンル
+They stay out of the genre pages and genre mixes.	Ils n’apparaissent ni dans les pages de genres ni dans les mixes de genres.	No aparecen en las páginas ni en los mixes de géneros.	Они не попадают на страницы жанров и в жанровые миксы.	它们不会出现在流派页面或流派混音中。	ジャンルページやジャンルミックスには表示されません。
+None of the songs in your library carry this genre anymore.	Aucun titre de ta bibliothèque n’a plus ce genre.	Ya no hay canciones de tu biblioteca con este género.	В медиатеке больше нет треков этого жанра.	音乐库中已没有属于此流派的歌曲。	ライブラリにこのジャンルの曲はもうありません。
+This song can't be measured	Ce titre ne peut pas être analysé	Esta canción no se puede analizar	Этот трек нельзя проанализировать	无法分析这首歌	この曲は解析できません
+This song isn't measured yet	Ce titre n’a pas encore été analysé	Esta canción aún no está analizada	Этот трек ещё не проанализирован	这首歌尚未分析	この曲はまだ解析されていません
+Measured from the audio by the sound analysis	Mesuré à partir de l’audio par l’analyse sonore	Medido a partir del audio mediante el análisis de sonido	Получено из аудио при анализе звучания	根据音频内容分析得出	音声解析で音源から測定しました
+The media analysis is paused (Settings → Library). Let it go on to measure your songs.	L’analyse audio est en pause. Reprends-la dans Paramètres → Bibliothèque pour analyser tes titres.	El análisis de audio está en pausa. Reanúdalo en Ajustes → Biblioteca para analizar tus canciones.	Анализ аудио приостановлен. Продолжи его в разделе «Настройки → Медиатека».	音频分析已暂停。请在“设置 → 音乐库”中恢复，以分析歌曲。	音声解析が一時停止しています。「設定 → ライブラリ」で再開すると曲を解析できます。
+The media analysis measures your songs in the background (Settings → Library). Try again in a little while, or pick another song.	L’analyse audio tourne en arrière-plan (Paramètres → Bibliothèque). Réessaie plus tard ou choisis un autre titre.	El análisis de audio sigue en segundo plano (Ajustes → Biblioteca). Prueba más tarde o elige otra canción.	Анализ аудио идёт в фоне (Настройки → Медиатека). Попробуй позже или выбери другой трек.	音频分析正在后台进行（设置 → 音乐库）。请稍后重试或选择其他歌曲。	音声解析はバックグラウンドで進行中です（設定 → ライブラリ）。少ししてから試すか、別の曲を選んでください。
+Songsta measures tempo and key on your computer (Settings → Media analysis) and shares them with this phone through your sync service.	Songsta analyse le tempo et la tonalité sur ton ordinateur (Paramètres → Analyse audio) et transmet les résultats à ton téléphone via le service de synchronisation.	Songsta analiza el tempo y la tonalidad en el ordenador (Ajustes → Análisis de audio) y envía los resultados al teléfono mediante el servicio de sincronización.	Songsta анализирует темп и тональность на компьютере (Настройки → Анализ аудио) и отправляет результаты на телефон через сервис синхронизации.	Songsta 会在电脑上分析节奏和调性（设置 → 音频分析），再通过同步服务发送到手机。	Songstaはパソコンでテンポとキーを解析し（設定 → 音声解析）、同期サービスを通じてスマートフォンに共有します。
+Key · {camelot} on the wheel	Tonalité · {camelot} sur la roue	Tonalidad · {camelot} en la rueda	Тональность · {camelot} на колесе	调性轮上的 {camelot}	キー・ホイール上の{camelot}
+Key · {camelot} · set by you	Tonalité · {camelot} · choisie par toi	Tonalidad · {camelot} · elegida por ti	Тональность · {camelot} · выбрана вручную	调性 · {camelot} · 由你设置	キー・{camelot}・手動設定
+Back to {key}	Retour à {key}	Volver a {key}	Вернуться к {key}	返回 {key}	{key}に戻す
+in {key}	en {key}	en {key}	в тональности {key}	调性为 {key}	キーは{key}
+in {key} and next to it	en {key} et les tonalités voisines	en {key} y tonalidades cercanas	в тональности {key} и соседних	{key} 及其相邻调性	{key}と近いキー
