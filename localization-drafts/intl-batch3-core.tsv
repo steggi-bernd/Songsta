@@ -1,0 +1,113 @@
+Enable Shuffle	Activer la lecture aléatoire	Activar aleatorio	Включить перемешивание	开启随机播放	シャッフルをオンにする
+Shuffle play	Lecture aléatoire	Reproducción aleatoria	Случайное воспроизведение	随机播放	シャッフル再生
+Enable repeat	Activer la répétition	Activar repetición	Включить повтор	开启循环播放	リピートをオンにする
+Enable repeat one	Répéter ce titre	Repetir una canción	Повторять один трек	单曲循环	1曲リピートをオンにする
+Repeat one	Répéter un titre	Repetir una canción	Повтор одного трека	单曲循环	1曲リピート
+Show all	Tout afficher	Mostrar todo	Показать всё	显示全部	すべて表示
+Show as list	Afficher en liste	Mostrar como lista	Показать списком	列表显示	リスト表示
+Show as tiles	Afficher en grille	Mostrar como cuadrícula	Показать плитками	网格显示	グリッド表示
+Show discography	Afficher la discographie	Mostrar discografía	Показать дискографию	显示作品目录	ディスコグラフィーを表示
+Show fewer	Afficher moins	Mostrar menos	Показать меньше	收起部分	表示を減らす
+Show less	Afficher moins	Mostrar menos	Показать меньше	收起	表示を減らす
+Show more	Afficher plus	Mostrar más	Показать больше	显示更多	もっと見る
+Show in folder	Afficher dans le dossier	Mostrar en carpeta	Показать в папке	在文件夹中显示	フォルダー内で表示
+Show them	Les afficher	Mostrarlos	Показать их	显示它们	表示する
+Hide volume bar	Masquer la barre de volume	Ocultar barra de volumen	Скрыть ползунок громкости	隐藏音量条	音量バーを非表示
+Sort by	Trier par	Ordenar por	Сортировать по	排序方式	並び替え
+Local music	Musique locale	Música local	Локальная музыка	本地音乐	ローカル音楽
+Local Music	Musique locale	Música local	Локальная музыка	本地音乐	ローカル音楽
+Local music folders	Dossiers de musique locale	Carpetas de música local	Папки с локальной музыкой	本地音乐文件夹	ローカル音楽フォルダー
+Music and server	Musique et serveur	Música y servidor	Музыка и сервер	音乐与服务器	音楽とサーバー
+Format	Format	Formato	Формат	格式	形式
+Sync & devices	Synchronisation et appareils	Sincronización y dispositivos	Синхронизация и устройства	同步与设备	同期とデバイス
+Sync and devices	Synchronisation et appareils	Sincronización y dispositivos	Синхронизация и устройства	同步与设备	同期とデバイス
+Sync service	Service de synchronisation	Servicio de sincronización	Сервис синхронизации	同步服务	同期サービス
+Sync service address	Adresse du service de synchronisation	Dirección del servicio de sincronización	Адрес сервиса синхронизации	同步服务地址	同期サービスのアドレス
+Synced	Synchronisé	Sincronizado	Синхронизировано	已同步	同期済み
+Synced lyrics	Paroles synchronisées	Letras sincronizadas	Синхронизированный текст	同步歌词	同期歌詞
+Server sync	Synchronisation du serveur	Sincronización del servidor	Синхронизация сервера	服务器同步	サーバー同期
+Server not reachable	Serveur inaccessible	Servidor inaccesible	Сервер недоступен	服务器无法访问	サーバーに接続できません
+Server: can't be reached	Serveur : inaccessible	Servidor: inaccesible	Сервер: недоступен	服务器：无法连接	サーバー：接続できません
+Server: reached	Serveur : accessible	Servidor: accesible	Сервер: доступен	服务器：已连接	サーバー：接続済み
+No sync service is linked	Aucun service de synchronisation connecté	No hay servicio de sincronización conectado	Сервис синхронизации не подключён	未连接同步服务	同期サービスが接続されていません
+No sync service found	Aucun service de synchronisation trouvé	No se encontró servicio de sincronización	Сервис синхронизации не найден	未找到同步服务	同期サービスが見つかりません
+No sync service found on your Jellyfin server	Aucun service de synchronisation trouvé sur ton serveur Jellyfin	No se encontró servicio de sincronización en tu servidor Jellyfin	На сервере Jellyfin не найден сервис синхронизации	未在 Jellyfin 服务器上找到同步服务	Jellyfinサーバーに同期サービスが見つかりません
+Looking for the sync service…	Recherche du service de synchronisation…	Buscando servicio de sincronización…	Поиск сервиса синхронизации…	正在查找同步服务…	同期サービスを検索中…
+The sync service needs an update	Le service de synchronisation doit être mis à jour	El servicio de sincronización necesita actualizarse	Сервис синхронизации нужно обновить	同步服务需要更新	同期サービスの更新が必要です
+The sync service refused this login	Le service de synchronisation a refusé la connexion	El servicio de sincronización rechazó el acceso	Сервис синхронизации отклонил вход	同步服务拒绝登录	同期サービスがログインを拒否しました
+Disconnect the server?	Se déconnecter du serveur ?	¿Desconectar el servidor?	Отключиться от сервера?	断开服务器连接？	サーバーとの接続を解除しますか？
+No music on the server yet.	Pas encore de musique sur le serveur.	Todavía no hay música en el servidor.	На сервере пока нет музыки.	服务器上还没有音乐。	サーバーに音楽がまだありません。
+No music on this server	Aucune musique sur ce serveur	No hay música en este servidor	На этом сервере нет музыки	此服务器上没有音乐	このサーバーに音楽がありません
+Loading the server's library…	Chargement de la bibliothèque du serveur…	Cargando biblioteca del servidor…	Загрузка медиатеки сервера…	正在加载服务器音乐库…	サーバーのライブラリを読み込み中…
+Music facts	Infos musicales	Datos musicales	Сведения о музыке	音乐信息	音楽の情報
+Media analysis	Analyse audio	Análisis de audio	Анализ аудио	音频分析	音声解析
+Start the analysis	Lancer l’analyse	Iniciar análisis	Начать анализ	开始分析	解析を開始
+Measure new songs by themselves	Analyser automatiquement les nouveaux titres	Analizar automáticamente canciones nuevas	Автоматически анализировать новые треки	自动分析新歌曲	新しい曲を自動解析
+Measure your music once?	Analyser ta musique ?	¿Analizar tu música?	Проанализировать твою музыку?	分析你的音乐？	音楽を解析しますか？
+Network & privacy	Réseau et confidentialité	Red y privacidad	Сеть и конфиденциальность	网络与隐私	ネットワークとプライバシー
+Support Songsta	Soutenir Songsta	Apoyar Songsta	Поддержать Songsta	支持 Songsta	Songstaを応援
+Search again	Relancer la recherche	Buscar de nuevo	Искать снова	重新搜索	もう一度検索
+Search albums	Rechercher des albums	Buscar álbumes	Поиск альбомов	搜索专辑	アルバムを検索
+Search for songs	Rechercher des titres	Buscar canciones	Искать треки	搜索歌曲	曲を検索
+Search for something to play	Chercher quelque chose à écouter	Buscar algo para escuchar	Найти что послушать	找点音乐来听	聴きたい曲を探す
+Search in Liked Songs	Rechercher dans les favoris	Buscar en canciones favoritas	Поиск по любимым трекам	搜索喜欢的歌曲	お気に入りの曲を検索
+Search in this playlist	Rechercher dans cette playlist	Buscar en esta lista	Поиск по этому плейлисту	搜索此播放列表	このプレイリストを検索
+Search settings	Rechercher dans les paramètres	Buscar en ajustes	Поиск по настройкам	搜索设置	設定を検索
+Search suggestions	Suggestions de recherche	Sugerencias de búsqueda	Поисковые подсказки	搜索建议	検索候補
+Search this server	Rechercher sur ce serveur	Buscar en este servidor	Поиск на этом сервере	搜索此服务器	このサーバーを検索
+Search your files	Rechercher dans tes fichiers	Buscar en tus archivos	Поиск по файлам	搜索你的文件	ファイルを検索
+Recent searches	Recherches récentes	Búsquedas recientes	Недавние поиски	最近搜索	最近の検索
+Recently added	Ajouté récemment	Añadido recientemente	Недавно добавлено	最近添加	最近追加した曲
+Queue	File d’attente	Cola	Очередь	播放队列	再生キュー
+Open queue	Ouvrir la file d’attente	Abrir cola	Открыть очередь	打开播放队列	再生キューを開く
+Remove from queue	Retirer de la file d’attente	Quitar de la cola	Убрать из очереди	从队列中移除	再生キューから削除
+Next in queue	Prochain titre	Siguiente en cola	Следующий в очереди	队列中的下一首	キューの次の曲
+Songs added to queue	Titres ajoutés à la file d’attente	Canciones añadidas a la cola	Треки добавлены в очередь	歌曲已加入队列	曲を再生キューに追加しました
+Playlist added to queue	Playlist ajoutée à la file d’attente	Lista añadida a la cola	Плейлист добавлен в очередь	播放列表已加入队列	プレイリストを再生キューに追加しました
+Liked Songs added to queue	Titres favoris ajoutés à la file d’attente	Canciones favoritas añadidas a la cola	Любимые треки добавлены в очередь	喜欢的歌曲已加入队列	お気に入りの曲を再生キューに追加しました
+Your queue is empty.	Ta file d’attente est vide.	Tu cola está vacía.	Очередь пуста.	播放队列为空。	再生キューは空です。
+Lyrics	Paroles	Letra	Текст песни	歌词	歌詞
+In lyrics	Dans les paroles	En la letra	В тексте песни	在歌词中	歌詞内
+Lyrics are coming together	Les paroles se préparent	Preparando la letra	Подготовка текста песни	正在整理歌词	歌詞を準備中
+Lyrics are loading	Chargement des paroles	Cargando letra	Загрузка текста песни	正在加载歌词	歌詞を読み込み中
+Show Cyrillic lyrics in Latin letters too	Afficher aussi la translittération des paroles cyrilliques	Mostrar también la transliteración de la letra en cirílico	Показывать транслитерацию кириллицы	同时显示西里尔歌词的拉丁转写	キリル文字の歌詞をローマ字でも表示
+No artist	Aucun artiste	Sin artista	Нет исполнителя	未知艺人	アーティスト不明
+Various Artists	Artistes divers	Varios artistas	Разные исполнители	群星	さまざまなアーティスト
+Go to artist	Voir l’artiste	Ir al artista	Перейти к исполнителю	前往艺人页面	アーティストを開く
+Go to album	Voir l’album	Ir al álbum	Перейти к альбому	前往专辑页面	アルバムを開く
+Edit album	Modifier l’album	Editar álbum	Изменить альбом	编辑专辑	アルバムを編集
+Edit album…	Modifier l’album…	Editar álbum…	Изменить альбом…	编辑专辑…	アルバムを編集…
+Edit Liked Songs	Modifier les titres favoris	Editar canciones favoritas	Изменить любимые треки	编辑喜欢的歌曲	お気に入りの曲を編集
+Edit rules	Modifier les règles	Editar reglas	Изменить правила	编辑规则	ルールを編集
+Edit smart playlist	Modifier la playlist intelligente	Editar lista inteligente	Изменить умный плейлист	编辑智能播放列表	スマートプレイリストを編集
+No year	Année inconnue	Año desconocido	Год неизвестен	未知年份	発売年不明
+Decade	Décennie	Década	Десятилетие	年代	年代
+Albums in several parts	Albums en plusieurs parties	Álbumes divididos	Альбомы из нескольких частей	分成多个部分的专辑	複数に分かれたアルバム
+No music that day	Pas de musique ce jour-là	No hubo música ese día	В этот день музыки не было	那天没有播放音乐	この日は音楽を再生していません
+Days with music	Jours avec de la musique	Días con música	Дни с музыкой	有音乐的日子	音楽を聴いた日
+For Replay on this phone	Pour Replay sur ce téléphone	Para Replay en este teléfono	Для Replay на этом телефоне	用于此手机的 Replay	このスマートフォンのReplay用
+Longest streak	Plus longue série	Racha más larga	Самая длинная серия	最长连续记录	最長の連続記録
+Most played from it	Les plus écoutés de cet album	Lo más escuchado de este álbum	Самые частые треки с альбома	这张专辑中最常播放的歌曲	このアルバムでよく聴いた曲
+Play album	Écouter l’album	Reproducir álbum	Воспроизвести альбом	播放专辑	アルバムを再生
+Play these five	Écouter ces cinq titres	Reproducir estas cinco	Воспроизвести эти пять треков	播放这五首歌	この5曲を再生
+Play the new ones	Écouter les nouvelles découvertes	Reproducir descubrimientos	Воспроизвести новые открытия	播放新发现的歌曲	新しく見つけた曲を再生
+Heard by you	Écouté par toi	Escuchado por ti	Ты слушал	你听过的	あなたが聴いた曲
+heard for the first time	écoutés pour la première fois	escuchadas por primera vez	впервые услышаны	第一次听到	初めて聴いた
+Number 1	Numéro 1	Número 1	Номер один	第一名	第1位
+Busiest day	Jour le plus musical	Día con más actividad	День с самой долгой музыкой	听歌最多的一天	いちばん音楽を聴いた日
+play	écoute	reproducción	прослушивание	播放	再生
+plays	écoutes	reproducciones	прослушивания	播放次数	再生回数
+artist	artiste	artista	исполнитель	艺人	アーティスト
+artists	artistes	artistas	исполнители	艺人	アーティスト
+album	album	álbum	альбом	专辑	アルバム
+albums	albums	álbumes	альбомы	专辑	アルバム
+folder	dossier	carpeta	папка	文件夹	フォルダー
+folders	dossiers	carpetas	папки	文件夹	フォルダー
+device	appareil	dispositivo	устройство	设备	デバイス
+devices	appareils	dispositivos	устройства	设备	デバイス
+days	jours	días	дней	天	日
+any	n’importe lequel	cualquiera	любой	任意	任意
+Elsewhere	Ailleurs	En otro lugar	В другом месте	其他位置	ほかの場所
+Everything	Tout	Todo	Всё	所有内容	すべて
+Empty	Vide	Vacío	Пусто	空	空
+Listening	Écoute	Escucha	Прослушивание	收听	再生
