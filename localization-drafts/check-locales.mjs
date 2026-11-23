@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const dir = path.dirname(new URL(import.meta.url).pathname);
-const languages = ["fr", "es", "ru", "zh", "ja"];
+const languages = ["de", "fr", "es", "it", "pt-BR", "ru", "zh", "ja"];
 const keyPattern = /^\s{2}("(?:\\.|[^"\\])*"):\s*("(?:\\.|[^"\\])*"),?\s*$/gm;
 const parse = (file) => {
   const text = fs.readFileSync(path.join(dir, file), "utf8");
@@ -22,7 +22,17 @@ let problems = 0;
 for (const lang of languages) {
   const dict = parse(lang + ".ts");
   let wrong = 0;
+  for (const key of reference.keys()) {
+    if (!dict.has(key)) {
+      console.error(lang + ": missing key " + JSON.stringify(key));
+      wrong++;
+    }
+  }
   for (const [key, value] of dict) {
+    if (!value.trim()) {
+      console.error(lang + ": blank translation " + JSON.stringify(key));
+      wrong++;
+    }
     if (!reference.has(key)) {
       console.error(lang + ": unknown key " + JSON.stringify(key));
       wrong++;
