@@ -1,0 +1,98 @@
+{
+  "version": "0.1.0",
+  "status": "tutorial-copy-draft",
+  "topics": [
+    {
+      "id": "tv.cast",
+      "de": {
+        "title": "Musik auf dem Fernseher",
+        "intro": "Großer Bildschirm, deine Musik.",
+        "steps": [
+          "Verbinde Fernseher und Computer mit demselben Heimnetz.",
+          "Öffne in Songsta die Geräteauswahl.",
+          "Wähle deinen Fernseher aus, falls er Google Cast oder DLNA/UPnP unterstützt."
+        ],
+        "trouble": "Nicht zu sehen? Prüfe, ob die Netzwerk-Wiedergabe am Fernseher eingeschaltet ist. Nicht jeder Smart-TV unterstützt das direkte Abspielen."
+      },
+      "en": {
+        "title": "Music on your TV",
+        "intro": "Big screen, your music.",
+        "steps": [
+          "Connect your TV and computer to the same home network.",
+          "Open the device picker in Songsta.",
+          "Select your TV if it supports Google Cast or DLNA/UPnP."
+        ],
+        "trouble": "Can't see your TV? Check whether network playback is enabled. Not every smart TV supports direct playback."
+      }
+    },
+    {
+      "id": "bluetooth",
+      "de": {
+        "title": "Bluetooth verbinden",
+        "intro": "Deine Musik, wo du sie hören möchtest.",
+        "steps": [
+          "Aktiviere den Kopplungsmodus an deinem Lautsprecher oder Kopfhörer.",
+          "Verbinde das Gerät in den Bluetooth-Einstellungen von Windows oder Android.",
+          "Wähle es bei Bedarf als Audioausgabe aus."
+        ],
+        "trouble": "Schon verbunden, aber nichts zu hören? Kontrolliere die Audioausgabe und die Lautstärke am Gerät."
+      },
+      "en": {
+        "title": "Connect Bluetooth audio",
+        "intro": "Your music, wherever you want to hear it.",
+        "steps": [
+          "Put your speaker or headphones into pairing mode.",
+          "Connect them in Windows or Android Bluetooth settings.",
+          "Choose the device as your audio output if needed."
+        ],
+        "trouble": "Connected but silent? Check your selected audio output and the device's volume."
+      }
+    },
+    {
+      "id": "tv.amazon",
+      "de": {
+        "title": "Echo oder Fire TV",
+        "intro": "Nicht jedes Gerät nimmt Musik direkt von Songsta an.",
+        "steps": [
+          "Für einen Echo kannst du eine Bluetooth-Verbindung nutzen.",
+          "Verbinde den Echo in den Bluetooth-Einstellungen deines Computers oder Handys.",
+          "Wähle den Echo als Audioausgabe."
+        ],
+        "trouble": "Fire TV wird möglicherweise erkannt, lässt sich aber nicht wie ein normaler Cast- oder DLNA-Lautsprecher ansteuern."
+      },
+      "en": {
+        "title": "Echo or Fire TV",
+        "intro": "Not every device accepts music directly from Songsta.",
+        "steps": [
+          "For an Echo, use Bluetooth audio.",
+          "Pair it in your computer or phone's Bluetooth settings.",
+          "Select the Echo as your audio output."
+        ],
+        "trouble": "Fire TV may be discovered but not support Songsta's direct playback method."
+      }
+    },
+    {
+      "id": "network.missing",
+      "de": {
+        "title": "Gerät nicht gefunden?",
+        "intro": "Schauen wir mal, woran’s liegt.",
+        "steps": [
+          "Prüfe, ob beide Geräte im selben Heimnetz sind.",
+          "Schalte das Zielgerät ein und öffne die Geräteauswahl erneut.",
+          "Teste, ob ein Gast-WLAN oder die Firewall die Verbindung blockiert."
+        ],
+        "trouble": "Manche Router trennen WLAN-Geräte voneinander. In den Router-Einstellungen heißt das oft Client-Isolation."
+      },
+      "en": {
+        "title": "Can't find the device?",
+        "intro": "Let's see what's getting in the way.",
+        "steps": [
+          "Check that both devices are on the same home network.",
+          "Make sure the device is on, then search again.",
+          "Check whether a guest network or firewall is blocking the connection."
+        ],
+        "trouble": "Some routers keep Wi-Fi devices isolated from each other. Look for a setting called client isolation."
+      }
+    }
+  ]
+}
