@@ -1,0 +1,111 @@
+Music	Musica	Música
+Music and server	Musica e server	Música e servidor
+Music facts	Informazioni sulla musica	Informações sobre a música
+Music for {label}	Musica per {label}	Músicas para {label}
+Local music	Musica locale	Música local
+Local Music	Musica locale	Música local
+Local music folders	Cartelle musicali locali	Pastas de músicas locais
+Library	Libreria	Biblioteca
+Library.	Libreria.	Biblioteca.
+Library check	Controllo della libreria	Verificação da biblioteca
+Library sources	Fonti della libreria	Fontes da biblioteca
+Explore your library	Esplora la tua libreria	Explore sua biblioteca
+Look through the whole library	Esplora tutta la libreria	Explorar toda a biblioteca
+In your library	Nella tua libreria	Na sua biblioteca
+Liked	Preferiti	Curtidas
+Liked Songs	Brani preferiti	Músicas curtidas
+Liked songs	Brani preferiti	Músicas curtidas
+liked songs	brani preferiti	músicas curtidas
+Liked Songs ↔ favorites	Brani preferiti ↔ preferiti del server	Músicas curtidas ↔ favoritas do servidor
+Liked Songs added to queue	Brani preferiti aggiunti alla coda	Músicas curtidas adicionadas à fila
+Liked songs by {name}	Brani preferiti di {name}	Músicas curtidas de {name}
+No liked songs by {name}	Nessun brano preferito di {name}	Nenhuma música curtida de {name}
+No liked songs yet	Non hai ancora brani preferiti	Você ainda não curtiu nenhuma música
+In Liked Songs	Nei Brani preferiti	Nas músicas curtidas
+Edit Liked Songs	Modifica i Brani preferiti	Editar músicas curtidas
+Only Liked Songs	Solo Brani preferiti	Apenas músicas curtidas
+Export your Liked Songs	Esporta i Brani preferiti	Exportar suas músicas curtidas
+Genre	Genere	Gênero
+genre	genere	gênero
+Genres	Generi	Gêneros
+genres	generi	gêneros
+Genre families	Famiglie di generi	Famílias de gêneros
+Genre family	Famiglia di generi	Família de gêneros
+Your genres, sorted	I tuoi generi, organizzati	Seus gêneros organizados
+Smarter album genres	Generi degli album più precisi	Gêneros de álbuns mais inteligentes
+Song	Brano	Música
+Songs	Brani	Músicas
+Sounds like	Suona come	Soa como
+SOUNDS LIKE	SUONA COME	SOA COMO
+Sounds like {name}	Suona come {name}	Soa como {name}
+Sounds like {title}	Suona come {title}	Soa como {title}
+Sounds like this one	Simili a questo brano	Parecidas com esta música
+Made from how it sounds	Basato sul suono	Com base no som
+Play as a mix	Riproduci come mix	Reproduzir como mix
+Mix	Mix	Mix
+Mixes	Mix	Mixes
+Mix · {count}	Mix · {count}	Mix · {count}
+Mix for you	Un mix per te	Um mix para você
+Mix from these	Crea un mix con questi brani	Criar mix com estas músicas
+Mixes need at least eight matching songs.	Per creare un mix servono almeno otto brani adatti.	Para criar um mix, é preciso ter pelo menos oito músicas compatíveis.
+Mixed for you · new every day	Un mix per te · nuovo ogni giorno	Um mix para você · renovado diariamente
+More by {artist}	Altri brani di {artist}	Mais de {artist}
+No artist	Artista sconosciuto	Artista desconhecido
+No album of this artist yet — search for one.	Non ci sono ancora album di questo artista. Prova a cercarne uno.	Ainda não há álbuns deste artista. Tente procurar um.
+No lyrics available for this track.	Nessun testo disponibile per questo brano.	Não há letra disponível para esta música.
+Lyrics	Testi	Letras
+Lyrics are loading	Caricamento del testo…	Carregando letra…
+Lyrics are coming together	Il testo sta arrivando	A letra está chegando
+Getting the lyrics	Recupero del testo…	Buscando a letra…
+In lyrics	Nei testi	Nas letras
+Line-synced lyrics	Testi sincronizzati per riga	Letras sincronizadas por linha
+Syllable-synced lyrics	Testi sincronizzati per sillaba	Letras sincronizadas por sílaba
+Lines that follow the song	Righe che seguono la musica	Linhas que acompanham a música
+Listening	Ascolti	Reproduções
+Listening history	Cronologia di ascolto	Histórico de reprodução
+Listening by hour of the day	Ascolti per ora del giorno	Reproduções por hora do dia
+listen	ascolto	reprodução
+listens	ascolti	reproduções
+Heard by you	Ascoltati da te	Ouvidas por você
+Days with music	Giorni con musica	Dias com música
+For Replay on this phone	Per Replay su questo telefono	Para o Replay neste celular
+No music that day	Nessuna musica quel giorno	Nenhuma música nesse dia
+No songs yet	Ancora nessun brano	Ainda não há músicas
+No music found in this folder	Nessuna musica trovata in questa cartella	Nenhuma música encontrada nesta pasta
+No music on the server yet.	Non c'è ancora musica sul server.	Ainda não há músicas no servidor.
+No music on this server	Nessuna musica su questo server	Não há músicas neste servidor
+The computer's listening shows here once your sync service is updated.	Gli ascolti del computer compariranno qui dopo la prossima sincronizzazione.	O que você ouviu no computador aparecerá aqui depois da próxima sincronização.
+The listening history, Recently played, Replay and play counts · {size}	Cronologia di ascolto, Riprodotti di recente, Replay e conteggi · {size}	Histórico de reprodução, Tocadas recentemente, Replay e contagens · {size}
+Every play goes to your sync service, so Replay counts all your devices	Ogni ascolto viene condiviso con il servizio di sincronizzazione, così Replay conta tutti i dispositivi	Cada reprodução vai para o serviço de sincronização, para que o Replay conte todos os dispositivos
+That song isn't in this phone's library	Questo brano non è nella libreria del telefono	Esta música não está na biblioteca deste celular
+Those songs aren't in this phone's library	Questi brani non sono nella libreria del telefono	Essas músicas não estão na biblioteca deste celular
+That needs songs your computer has measured: Settings → Media analysis there	Servono brani già analizzati sul computer: Impostazioni → Analisi audio.	Para isso, é preciso ter músicas analisadas no computador: Configurações → Análise de áudio.
+Media analysis	Analisi audio	Análise de áudio
+Measure your music once?	Vuoi analizzare la tua musica?	Quer analisar suas músicas?
+Measure new songs by themselves	Analizza automaticamente i nuovi brani	Analisar músicas novas automaticamente
+This song can't be measured	Impossibile analizzare questo brano	Não foi possível analisar esta música
+This song isn't measured yet	Questo brano non è ancora stato analizzato	Esta música ainda não foi analisada
+The Camelot wheel: pick a key to find songs that fit it	Ruota Camelot: scegli una tonalità per trovare brani compatibili	Roda Camelot: escolha uma tonalidade para encontrar músicas compatíveis
+The media analysis is paused (Settings → Library). Let it go on to measure your songs.	L'analisi audio è in pausa (Impostazioni → Libreria). Riprendila per analizzare i tuoi brani.	A análise de áudio está pausada (Configurações → Biblioteca). Retome para analisar suas músicas.
+No song of yours in {key} is measured yet	Nessun tuo brano in {key} è ancora stato analizzato	Nenhuma música sua em {key} foi analisada ainda
+Flowing	Scorrevole	Fluindo
+Start the analysis	Avvia analisi	Iniciar análise
+Start now	Inizia ora	Começar agora
+What may Songsta ask the internet?	Cosa può chiedere Songsta a Internet?	O que o Songsta pode consultar na internet?
+Network & privacy	Rete e privacy	Rede e privacidade
+Only my own servers	Solo i miei server	Apenas meus servidores
+Only my own server	Solo il mio server	Apenas meu servidor
+Keep my plays	Conserva la cronologia di ascolto	Guardar meu histórico de reprodução
+Keep my searches	Conserva le mie ricerche	Salvar minhas buscas
+Remember songs I skip	Ricorda i brani che salto	Lembrar as músicas que eu pulo
+No sync service is linked	Nessun servizio di sincronizzazione collegato	Nenhum serviço de sincronização vinculado
+Songsta is free and stays free. If you like it, you can buy me a coffee on Ko-fi.	Songsta è gratuito e lo sarà sempre. Se ti piace, puoi offrirmi un caffè su Ko-fi.	O Songsta é gratuito e vai continuar assim. Se você gostar, pode me pagar um café no Ko-fi.
+Support Songsta	Sostieni Songsta	Apoiar o Songsta
+Download for offline listening	Scarica per ascoltare offline	Baixar para ouvir offline
+Downloading songs	Download dei brani in corso	Baixando músicas
+Edit album — artists, merge split albums	Modifica album: artisti e unione di album divisi	Editar álbum: artistas e junção de álbuns divididos
+Changes stay in Songsta — your files and servers aren't touched.	Le modifiche restano in Songsta: i file e i server non vengono toccati.	As alterações ficam no Songsta: seus arquivos e servidores não são modificados.
+Add a music folder first — Local Music → Add folders	Aggiungi prima una cartella musicale: Musica locale → Aggiungi cartelle.	Adicione primeiro uma pasta: Música local → Adicionar pastas.
+Add a music folder or connect a server — your albums, artists and genres show up here.	Aggiungi una cartella musicale o collega un server: qui vedrai album, artisti e generi.	Adicione uma pasta de músicas ou conecte um servidor para ver aqui álbuns, artistas e gêneros.
+Choose a folder with your music. No server, no account.	Scegli una cartella con la tua musica. Non serve un server né un account.	Escolha uma pasta com suas músicas. Não precisa de servidor nem de conta.
+What comes next now flows from song to song	Ora i brani si susseguono in modo più fluido	Agora as músicas se conectam de forma mais natural
