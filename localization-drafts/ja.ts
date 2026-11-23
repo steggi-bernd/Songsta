@@ -6,7 +6,7 @@ export const ja: Record<string, string> = {
   " · with {names}": "・{names}を含む",
   " ({count} zones)": "（{count}ゾーン）",
   " ({months} months of history)": "（{months}か月分の履歴）",
-  "— nothing is lost": " — ロスレス",
+  " — nothing is lost": " — ロスレス",
   ", and {count} on the way": "、さらに{count}件を処理中",
   ", in the playlist's order": "、プレイリストの順序で",
   ", newest like first": "、最近のお気に入りを先頭に",
