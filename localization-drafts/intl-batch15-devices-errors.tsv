@@ -1,0 +1,60 @@
+{name} doesn't answer	{name} ne répond pas	{name} no responde	{name} не отвечает	{name} 没有响应	{name}から応答がありません
+{name} doesn't answer to that. It has to be switched on, and be a Google TV or Android TV.	{name} ne répond pas. Vérifie qu’il est allumé et qu’il s’agit d’un Google TV ou Android TV.	{name} no responde. Comprueba que esté encendido y sea un Google TV o Android TV.	{name} не отвечает. Убедись, что устройство включено и поддерживает Google TV или Android TV.	{name} 没有响应。请确认它已开机，且使用 Google TV 或 Android TV。	{name}から応答がありません。電源が入っていて、Google TVかAndroid TVであることを確認してください。
+{name} doesn't say which input it's on	{name} n’indique pas l’entrée utilisée	{name} no indica qué entrada está usando	{name} не сообщает текущий вход	{name} 未报告当前输入源	{name}が現在の入力端子を報告していません
+{name} is switching off	Extinction de {name}…	Apagando {name}…	Выключение {name}…	正在关闭 {name}	{name}の電源をオフにしています
+{name} is switching to {input}	Passage de {name} à {input}…	Cambiando {name} a {input}…	Переключение {name} на {input}…	正在将 {name} 切换到 {input}	{name}を{input}に切り替え中
+{name} plays along	{name} joue en même temps	{name} reproduce a la vez	{name} играет вместе с остальными	{name} 正在同步播放	{name}も同時再生中
+{name} stopped answering	{name} ne répond plus	{name} ha dejado de responder	{name} перестал отвечать	{name} 已停止响应	{name}からの応答が途絶えました
+{name} stopped answering — the music is back on this computer, paused	{name} ne répond plus. La lecture est revenue sur cet ordinateur, en pause.	{name} ha dejado de responder. La música ha vuelto al ordenador, en pausa.	{name} перестал отвечать. Музыка вернулась на компьютер и поставлена на паузу.	{name} 没有响应，音乐已切回此电脑并暂停。	{name}から応答がなくなりました。再生はこのパソコンに戻り、一時停止しました。
+{name} stops playing along	{name} cesse la lecture simultanée	{name} deja de reproducir a la vez	{name} прекращает совместное воспроизведение	{name} 已停止同步播放	{name}の同時再生を停止します
+{name} switches off in {seconds} s	{name} s’éteint dans {seconds} s	{name} se apaga en {seconds} s	{name} выключится через {seconds} с	{name} 将在 {seconds} 秒后关闭	{name}は{seconds}秒後に電源が切れます
+{name} switches off in 30 seconds	{name} s’éteint dans 30 secondes	{name} se apaga en 30 segundos	{name} выключится через 30 секунд	{name} 将在 30 秒后关闭	{name}は30秒後に電源が切れます
+{name} transcoded to MP3 by Jellyfin	Jellyfin a converti {name} en MP3	Jellyfin convirtió {name} a MP3	Jellyfin преобразовал {name} в MP3	Jellyfin 已将 {name} 转换为 MP3	Jellyfinが{name}をMP3に変換しました
+{name} transcoded to MP3 by Navidrome	Navidrome a converti {name} en MP3	Navidrome convirtió {name} a MP3	Navidrome преобразовал {name} в MP3	Navidrome 已将 {name} 转换为 MP3	Navidromeが{name}をMP3に変換しました
+{playerName} didn't take that	{playerName} n’a pas accepté la commande	{playerName} no aceptó la orden	{playerName} не принял команду	{playerName} 没有接受该操作	{playerName}が操作を受け付けませんでした
+{size} devices chosen	{size} appareils sélectionnés	{size} dispositivos seleccionados	Выбрано устройств: {size}	已选择 {size} 台设备	{size}台のデバイスを選択
+{title} · not available right now	{title} · indisponible pour le moment	{title} · no disponible ahora	{title} · сейчас недоступно	{title} · 暂时不可用	{title}・現在利用できません
+{unreachableMsg} Skipping what can't play.	{unreachableMsg} Les titres indisponibles seront ignorés.	{unreachableMsg} Se omitirán las canciones que no se puedan reproducir.	{unreachableMsg} Недоступные треки будут пропущены.	{unreachableMsg} 将跳过无法播放的歌曲。	{unreachableMsg} 再生できない曲をスキップします。
+{percent}% downloaded	{percent} % téléchargés	{percent} % descargado	Загружено: {percent} %	已下载 {percent}%	ダウンロード済み：{percent}%
+1 device chosen	1 appareil sélectionné	1 dispositivo seleccionado	Выбрано одно устройство	已选择 1 台设备	1台のデバイスを選択
+1 play	1 écoute	1 reproducción	1 прослушивание	播放 1 次	1回再生
+1 song downloaded	1 titre téléchargé	1 canción descargada	Скачан 1 трек	已下载 1 首歌曲	1曲ダウンロードしました
+1 song downloading	Téléchargement d’un titre	Descargando 1 canción	Скачивается 1 трек	正在下载 1 首歌曲	1曲をダウンロード中
+1 song stays, because it's on another downloaded list too.	Un titre reste, car il figure aussi dans une autre liste téléchargée.	Se conserva una canción porque también está en otra lista descargada.	Один трек останется, потому что он есть в другом скачанном плейлисте.	有一首歌曲也属于其他已下载列表，因此会保留。	別のダウンロード済みリストにもあるため、1曲は残ります。
+A missing song is downloading again	Un titre manquant est de nouveau téléchargé	Se vuelve a descargar una canción que faltaba	Недостающий трек скачивается повторно	正在重新下载缺失的歌曲	不足していた曲を再ダウンロード中
+Didn't download	Téléchargement non effectué	No se descargó	Не скачано	未能下载	ダウンロードできませんでした
+Download failed: {value}	Échec du téléchargement : {value}	Error de descarga: {value}	Ошибка загрузки: {value}	下载失败：{value}	ダウンロード失敗：{value}
+Downloading {count}	Téléchargement de {count} éléments	Descargando {count} elementos	Скачивание: {count}	正在下载 {count} 项	{count}件をダウンロード中
+Downloading {count}…	Téléchargement de {count} éléments…	Descargando {count} elementos…	Скачивание: {count}…	正在下载 {count} 项…	{count}件をダウンロード中…
+Downloading {percent}%	Téléchargement : {percent} %	Descargando: {percent} %	Скачивание: {percent} %	下载进度：{percent}%	ダウンロード中：{percent}%
+Downloading Songsta {version}	Téléchargement de Songsta {version}	Descargando Songsta {version}	Скачивание Songsta {version}	正在下载 Songsta {version}	Songsta {version}をダウンロード中
+Download {title} for offline listening	Télécharger {title} pour l’écouter hors ligne	Descargar {title} para escuchar sin conexión	Скачать {title} для прослушивания без сети	下载 {title} 以便离线收听	{title}をオフライン再生用にダウンロード
+Download for offline — {count} {value} only on the server	Télécharger pour écouter hors ligne · {count} {value} uniquement sur le serveur	Descargar para escuchar sin conexión · {count} {value} solo en el servidor	Скачать для прослушивания без сети · {count} {value} только на сервере	离线下载 · {count} {value} 仅在服务器上	オフライン用にダウンロード・サーバーのみの{count} {value}
+Downloading "{title}" into the folder	Téléchargement de « {title} » dans le dossier	Descargando «{title}» en la carpeta	Скачивание «{title}» в папку	正在将“{title}”下载到文件夹	「{title}」をフォルダーにダウンロード中
+download	télécharger	descargar	скачать	下载	ダウンロード
+downloads	téléchargements	descargas	загрузки	下载内容	ダウンロード
+Everything is up to date	Tout est à jour	Todo está actualizado	Всё обновлено	所有内容均为最新	すべて最新の状態です
+Everything here is muted	Tous les titres ici sont ignorés	Todas las canciones de aquí están silenciadas	Все треки здесь отключены	这里的歌曲均已静音	ここの曲はすべてミュートされています
+Everything imported · {count} song{value}	Importation terminée · {count} titre{value}	Importación completa · {count} canción{value}	Импорт завершён · {count} трек{value}	导入完成 · {count} 首歌曲{value}	読み込み完了・{count}曲{value}
+Folders on this phone · {count}	Dossiers sur ce téléphone · {count}	Carpetas de este teléfono · {count}	Папки на телефоне · {count}	此手机上的文件夹 · {count}	スマートフォンのフォルダー・{count}
+Found {name}	{name} trouvé	Se encontró {name}	Найдено: {name}	已找到 {name}	{name}が見つかりました
+Connected as {user}	Connecté en tant que {user}	Conectado como {user}	Вход выполнен как {user}	已以 {user} 身份连接	{user}として接続中
+Connected to {value}	Connecté à {value}	Conectado a {value}	Подключено к {value}	已连接到 {value}	{value}に接続済み
+Copied {count} {value}	{count} {value} copiés	Se copiaron {count} {value}	Скопировано: {count} {value}	已复制 {count} {value}	{count} {value}をコピーしました
+Copied: {command}	Copié : {command}	Copiado: {command}	Скопировано: {command}	已复制：{command}	コピーしました：{command}
+Couldn't start {name}	Impossible de démarrer {name}	No se pudo iniciar {name}	Не удалось запустить {name}	无法启动 {name}	{name}を起動できませんでした
+Couldn't update to Songsta {version}	Impossible de mettre Songsta à jour vers {version}	No se pudo actualizar Songsta a {version}	Не удалось обновить Songsta до {version}	无法更新至 Songsta {version}	Songsta {version}に更新できませんでした
+Couldn't play "{title}"	Impossible de lire « {title} »	No se pudo reproducir «{title}»	Не удалось воспроизвести «{title}»	无法播放“{title}”	「{title}」を再生できませんでした
+Couldn't play "{title}" — skipping	Impossible de lire « {title} » · titre ignoré	No se pudo reproducir «{title}» · se omite	Не удалось воспроизвести «{title}» · пропуск	无法播放“{title}”，已跳过	「{title}」を再生できなかったためスキップします
+Couldn't convert "{title}" for playback — the file may be damaged.	Impossible de convertir « {title} » pour la lecture. Le fichier est peut-être endommagé.	No se pudo convertir «{title}» para reproducirlo. Puede que el archivo esté dañado.	Не удалось преобразовать «{title}» для воспроизведения. Возможно, файл повреждён.	无法转换“{title}”以供播放，文件可能已损坏。	「{title}」を再生用に変換できませんでした。ファイルが破損している可能性があります。
+No song here matches “{query}”	Aucun titre ici ne correspond à « {query} »	Aquí no hay canciones que coincidan con «{query}»	Здесь нет треков по запросу «{query}»	这里没有与“{query}”匹配的歌曲	ここには「{query}」に一致する曲がありません
+No songs by {name}	Aucun titre de {name}	No hay canciones de {name}	Нет треков {name}	没有 {name} 的歌曲	{name}の曲はありません
+No songs match — try fewer words.	Aucun titre trouvé. Essaie avec moins de mots.	No se encontraron canciones. Prueba con menos palabras.	Треки не найдены. Попробуй меньше слов.	没有匹配的歌曲，试着减少搜索词。	一致する曲がありません。検索語を減らしてみてください。
+None of these songs are in your library yet	Aucun de ces titres n’est encore dans ta bibliothèque	Ninguna de estas canciones está todavía en tu biblioteca	Ни одного из этих треков пока нет в медиатеке	这些歌曲尚未加入你的音乐库	これらの曲はまだライブラリにありません
+None of them is on right now.	Aucun de ces appareils n’est allumé.	Ninguno está encendido ahora.	Сейчас ни одно устройство не включено.	这些设备目前都未开机。	今はどのデバイスも電源が入っていません。
+No releases of their own yet	Pas encore de sortie à leur nom	Todavía no tienen lanzamientos propios	Собственных релизов пока нет	目前还没有独立发行作品	本人名義のリリースはまだありません
+Nothing playable answers there	Aucun lecteur compatible ne répond à cette adresse	No responde ningún reproductor compatible en esa dirección	По этому адресу нет доступного плеера	该地址没有可用播放器响应	そのアドレスに再生可能なデバイスが見つかりません
+Not found. Is it running there?	Introuvable. Le service est-il bien lancé ?	No se encontró. ¿Está en funcionamiento?	Не найдено. Сервис запущен?	未找到。服务是否正在运行？	見つかりません。サービスは起動していますか？
+Neither address answers right now	Aucune des deux adresses ne répond pour le moment	Ninguna de las dos direcciones responde ahora	Сейчас оба адреса недоступны	两个地址目前都没有响应	どちらのアドレスからも応答がありません
+Not on this server	Absent de ce serveur	No está en este servidor	Нет на этом сервере	不在此服务器上	このサーバーにはありません
+Not plugged in there	Pas branché à cet endroit	No está conectado ahí	Там не подключено	未连接到该端口	そこには接続されていません
