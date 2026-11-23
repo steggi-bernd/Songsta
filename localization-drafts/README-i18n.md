@@ -1,25 +1,25 @@
 # Songsta: five new languages — first editorial pass
 
 **Branch:** `localization/intl-first-pass-2026-11-23`  
-**Status:** Translation draft; **not app-integrated** and **not ready for a release**.
+**Status:** Expanded translation draft; **not app-integrated** and **not ready for a release**.
 
 ## Scope and coverage
 
 | Locale | Language | Translated existing lookup keys | Base keys | Coverage |
 | --- | --- | ---: | ---: | ---: |
-| `fr` | French (informal `tu`) | 178 | 2045 | 8.7% |
-| `es` | Spanish (neutral informal `tú`) | 178 | 2045 | 8.7% |
-| `ru` | Russian | 178 | 2045 | 8.7% |
-| `zh` | Simplified Chinese (`zh-Hans`, expected `zh-CN`) | 178 | 2045 | 8.7% |
-| `ja` | Japanese | 178 | 2045 | 8.7% |
+| `fr` | French (informal `tu`) | 435 | 2045 | 21.3% |
+| `es` | Spanish (neutral informal `tú`) | 435 | 2045 | 21.3% |
+| `ru` | Russian | 435 | 2045 | 21.3% |
+| `zh` | Simplified Chinese (`zh-Hans`, expected `zh-CN`) | 435 | 2045 | 21.3% |
+| `ja` | Japanese | 435 | 2045 | 21.3% |
 
-The five `*.ts` files include translated navigation, library, playback, downloads, device connection, common controls, some Replay copy, i18n swipe actions, and error messages.
+The five `*.ts` files now include 435 translated keys each, including navigation, album/library management, playback controls, queue, downloads, device selection, synchronization, search, lyric handling, common Replay copy, i18n swipe actions, and actionable errors. Translation batches are retained in `intl-core.tsv`, `intl-batch2-core.tsv` and `intl-batch3-core.tsv` for review.
 
-The `replay-samples.fr-es-ru-zh-ja.json` file adds **10 more localized Replay variants per language** as a *separate editorial exercise*, not as keys in the 178-entry dictionaries. The originals are in `design/replay-copy-v2.en-de.json` in branch `design/replay-personality-genre-graph-v1`.
+The `replay-samples.fr-es-ru-zh-ja.json` file adds **10 more localized Replay variants per language** as a *separate editorial exercise*, not as keys in the 435-entry dictionaries. The originals are in `design/replay-copy-v2.en-de.json` in branch `design/replay-personality-genre-graph-v1`.
 
 ### Important boundaries
 
-- Approximately **1,867 of 2,045** existing message keys **are still untranslated in each target language**. These will fall back to English if the languages are registered in the current `T()` function.
+- Approximately **1,610 of 2,045** existing message keys **are still untranslated in each target language**. These will fall back to English if the languages are registered in the current `T()` function.
 - **Do not present these as complete translations.** A mixed-language application is not release-ready.
 - The default branch is unchanged; source files `src/lib/i18n.ts` and `src/locales/de.ts` have not been modified or wired to these drafts.
 - Some source English messages are awkward sentence fragments. Before adding their translation, change the code to stable semantic keys / complete translatable sentences, especially in Replay.
@@ -28,7 +28,7 @@ The `replay-samples.fr-es-ru-zh-ja.json` file adds **10 more localized Replay va
 - Japanese and Chinese layouts need font and line-wrap checks. Russian, French and Spanish often need longer text boxes.
 - French uses `tu` for the approved friendly tone; Russian avoids unnecessary gendered statements; Japanese uses natural neutral language without over-familiar slang.
 - Review in-context strings, especially buttons, sources, singular/plural, placeholders, and provider names.
-- Online machine-translation output should never bypass human and automated QA when doing the remaining ~1,867 entries.
+- Online machine-translation output should never bypass human and automated QA when doing the remaining ~1,610 entries.
 
 ## Suggested completion sequence
 
