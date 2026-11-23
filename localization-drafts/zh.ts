@@ -6,7 +6,7 @@ export const zh: Record<string, string> = {
   " · with {names}": " · 包括 {names}",
   " ({count} zones)": "（{count} 个区域）",
   " ({months} months of history)": "（{months} 个月的历史记录）",
-  "— nothing is lost": " — 无损",
+  " — nothing is lost": " — 无损",
   ", and {count} on the way": "，还有 {count} 个正在处理",
   ", in the playlist's order": "，按播放列表顺序",
   ", newest like first": "，最近喜欢的排在前面",
