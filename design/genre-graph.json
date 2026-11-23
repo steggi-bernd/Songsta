@@ -338,9 +338,7 @@
       "parents": [
         "alternative-rock"
       ],
-      "aliases": [
-        "Indie"
-      ],
+      "aliases": [],
       "related": [
         {
           "id": "alternative-rock",
@@ -1189,8 +1187,7 @@
       "name": "Metalcore",
       "family": "metal",
       "parents": [
-        "metal",
-        "hardcore-punk"
+        "metal"
       ],
       "aliases": [
         "Metal Core"
@@ -1768,8 +1765,7 @@
       "name": "Dream Pop",
       "family": "pop",
       "parents": [
-        "pop",
-        "shoegaze"
+        "pop"
       ],
       "aliases": [],
       "related": [
@@ -3112,26 +3108,15 @@
     {
       "id": "funk-carioca",
       "name": "Funk Carioca",
-      "family": "funk-disco",
+      "family": "latin",
       "parents": [
-        "funk-and-disco",
         "latin"
       ],
       "aliases": [
         "Brazilian Funk",
-        "Funk Brasileiro"
+        "Funk Brasileiro",
+        "Baile Funk"
       ],
-      "related": []
-    },
-    {
-      "id": "baile-funk",
-      "name": "Baile Funk",
-      "family": "funk-disco",
-      "parents": [
-        "funk-and-disco",
-        "latin"
-      ],
-      "aliases": [],
       "related": []
     },
     {
@@ -4789,7 +4774,9 @@
       "parents": [
         "swing"
       ],
-      "aliases": [],
+      "aliases": [
+        "Jazz Manouche"
+      ],
       "related": []
     },
     {
@@ -5022,16 +5009,6 @@
     {
       "id": "third-stream",
       "name": "Third Stream",
-      "family": "jazz",
-      "parents": [
-        "jazz"
-      ],
-      "aliases": [],
-      "related": []
-    },
-    {
-      "id": "jazz-manouche",
-      "name": "Jazz Manouche",
       "family": "jazz",
       "parents": [
         "jazz"
