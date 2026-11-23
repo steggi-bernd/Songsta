@@ -1,58 +1,60 @@
-# Songsta: five new languages — first editorial pass
+# Songsta — localization draft (EN, DE, FR, ES, RU, ZH-Hans, JA)
 
 **Branch:** `localization/intl-first-pass-2026-11-23`  
-**Status:** Expanded translation draft; **not app-integrated** and **not ready for a release**.
+**Based on:** `feat/local-player`, translation-key snapshot from 2026-11-23  
+**Status:** **100% existing key coverage — editorial draft, not release-ready**  
+**Production code:** unchanged
 
-## Scope and coverage
+## Language dictionaries
 
-| Locale | Language | Translated existing lookup keys | Base keys | Coverage |
-| --- | --- | ---: | ---: | ---: |
-| `fr` | French (informal `tu`) | 1298 | 2045 | 63.5% |
-| `es` | Spanish (neutral informal `tú`) | 1298 | 2045 | 63.5% |
-| `ru` | Russian | 1298 | 2045 | 63.5% |
-| `zh` | Simplified Chinese (`zh-Hans`, expected `zh-CN`) | 1298 | 2045 | 63.5% |
-| `ja` | Japanese | 1298 | 2045 | 63.5% |
+| File | Language | Entries | Coverage of 2,045 source keys |
+|---|---|---:|---:|
+| `en.ts` | English editorial draft | 2,045 | 100% |
+| `de.ts` | German editorial draft | 2,045 | 100% |
+| `fr.ts` | French (friendly `tu`) | 2,045 | 100% |
+| `es.ts` | Spanish (informal `tú`) | 2,045 | 100% |
+| `ru.ts` | Russian | 2,045 | 100% |
+| `zh.ts` | Simplified Chinese (zh-Hans / zh-CN) | 2,045 | 100% |
+| `ja.ts` | Japanese | 2,045 | 100% |
 
-The five `*.ts` files now include 1298 translated keys each, including navigation, album/library management, playback controls, queue, downloads, device selection, synchronization, search, lyric handling, common Replay copy, i18n swipe actions, and actionable errors. Translation batches are retained in `intl-core.tsv`, `intl-batch2-core.tsv` and `intl-batch3-core.tsv`, `intl-batch4-connections.tsv` and `intl-batch5-setup-help.tsv`, `intl-batch6-audio-genres.tsv` and `intl-batch7-privacy-library.tsv`, `intl-batch8-playlists-library.tsv`, `intl-batch9-spotify-liked.tsv` and `intl-batch10-explanations.tsv`, `intl-batch11-replay-mixes.tsv`, `intl-batch12-status-counts.tsv` and `intl-batch13-general-ui.tsv` for review.
+The English and German editorial drafts are from the earlier pass; the five new languages have now all been translated in full to the **existing lookup-key inventory**. These counts do not establish that all unlocalized text across the codebase has been extracted. A complete source-code i18n audit is still recommended.
 
-The `replay-samples.fr-es-ru-zh-ja.json` file adds **10 more localized Replay variants per language** as a *separate editorial exercise*, not as keys in the 1298-entry dictionaries. The originals are in `design/replay-copy-v2.en-de.json` in branch `design/replay-personality-genre-graph-v1`.
+The last large pass brought each new language from **1,298 to 2,045 translated keys** (+747 each). The incremental source-to-translation batches remain as `intl-core.tsv` and `intl-batch2-core.tsv` through `intl-batch20-final-technical.tsv` for editorial review and traceability.
 
-### Important boundaries
+## Verification performed
 
-- Approximately **747 of 2,045** existing message keys **are still untranslated in each target language**. These will fall back to English if the languages are registered in the current `T()` function.
-- **Do not present these as complete translations.** A mixed-language application is not release-ready.
-- The default branch is unchanged; source files `src/lib/i18n.ts` and `src/locales/de.ts` have not been modified or wired to these drafts.
-- Some source English messages are awkward sentence fragments. Before adding their translation, change the code to stable semantic keys / complete translatable sentences, especially in Replay.
-- The example `{count} songs` uses simple interpolation; Russian needs plural categories, and numeric-count grammar in other languages may vary. Add Intl.PluralRules or ICU-message formatting before production.
-- Date, time and numeric localization should use `Intl` with the selected locale, not English strings embedded in UI logic.
-- Japanese and Chinese layouts need font and line-wrap checks. Russian, French and Spanish often need longer text boxes.
-- French uses `tu` for the approved friendly tone; Russian avoids unnecessary gendered statements; Japanese uses natural neutral language without over-familiar slang.
-- Review in-context strings, especially buttons, sources, singular/plural, placeholders, and provider names.
-- Online machine-translation output should never bypass human and automated QA when doing the remaining ~747 entries.
+At the source snapshot:
+- All five new dictionaries have exactly **2,045 unique entries**.
+- Every key matches an English source lookup key; zero missing or extraneous keys.
+- Every interpolation placeholder matches its source key, including repeated placeholders and case.
+- Zero empty-string translations or duplicate keys.
+- Initial content audit showed no accidental Japanese text in the French dictionary.
+- Unchanged values can be legitimate technical names and terms (e.g. BPM, Bluetooth, Songsta Replay); they are **not automatically considered untranslated**.
 
-## Suggested completion sequence
+This is a **technical structure check, not a native-speaker review**. Meaning, grammatical correctness, device-specific labels, fonts, wrapping and line breaks still need in-context validation.
 
-1. Finish the core navigation and frequent UI strings in all five languages.
-2. Translate all Replay variants as complete semantic messages, not code fragments.
-3. Translate setup, server, devices and short help messages.
-4. Translate long settings descriptions, privacy, destructive actions and troubleshooting accurately.
-5. Run key / placeholder / Unicode checks and test desktop/mobile surfaces.
-6. Once coverage is near-complete, register locales in `src/lib/i18n.ts`, add language-picker labels, locale aliases (zh-Hans vs zh-Hant), and plural support.
+## Draft implementation pieces
 
-## Usage
+- `i18n-next.ts`: side-by-side design for **stable semantic translation IDs**, interpolation, `Intl.PluralRules` and a seven-language plural-message sample. It is not imported by `src/lib/i18n.ts`.
+- `replay-headlines.v2.ts`: **complete, language-specific Replay headlines in all seven languages**, with a contextual introduction selector. The current desktop/mobile Replay screens still use older split keys.
+- `replay-samples.fr-es-ru-zh-ja.json`: separate localized variations for editorial approval.
+- `check-locales.mjs`: lightweight parity and placeholder test for the drafts.
 
-Each locale exports `Record<string, string>` with keys matching `T("English source text")`. These can later be moved under `src/locales/<lang>.ts` and added to the language table after translation coverage and UI checks.
+## Necessary changes before release
 
-The script `check-locales.mjs` checks key parity and placeholders against the 2,045-key draft in `en.ts`.
+1. **Translate whole sentences, not fragments.** Replay currently concatenates separately translated strings such as `T("{period} was")` with `T("loud.")`, and `T("Five you")` with `T("couldn't stop.")`. These produce broken grammar in many languages. Migrate the Replay screens to full message keys and connect the approved variations, while keeping fallback copy for empty or sparse periods.
+2. **Migrate count-dependent UI.** Keys such as `{n} song{s}` and `{artist} · {count} song{value}` are an English suffix workaround. Implement locale-aware plural categories (particularly Russian) with full messages, not inserted plural suffixes.
+3. **Register locales and language selection.** Update `src/lib/i18n.ts` only after the data and UI changes are ready. Ensure phone language selection, persisted language choice, `textLocale()` and system detection work correctly. Explicitly distinguish Simplified from Traditional Chinese rather than mapping all `zh` locales blindly.
+4. **Check every device-specific instruction.** Android / Windows menu paths, Bluetooth pairing, firewall, Denon/Marantz and Echo behavior may depend on OS version or configuration. Verify the actual labels and behavior on supported devices.
+5. **Check destructive and privacy copy.** Verify carefully that texts accurately distinguish data deleted from Songsta from files retained on disk and data retained on sync servers. Treat texts describing what is transmitted to third parties as product/security requirements, not merely style.
+6. **Responsive UI and typography.** Allow longer strings on narrow screens, test Japanese/Chinese line breaking and fonts, verify accessibility labels, truncation and right-to-left expectations if more locales are added later.
+7. **Human linguistic QA.** Especially French and Spanish voice consistency, Russian declensions/plurals, and Chinese/Japanese UI-naturalness.
+8. **Source audit.** Search desktop and mobile code for raw literals, missing `T(...)` calls and dynamic text not in the existing 2,045 source keys; avoid reporting 100% application localization until this audit passes.
 
-## Follow-up from the 2026-11-23 larger pass
+## Approved tone
 
-This pass added **398** keys per language, primarily original Replay slides, mixed recommendations, playback controls, counters, empty states, device messages, and settings labels. The source has **2,045** keys; each target file now has **1,298** verified keys (**63.5% coverage**), leaving **747** keys per language to translate.
+Warm, relaxed and clear. No forced slang, no stiff or formal wording. Errors should tell the user what happened and what to do next. Familiar musical terms are preferred. French uses `tu`, Spanish `tú`; Russian copy should avoid needlessly gendered forms, and Japanese should be friendly without overly casual slang.
 
-### High-priority integration debt
+## Git safety
 
-1. **Replay translated fragments:** `T("{period} was")`, `T("loud.")`, `T("Five you")`, `T("couldn't stop.")`, `T("song") + T("were new to you.")`, etc. are grammatically unsound when translated separately. The first-pass values are provisional and often unnatural in Japanese, Chinese, French and Russian. Replace with **full translated sentence / headline IDs**, then connect the approved contextual headline variants.
-2. **Count-based English suffix keys:** `{n} song{s}`, `{count} song{value}`, `{artist} · {count} song{value}`, and other adjective-noun mixes cannot be made consistently grammatical through string substitution. In particular Russian requires grammatical plural categories. Use `Intl.PluralRules` and stable message IDs for **0, 1, 2–4, 5+** and locale-specific rules.
-3. **Technical QA is not linguistic QA:** key parity, identical placeholder names, no duplicates and nonempty strings are necessary but do not prove correctness of grammar or UI context.
-4. **Special key preservation:** even leading/trailing whitespace is significant in English-as-key lookups. A leading-space key accidentally lost in TSV normalization was restored and verified.
-5. These are editorial drafts, not ready for merge into `src/lib/i18n.ts` or distribution. Confirm the final English/German terminology and layout first.
+This branch contains **draft files under `localization-drafts/` only**; no app runtime imports are added or overwritten. Do not merge the dictionaries directly into production before the above migrations and reviews.
