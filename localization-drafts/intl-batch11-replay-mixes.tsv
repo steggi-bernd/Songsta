@@ -1,0 +1,94 @@
+Listening by hour of the day	Écoutes selon l’heure	Escuchas por hora del día	Прослушивания по часам	按小时统计收听情况	時間帯別の再生
+{period} was	{period} :	{period}:	{period}:	{period}：	{period}は、
+loud.	de la musique à volonté.	música por todas partes.	музыка была с тобой.	音乐一直相伴。	音楽がいっぱい。
+still quiet.	encore peu d’écoutes.	todavía con pocas escuchas.	пока немного музыки.	还没有多少播放记录。	まだ再生履歴が少なめ。
+MINUTES	MINUTES	MINUTOS	МИНУТЫ	分钟	分
+PLAYS	ÉCOUTES	REPRODUCCIONES	ПРОСЛУШИВАНИЯ	播放次数	再生回数
+SONGS	TITRES	CANCIONES	ТРЕКИ	歌曲	曲
+Five you	Tes cinq titres	Tus cinco canciones	Пять треков,	你的五首歌	よく聴いた5曲、
+couldn't stop.	en boucle.	en bucle.	которые были на повторе.	听了又听。	何度でも。
+Your prime time	Ton heure préférée	Tu hora punta	Самое музыкальное время	你的音乐高峰时段	いちばん音楽を聴いた時間
+was at {time}.	était vers {time}.	fue a las {time}.	— около {time}.	是 {time}。	は{time}ごろ。
+Each ray is an hour of the day, as long as you listened then. Point at one.	Chaque rayon représente une heure. Plus il est long, plus tu as écouté de musique. Passe dessus pour voir les détails.	Cada rayo representa una hora. Cuanto más largo, más música escuchaste. Pasa el cursor para ver los detalles.	Каждый луч — один час. Чем он длиннее, тем больше ты слушал музыку. Наведи курсор, чтобы увидеть подробности.	每条射线代表一个小时，越长表示听歌越久。将鼠标移上去可查看详情。	線は1時間ごとの再生時間です。長いほどたくさん聴いています。カーソルを合わせると詳細が見られます。
+It had a	Ton mois avait	Tu mes tuvo	У месяца был	这个月有自己的	今月の音楽には
+pulse.	son rythme.	su ritmo.	свой ритм.	节奏。	リズムがあった。
+{label}: {time}	{label} : {time}	{label}: {time}	{label}: {time}	{label}：{time}	{label}：{time}
+The bigger the record, the more played then.	Plus le disque est grand, plus tu as écouté de musique à cette période.	Cuanto más grande el disco, más música escuchaste en ese periodo.	Чем больше пластинка, тем дольше звучала музыка в этот период.	唱片越大，表示该时段听歌越久。	レコードが大きいほど、その期間にたくさん聴いています。
+was your day.	était ta journée musicale.	fue tu día de música.	— твой самый музыкальный день.	是你听歌最多的一天。	はいちばん音楽を聴いた日。
+Your year,	Ton année,	Tu año,	Твой год,	这一年的音乐，	あなたの1年を、
+day by day.	jour après jour.	día a día.	день за днём.	一天一天回顾。	1日ずつ振り返ろう。
+The faces	Les artistes	Los artistas	Лица	这些艺人	今月を彩った
+of it all.	de ton mois.	de tu mes.	твоего месяца.	陪你度过了这个月。	アーティストたち。
+song	titre	canción	трек	首歌曲	曲
+songs	titres	canciones	треки	首歌曲	曲
+were new to you.	nouveaux pour toi.	nuevas para ti.	были для тебя новыми.	是你第一次听到的。	は初めて聴いた曲。
+was new to you.	nouveau pour toi.	nueva para ti.	был для тебя новым.	是你第一次听到的。	は初めて聴いた曲。
+Mostly	Surtout	Sobre todo	Больше всего	最常听的是	いちばん聴いたのは
+Same seat	On remet ça	¿Repetimos	Повторим	下次再来	また一緒に
+next time?	la prochaine fois ?	otro día?	ещё раз?	一轮？	聴こうか？
+ADMIT ONE · SONGSTA REPLAY	UNE PLACE · SONGSTA REPLAY	UNA ENTRADA · SONGSTA REPLAY	ОДИН БИЛЕТ · SONGSTA REPLAY	专属入场券 · SONGSTA REPLAY	入場券1枚・SONGSTA REPLAY
+{count} · shared with your devices through your sync service	{count} · partagées entre tes appareils via ton service de synchronisation	{count} · compartidas entre tus dispositivos mediante la sincronización	{count} · синхронизированы между твоими устройствами	{count} · 通过同步服务在设备间共享	{count}件・同期サービスでデバイス間に共有
+listen	écoute	escucha	прослушивание	次收听	回再生
+listens	écoutes	escuchas	прослушивания	次收听	回再生
+{count} · kept on this computer only	{count} · gardées sur cet ordinateur uniquement	{count} · guardadas solo en este ordenador	{count} · сохранены только на этом компьютере	{count} · 仅保存在此电脑上	{count}件・このパソコンのみに保存
+{weekday} {day}	{weekday} {day}	{weekday} {day}	{weekday}, {day}	{weekday} {day} 日	{weekday}・{day}日
+{n}%	{n} %	{n} %	{n} %	{n}%	{n}%
+Each bar is an hour, from midnight at the top to 23:00 at the bottom.	Chaque barre représente une heure, de minuit en haut à 23 h en bas.	Cada barra representa una hora, desde las 00:00 arriba hasta las 23:00 abajo.	Каждая полоса — один час: от полуночи сверху до 23:00 снизу.	每条柱状线代表一个小时，从顶部 00:00 到底部 23:00。	棒は1時間ごとです。上の0時から下の23時まで並んでいます。
+Each row is a month. The wider, the more played.	Chaque ligne représente un mois. Plus elle est large, plus tu as écouté.	Cada fila representa un mes. Cuanto más ancha, más música escuchaste.	Каждая строка — месяц. Чем она шире, тем дольше ты слушал музыку.	每行代表一个月，越宽表示播放时间越长。	各行は1か月を表します。幅が広いほど再生時間が長くなります。
+Each row is a day. The wider, the more played.	Chaque ligne représente un jour. Plus elle est large, plus tu as écouté.	Cada fila representa un día. Cuanto más ancha, más música escuchaste.	Каждая строка — день. Чем она шире, тем дольше ты слушал музыку.	每行代表一天，越宽表示播放时间越长。	各行は1日を表します。幅が広いほど再生時間が長くなります。
+Close behind: {weekday} with {time}	Juste derrière : {weekday}, avec {time}	Muy cerca: {weekday}, con {time}	Почти рядом: {weekday} — {time}	紧随其后：{weekday}，{time}	次点は{weekday}、{time}
+behind it.	qui t’ont accompagné.	que lo hicieron posible.	за этим месяцем.	陪伴你左右。	が主役。
+{artists} in all	{artists} au total	{artists} en total	Всего: {artists}	共 {artists}	合計{artists}
+How it	Le son,	El sonido,	Как это	音乐的	音質は
+sounded.	selon le format.	según el formato.	звучало.	声音表现。	こんな感じ。
+This phone and {devices} · as of {time}	Ce téléphone et {devices} · mise à jour à {time}	Este teléfono y {devices} · actualizado a las {time}	Этот телефон и {devices} · обновлено в {time}	此手机和 {devices} · 更新于 {time}	このスマートフォンと{devices}・{time}時点
+The computer's listening shows here once your sync service is updated.	Les écoutes de ton ordinateur apparaîtront ici après la prochaine synchronisation.	Lo que escuchas en el ordenador aparecerá aquí después de la próxima sincronización.	Прослушивания с компьютера появятся здесь после следующей синхронизации.	电脑上的收听记录会在下次同步后显示在这里。	パソコンの再生履歴は次の同期後にここへ表示されます。
+Your {name}	Ton {name}	Tu {name}	Твой {name}	你的 {name}	あなたの{name}
+Those songs aren't in this phone's library	Ces titres ne sont pas dans la bibliothèque de ce téléphone	Esas canciones no están en la biblioteca del teléfono	Этих треков нет в медиатеке телефона	这些歌曲不在此手机的音乐库中	これらの曲はこのスマートフォンのライブラリにありません
+was quiet.	était plutôt calme.	fue tranquilo.	прошёл тихо.	比较安静。	は静かだった。
+is still quiet.	est encore calme.	aún está tranquilo.	пока тихо.	还很安静。	はまだ静か。
+Tap on the right for the next, on the left for the one before; hold to stop	Appuie à droite pour avancer, à gauche pour revenir. Maintiens le doigt pour mettre en pause.	Toca a la derecha para avanzar y a la izquierda para volver. Mantén pulsado para pausar.	Нажми справа, чтобы перейти дальше, слева — чтобы вернуться. Удерживай для паузы.	点按右侧进入下一页，左侧返回上一页；长按暂停。	右をタップすると次へ、左で前へ。長押しすると一時停止できます。
+That song isn't in this phone's library	Ce titre n’est pas dans la bibliothèque de ce téléphone	Esa canción no está en la biblioteca del teléfono	Этого трека нет в медиатеке телефона	这首歌不在此手机的音乐库中	この曲はこのスマートフォンのライブラリにありません
+Your listening, told as a story	Ton écoute, racontée en musique	Tu música cuenta una historia	Твоя музыкальная история	你的音乐故事	音楽で振り返るあなたの時間
+Your listening over time, and every listen — kept on this computer	Tes écoutes au fil du temps, enregistrées sur cet ordinateur	Tus escuchas a lo largo del tiempo, guardadas en este ordenador	История всех твоих прослушиваний хранится на этом компьютере	你的完整收听历史和变化趋势，仅保存在此电脑上	再生履歴とその変化をこのパソコンに保存
+Each ray is an hour of the day, as long as you listened then.	Chaque rayon représente une heure. Plus il est long, plus tu as écouté.	Cada rayo es una hora. Cuanto más largo, más música escuchaste.	Каждый луч — один час. Длина показывает время прослушивания.	每条射线代表一个小时，越长表示收听越久。	線は1時間ごとの再生時間です。長いほどたくさん聴いています。
+The listening history, Recently played, Replay and play counts · {size}	Historique d’écoute, écoutes récentes, Replay et compteurs · {size}	Historial, reproducciones recientes, Replay y recuentos · {size}	История, недавние прослушивания, Replay и счётчики · {size}	收听历史、最近播放、Replay 和播放次数 · {size}	再生履歴・最近再生した曲・Replay・再生回数 · {size}
+Replay, the listening history and Recently played on this phone start from nothing. Play counts on your server and what your sync service has stay. This can't be undone.	Replay, l’historique et les écoutes récentes sur ce téléphone seront remis à zéro. Les données de ton serveur et de synchronisation resteront intactes. Impossible d’annuler cette action.	Replay, el historial y las escuchas recientes de este teléfono se borrarán. Los recuentos del servidor y los datos sincronizados se conservan. No se puede deshacer.	Replay, история и недавние прослушивания на телефоне будут сброшены. Данные на сервере и в сервисе синхронизации сохранятся. Отменить это нельзя.	此手机的 Replay、收听历史和最近播放将清零。服务器播放次数及同步服务中的数据会保留。此操作无法撤销。	このスマートフォンのReplay・再生履歴・最近再生した曲をリセットします。サーバーの再生回数と同期データは残ります。元に戻せません。
+The listening history, Recently played, Replay and play counts on this computer start from nothing. What your sync service already has stays there. This can't be undone.	L’historique, les écoutes récentes, Replay et les compteurs de cet ordinateur seront remis à zéro. Les données déjà synchronisées resteront intactes. Impossible d’annuler.	El historial, las escuchas recientes, Replay y los recuentos de este ordenador se borrarán. Los datos del servicio de sincronización se conservan. No se puede deshacer.	История, недавние прослушивания, Replay и счётчики на этом компьютере будут сброшены. Данные сервиса синхронизации сохранятся. Отменить это нельзя.	此电脑的收听历史、最近播放、Replay 和播放次数将清零。同步服务中的数据不受影响。此操作无法撤销。	このパソコンの再生履歴・最近再生した曲・Replay・再生回数をリセットします。同期サービスのデータは残ります。元に戻せません。
+ReplayGain — songs play at the same loudness, their dynamics untouched	ReplayGain : un volume homogène sans modifier la dynamique des titres	ReplayGain: volumen uniforme sin alterar la dinámica de las canciones	ReplayGain выравнивает громкость без изменения динамики музыки	ReplayGain：统一播放响度，同时保留音乐动态	ReplayGain：音楽のダイナミクスを保ちながら音量をそろえます
+Mixed for you · new every day	Mix pour toi · renouvelé chaque jour	Mix para ti · cambia cada día	Микс для тебя · обновляется ежедневно	为你混音 · 每天更新	あなたへのミックス・毎日更新
+Mix from these	Créer un mix avec ces titres	Crear un mix con estas canciones	Создать микс из этих треков	用这些歌曲生成混音	この曲からミックスを作成
+Play as a mix	Écouter comme un mix	Reproducir como mix	Воспроизвести как микс	作为混音播放	ミックスとして再生
+Mix for you	Un mix pour toi	Un mix para ti	Микс для тебя	为你混音	あなたへのミックス
+Mix	Mix	Mix	Микс	混音	ミックス
+Mix · {count}	Mix · {count}	Mix · {count}	Микс · {count}	混音 · {count}	ミックス・{count}
+Mixes	Mix	Mixes	Миксы	混音	ミックス
+Mixes need at least eight matching songs.	Pour créer un mix, il faut au moins huit titres correspondants.	Para crear un mix hacen falta al menos ocho canciones compatibles.	Для микса нужно как минимум восемь подходящих треков.	创建混音至少需要八首匹配的歌曲。	ミックスには条件に合う曲が8曲以上必要です。
+This mix is empty	Ce mix est vide	Este mix está vacío	Этот микс пуст	这个混音还是空的	このミックスは空です
+Your mixes	Tes mix	Tus mixes	Твои миксы	你的混音	あなたのミックス
+Quiet, gentle songs from your library	Des titres calmes et doux de ta bibliothèque	Canciones suaves y tranquilas de tu biblioteca	Спокойные и мягкие треки из твоей медиатеки	从音乐库中挑选轻柔舒缓的歌曲	ライブラリから穏やかな曲を選びます
+150–175 BPM · lots of energy	150–175 BPM · beaucoup d’énergie	150–175 BPM · mucha energía	150–175 BPM · высокая энергия	150–175 BPM · 高能量	150〜175 BPM・高エネルギー
+steady 100–120 BPM · little energy	100–120 BPM réguliers · douceur	100–120 BPM constantes · poca energía	Ровные 100–120 BPM · низкая энергия	稳定 100–120 BPM · 低能量	安定した100〜120 BPM・低エネルギー
+Most played	Les plus écoutés	Más escuchadas	Самые прослушиваемые	播放最多	よく聴いた曲
+Never played	Jamais écoutés	Nunca reproducidas	Ни разу не слушали	从未播放	まだ聴いていない
+Not played in a while	Pas écoutés depuis un moment	Hace tiempo que no suenan	Давно не слушали	很久没播放	しばらく聴いていない
+Last played	Dernière écoute	Última reproducción	Последнее прослушивание	上次播放	最後に再生した日時
+Often played together	Souvent écoutés ensemble	Suelen sonar juntos	Часто слушают вместе	经常一起播放	一緒によく聴く曲
+Keep recently played tracks out of autoplay	Éviter les titres écoutés récemment en lecture automatique	Excluir canciones recientes de la reproducción automática	Не включать недавно прослушанные треки в автовоспроизведение	自动播放时跳过最近听过的歌曲	自動再生で最近聴いた曲を除外
+Leave out what played today	Exclure les titres écoutés aujourd’hui	Excluir lo escuchado hoy	Не включать треки, сыгранные сегодня	排除今天播放的歌曲	今日再生した曲を除外
+What played in the last week stays out of that	Les titres écoutés la semaine dernière sont exclus	Se excluye lo escuchado durante la última semana	Треки, прослушанные за последнюю неделю, исключаются	排除过去一周播放过的歌曲	過去1週間に再生した曲は除外されます
+Keep the music going when the queue ends	Continuer la musique quand la file d’attente se termine	Seguir escuchando cuando termine la cola	Продолжать музыку после окончания очереди	播放队列结束后继续播放	再生キューが終わっても音楽を続ける
+Make the queue bigger	Agrandir la file d’attente	Ampliar la cola	Увеличить очередь	展开播放队列	再生キューを広げる
+Make the queue smaller	Réduire la file d’attente	Reducir la cola	Уменьшить очередь	收起播放队列	再生キューを小さくする
+Added “{title}” to the queue	« {title} » ajouté à la file d’attente	«{title}» añadida a la cola	«{title}» добавлен в очередь	已将“{title}”加入播放队列	「{title}」を再生キューに追加しました
+Added to queue, after {count}	Ajouté à la file d’attente, après {count}	Añadido a la cola, después de {count}	Добавлено в очередь после {count}	已加入队列，排在 {count} 后面	キューの{count}の後に追加しました
+Nothing playing — start a track to see your queue here.	Aucune lecture en cours. Lance un titre pour voir la file d’attente ici.	No suena nada. Reproduce una canción para ver aquí la cola.	Сейчас ничего не играет. Запусти трек, чтобы увидеть очередь.	当前没有歌曲播放。开始播放后即可在这里查看队列。	再生中の曲はありません。曲を再生すると、ここにキューが表示されます。
+Nothing here yet — tracks you play land in Recently played.	Rien ici pour le moment. Les titres écoutés apparaîtront dans les écoutes récentes.	Todavía no hay nada. Las canciones que escuches aparecerán en Reproducciones recientes.	Пока здесь пусто. Прослушанные треки появятся в разделе «Недавно слушали».	这里暂时没有内容。播放过的歌曲会显示在“最近播放”中。	まだ何もありません。再生した曲は「最近再生した曲」に表示されます。
+Nothing played this week yet. What you play shows up here.	Pas encore d’écoute cette semaine. Les titres que tu écouteras apparaîtront ici.	Todavía no has escuchado música esta semana. Tus reproducciones aparecerán aquí.	На этой неделе пока не было прослушиваний. Твои треки появятся здесь.	本周还没有播放记录。之后听过的歌曲会显示在这里。	今週はまだ再生履歴がありません。聴いた曲がここに表示されます。
+This week's songs aren't in your listening history.	Aucune écoute de cette semaine dans ton historique.	Las canciones de esta semana aún no aparecen en tu historial.	Прослушивания за эту неделю отсутствуют в истории.	你的收听历史中还没有本周的歌曲。	今週聴いた曲はまだ再生履歴にありません。
+Point at a day, click it to see its songs.	Passe sur un jour, puis clique pour voir les titres écoutés.	Señala un día y haz clic para ver sus canciones.	Наведи курсор на день и нажми, чтобы увидеть треки.	将鼠标移到某一天，点击查看当天听过的歌曲。	日付にカーソルを合わせ、クリックするとその日の曲を表示できます。
+Loading the day…	Chargement de la journée…	Cargando el día…	Загрузка дня…	正在加载当天记录…	その日の履歴を読み込み中…
+Play the day	Écouter les titres du jour	Reproducir canciones del día	Воспроизвести треки дня	播放当天歌曲	その日の曲を再生
+Quietest month	Mois le plus calme	Mes más tranquilo	Самый спокойный месяц	播放最少的月份	いちばん静かな月
+Midday	Midi	Mediodía	Середина дня	正午	昼ごろ
+Year	Année	Año	Год	年份	年
