@@ -1,0 +1,104 @@
+a playlist	une playlist	una lista de reproducción	плейлист	一个播放列表	プレイリスト
+playlist	playlist	lista de reproducción	плейлист	播放列表	プレイリスト
+playlists	playlists	listas de reproducción	плейлисты	播放列表	プレイリスト
+PLAYLISTS	PLAYLISTS	LISTAS	ПЛЕЙЛИСТЫ	播放列表	プレイリスト
+New playlist	Nouvelle playlist	Nueva lista	Новый плейлист	新建播放列表	新しいプレイリスト
+New Playlist	Nouvelle playlist	Nueva lista	Новый плейлист	新建播放列表	新しいプレイリスト
+New playlist…	Nouvelle playlist…	Nueva lista…	Новый плейлист…	新建播放列表…	新しいプレイリスト…
+New smart playlist	Nouvelle playlist intelligente	Nueva lista inteligente	Новый умный плейлист	新建智能播放列表	新しいスマートプレイリスト
+Smart playlist	Playlist intelligente	Lista inteligente	Умный плейлист	智能播放列表	スマートプレイリスト
+Smart playlist not found	Playlist intelligente introuvable	No se encontró la lista inteligente	Умный плейлист не найден	未找到智能播放列表	スマートプレイリストが見つかりません
+No playlists yet	Pas encore de playlists	Todavía no hay listas	Плейлистов пока нет	还没有播放列表	プレイリストはまだありません
+No playlist by that name.	Aucune playlist ne porte ce nom.	No hay ninguna lista con ese nombre.	Плейлист с таким названием не найден.	没有这个名称的播放列表。	その名前のプレイリストはありません。
+Playlist name	Nom de la playlist	Nombre de la lista	Название плейлиста	播放列表名称	プレイリスト名
+Give your playlist a name.	Donne un nom à ta playlist.	Ponle nombre a tu lista.	Дай плейлисту название.	给播放列表起个名字。	プレイリストに名前を付けてください。
+My Playlist #{count}	Ma playlist n° {count}	Mi lista n.º {count}	Мой плейлист № {count}	我的播放列表 #{count}	マイプレイリスト #{count}
+Open playlist	Ouvrir la playlist	Abrir lista	Открыть плейлист	打开播放列表	プレイリストを開く
+Play playlist	Écouter la playlist	Reproducir lista	Воспроизвести плейлист	播放列表	プレイリストを再生
+Rename playlist	Renommer la playlist	Cambiar nombre de lista	Переименовать плейлист	重命名播放列表	プレイリスト名を変更
+Playlist deleted	Playlist supprimée	Lista eliminada	Плейлист удалён	播放列表已删除	プレイリストを削除しました
+Remove from this playlist	Retirer de cette playlist	Quitar de esta lista	Убрать из этого плейлиста	从此播放列表中移除	このプレイリストから削除
+Removed from playlist	Retiré de la playlist	Eliminado de la lista	Удалено из плейлиста	已从播放列表移除	プレイリストから削除しました
+Organize your playlists	Organise tes playlists	Organiza tus listas	Организуй свои плейлисты	整理你的播放列表	プレイリストを整理
+Pin playlist	Épingler la playlist	Fijar lista	Закрепить плейлист	固定播放列表	プレイリストをピン留め
+Unpin playlist	Désépingler la playlist	Desfijar lista	Открепить плейлист	取消固定播放列表	プレイリストのピン留めを解除
+Untitled playlist	Playlist sans nom	Lista sin nombre	Плейлист без названия	未命名播放列表	無題のプレイリスト
+Which playlist?	Quelle playlist ?	¿Qué lista?	Какой плейлист?	哪个播放列表？	どのプレイリスト？
+Your playlists	Tes playlists	Tus listas	Твои плейлисты	你的播放列表	あなたのプレイリスト
+the playlist	la playlist	la lista	плейлист	该播放列表	プレイリスト
+Playlist · {count}	Playlist · {count}	Lista · {count}	Плейлист · {count}	播放列表 · {count}	プレイリスト・{count}
+Playlist · {count} {value}	Playlist · {count} {value}	Lista · {count} {value}	Плейлист · {count} {value}	播放列表 · {count} {value}	プレイリスト・{count} {value}
+{title} — Playlist	{title} — Playlist	{title} — Lista	{title} — Плейлист	{title} — 播放列表	{title} — プレイリスト
+New folder	Nouveau dossier	Nueva carpeta	Новая папка	新建文件夹	新しいフォルダー
+New Folder	Nouveau dossier	Nueva carpeta	Новая папка	新建文件夹	新しいフォルダー
+New Folder {count}	Nouveau dossier {count}	Nueva carpeta {count}	Новая папка {count}	新建文件夹 {count}	新しいフォルダー {count}
+Folder name	Nom du dossier	Nombre de carpeta	Название папки	文件夹名称	フォルダー名
+Give your folder a name.	Donne un nom à ton dossier.	Ponle nombre a la carpeta.	Дай папке название.	给文件夹起个名字。	フォルダーに名前を付けてください。
+Rename folder	Renommer le dossier	Cambiar nombre de carpeta	Переименовать папку	重命名文件夹	フォルダー名を変更
+Remove from folder	Retirer du dossier	Quitar de la carpeta	Убрать из папки	从文件夹中移除	フォルダーから外す
+your folders	tes dossiers	tus carpetas	твои папки	你的文件夹	あなたのフォルダー
+your music folder	ton dossier de musique	tu carpeta de música	твоя папка с музыкой	你的音乐文件夹	音楽フォルダー
+Watch folders	Surveiller les dossiers	Vigilar carpetas	Отслеживать папки	监视文件夹	フォルダーを監視
+Choose a whole folder	Choisir un dossier entier	Elegir una carpeta completa	Выбрать папку целиком	选择整个文件夹	フォルダー全体を選択
+Choose an empty folder, or make a new one	Choisis un dossier vide ou crée-en un nouveau	Elige una carpeta vacía o crea una nueva	Выбери пустую папку или создай новую	选择空文件夹或新建文件夹	空のフォルダーを選ぶか新しく作成してください
+That's a file, not a folder	C’est un fichier, pas un dossier	Eso es un archivo, no una carpeta	Это файл, а не папка	这是文件，不是文件夹	これはフォルダーではなくファイルです
+A folder couldn't be read	Impossible de lire un dossier	No se pudo leer una carpeta	Не удалось прочитать папку	无法读取某个文件夹	フォルダーを読み取れませんでした
+That folder is already in your library	Ce dossier est déjà dans ta bibliothèque	Esa carpeta ya está en tu biblioteca	Эта папка уже есть в медиатеке	此文件夹已在音乐库中	このフォルダーはすでにライブラリにあります
+Re-read tags and artwork from every imported folder	Relire les tags et pochettes de tous les dossiers importés	Volver a leer etiquetas y portadas de todas las carpetas importadas	Повторно прочитать теги и обложки во всех импортированных папках	重新读取所有导入文件夹中的标签与封面	読み込んだ全フォルダーのタグとジャケットを再取得
+{n} folders imported	{n} dossiers importés	{n} carpetas importadas	Импортировано папок: {n}	已导入 {n} 个文件夹	{n}個のフォルダーを読み込みました
+Imported {n} folders	{n} dossiers importés	Se importaron {n} carpetas	Импортировано папок: {n}	已导入 {n} 个文件夹	{n}個のフォルダーを読み込みました
+Imported {count} songs	{count} titres importés	Se importaron {count} canciones	Импортировано треков: {count}	已导入 {count} 首歌曲	{count}曲を読み込みました
+Imported {count} filters	{count} filtres importés	Se importaron {count} filtros	Импортировано фильтров: {count}	已导入 {count} 个滤镜	{count}件のフィルターを読み込みました
+Imported "{name}"	« {name} » importé	Se importó «{name}»	Импортировано «{name}»	已导入“{name}”	「{name}」を読み込みました
+Import music folders — a parent folder brings its music subfolders along	Importer des dossiers musicaux : un dossier parent inclut aussi ses sous-dossiers	Importa carpetas de música: las subcarpetas se incluyen automáticamente	Импортируй папки с музыкой: вложенные папки тоже будут добавлены	导入音乐文件夹时，父文件夹中的音乐子文件夹也会一并导入	音楽フォルダーを読み込むと、下位の音楽フォルダーも含まれます
+Export the playlist	Exporter la playlist	Exportar lista	Экспортировать плейлист	导出播放列表	プレイリストをエクスポート
+Export your Liked Songs	Exporter tes titres favoris	Exportar tus canciones favoritas	Экспортировать любимые треки	导出喜欢的歌曲	お気に入りの曲をエクスポート
+Export failed	Échec de l’exportation	Error al exportar	Не удалось экспортировать	导出失败	エクスポートできませんでした
+That file is far too large for a playlist export.	Ce fichier est trop volumineux pour un export de playlist.	Ese archivo es demasiado grande para exportar una lista.	Файл слишком большой для экспорта плейлиста.	该文件太大，无法作为播放列表导出文件。	プレイリストのエクスポート用としてはファイルが大きすぎます。
+That file is far too large for a Liked Songs export.	Ce fichier est trop volumineux pour un export des favoris.	Ese archivo es demasiado grande para exportar canciones favoritas.	Файл слишком большой для экспорта любимых треков.	该文件太大，无法作为喜欢的歌曲导出文件。	お気に入りの曲のエクスポート用としてはファイルが大きすぎます。
+That playlist has no songs in it	Cette playlist est vide	Esta lista no tiene canciones	В этом плейлисте нет треков	此播放列表没有歌曲	このプレイリストには曲がありません
+This playlist no longer exists	Cette playlist n’existe plus	Esta lista ya no existe	Этот плейлист больше не существует	此播放列表已不存在	このプレイリストはもう存在しません
+No album matches.	Aucun album ne correspond.	No hay álbumes que coincidan.	Подходящих альбомов нет.	没有匹配的专辑。	一致するアルバムがありません。
+New album	Nouvel album	Nuevo álbum	Новый альбом	新建专辑	新しいアルバム
+New album…	Nouvel album…	Nuevo álbum…	Новый альбом…	新建专辑…	新しいアルバム…
+Make album	Créer un album	Crear álbum	Создать альбом	创建专辑	アルバムを作成
+Make an album	Créer un album	Crear un álbum	Создать альбом	创建专辑	アルバムを作成
+Make an album…	Créer un album…	Crear un álbum…	Создать альбом…	创建专辑…	アルバムを作成…
+Merge albums	Fusionner des albums	Fusionar álbumes	Объединить альбомы	合并专辑	アルバムを結合
+Merge albums…	Fusionner des albums…	Fusionar álbumes…	Объединить альбомы…	合并专辑…	アルバムを結合…
+Rename album	Renommer l’album	Cambiar nombre del álbum	Переименовать альбом	重命名专辑	アルバム名を変更
+Pin album	Épingler l’album	Fijar álbum	Закрепить альбом	固定专辑	アルバムをピン留め
+Unpin album	Désépingler l’album	Desfijar álbum	Открепить альбом	取消固定专辑	アルバムのピン留めを解除
+Per album	Par album	Por álbum	По альбому	按专辑	アルバムごと
+Parts of this album	Parties de cet album	Partes de este álbum	Части этого альбома	此专辑的不同部分	このアルバムの各パート
+Songs without an album	Titres sans album	Canciones sin álbum	Треки без альбома	没有专辑的歌曲	アルバム未設定の曲
+Every song is on an album	Chaque titre appartient à un album	Cada canción pertenece a un álbum	У каждого трека есть альбом	每首歌都有所属专辑	すべての曲にアルバムがあります
+Their tags name no album	Leurs tags n’indiquent aucun album	Sus etiquetas no indican un álbum	В тегах не указан альбом	标签中没有专辑名称	タグにアルバム名がありません
+Put on album	Ajouter à un album	Añadir al álbum	Добавить в альбом	加入专辑	アルバムに追加
+Put on an album	Ajouter à un album	Añadir a un álbum	Добавить в альбом	加入专辑	アルバムに追加
+Put on an album…	Ajouter à un album…	Añadir a un álbum…	Добавить в альбом…	加入专辑…	アルバムに追加…
+Put songs on an album	Ajouter des titres à un album	Añadir canciones a un álbum	Добавить треки в альбом	将歌曲加入专辑	曲をアルバムに追加
+Take off this album	Retirer de cet album	Quitar de este álbum	Убрать из этого альбома	从此专辑移除	このアルバムから外す
+{title}: open the album	{title} : ouvrir l’album	{title}: abrir álbum	{title}: открыть альбом	打开专辑 {title}	{title} のアルバムを開く
+Go to {album}	Aller à {album}	Ir a {album}	Перейти к {album}	前往 {album}	{album}に移動
+Edit album — artists, merge split albums	Modifier l’album : artistes et albums à réunir	Editar álbum: artistas y álbumes separados	Правка альбома: исполнители и объединение частей	编辑专辑：艺人、合并拆分的专辑	アルバムを編集：アーティストや分割アルバムの結合
+No similar albums — search for one.	Aucun album similaire trouvé. Essaie une recherche.	No hay álbumes similares. Prueba a buscar uno.	Похожих альбомов нет. Попробуй поиск.	未找到相似专辑，请尝试搜索。	似たアルバムはありません。検索してみてください。
+No album of this artist yet — search for one.	Aucun album de cet artiste pour l’instant. Lance une recherche.	Todavía no hay álbumes de este artista. Prueba a buscar.	Альбомов этого исполнителя пока нет. Попробуй поиск.	尚未找到这位艺人的专辑，可以尝试搜索。	このアーティストのアルバムはまだありません。検索してみてください。
+No other album is shown as part of this one. If your tags split it — “Disc 2”, or a song with another album artist — add that album below.	Aucun autre album n’est associé à celui-ci. Si tes tags l’ont séparé (« Disc 2 » ou autre artiste d’album), ajoute-le ci-dessous.	No hay otros álbumes asociados. Si las etiquetas lo dividieron («Disc 2» u otro artista del álbum), añádelo abajo.	Другие части альбома не найдены. Если теги разделили его («Disc 2» или другой исполнитель альбома), добавь нужную часть ниже.	目前没有其他专辑被关联为此专辑的一部分。如果标签将它拆成了“Disc 2”或不同专辑艺人的条目，可在下方添加。	ほかのアルバムは結合されていません。タグによって「Disc 2」などに分かれている場合は、下から追加してください。
+An album keeps at least one artist	Un album doit garder au moins un artiste	Un álbum debe tener al menos un artista	У альбома должен остаться хотя бы один исполнитель	专辑至少需要保留一位艺人	アルバムには少なくとも1人のアーティストが必要です
+Artists written different ways	Artistes écrits de différentes façons	Artistas escritos de distintas formas	Разные варианты имени исполнителя	艺人名称有多种写法	アーティスト名の表記ゆれ
+The artist is spelled differently	Le nom de l’artiste est écrit autrement	El nombre del artista está escrito de otra forma	Имя исполнителя написано иначе	艺人名称的拼写不同	アーティスト名の表記が異なります
+ARTISTS	ARTISTES	ARTISTAS	ИСПОЛНИТЕЛИ	艺人	アーティスト
+Artists · {count}	Artistes · {count}	Artistas · {count}	Исполнители · {count}	艺人 · {count}	アーティスト・{count}
+Artists…	Artistes…	Artistas…	Исполнители…	艺人…	アーティスト…
+Your top artists	Tes artistes les plus écoutés	Tus artistas más escuchados	Твои самые прослушиваемые исполнители	你最常听的艺人	よく聴いたアーティスト
+More by {artist}	Plus de titres de {artist}	Más de {artist}	Больше музыки от {artist}	更多来自 {artist} 的歌曲	{artist}のほかの曲
+About the artist: open {name}	À propos de l’artiste : ouvrir {name}	Sobre el artista: abrir {name}	Об исполнителе: открыть {name}	艺人简介：打开 {name}	アーティスト情報：{name}を開く
+About the artist — show {name} in your library	À propos de l’artiste : afficher {name} dans ta bibliothèque	Sobre el artista: mostrar a {name} en tu biblioteca	Об исполнителе: показать {name} в медиатеке	艺人简介：在音乐库中查看 {name}	アーティスト情報：ライブラリで{name}を表示
+Nothing in your library credits this artist.	Cet artiste ne figure pas dans ta bibliothèque.	No hay canciones de este artista en tu biblioteca.	В медиатеке нет записей с участием этого исполнителя.	你的音乐库中没有收录这位艺人的作品。	このアーティストの作品はライブラリにありません。
+Playing from artist	Lecture depuis l’artiste	Reproduciendo del artista	Воспроизведение исполнителя	正在播放此艺人的歌曲	アーティストから再生
+Playing from album	Lecture depuis l’album	Reproduciendo del álbum	Воспроизведение альбома	正在播放此专辑的歌曲	アルバムから再生
+Album · {artist}	Album · {artist}	Álbum · {artist}	Альбом · {artist}	专辑 · {artist}	アルバム・{artist}
+ALBUMS	ALBUMS	ÁLBUMES	АЛЬБОМЫ	专辑	アルバム
+Albums · {count}	Albums · {count}	Álbumes · {count}	Альбомы · {count}	专辑 · {count}	アルバム・{count}
+a folder you chose	un dossier que tu as choisi	una carpeta que elegiste	выбранная тобой папка	你选择的文件夹	選択したフォルダー
