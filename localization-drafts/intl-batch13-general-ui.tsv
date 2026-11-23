@@ -1,0 +1,144 @@
+Duration	Durée	Duración	Длительность	时长	長さ
+Go back	Retour	Volver	Назад	返回	戻る
+Go forward	Avancer	Avanzar	Вперёд	前进	進む
+Get started	C’est parti	Empezar	Начать	开始使用	はじめる
+Good morning	Bonjour	Buenos días	Доброе утро	早上好	おはようございます
+Good afternoon	Bon après-midi	Buenas tardes	Добрый день	下午好	こんにちは
+Good evening	Bonsoir	Buenas noches	Добрый вечер	晚上好	こんばんは
+Late night	Nuit	Noche	Поздняя ночь	深夜	深夜
+Focus	Concentration	Concentración	Концентрация	专注	集中
+Both	Les deux	Ambos	Оба	两者	両方
+Any	N’importe lequel	Cualquiera	Любой	任意	どれでも
+Amber	Ambre	Ámbar	Янтарный	琥珀色	アンバー
+Blue	Bleu	Azul	Синий	蓝色	ブルー
+Coral	Corail	Coral	Коралловый	珊瑚色	コーラル
+Green	Vert	Verde	Зелёный	绿色	グリーン
+Pink	Rose	Rosa	Розовый	粉色	ピンク
+Flat	Plat	Plano	Плоский	平直	フラット
+Normal	Normal	Normal	Обычный	普通	標準
+Random	Aléatoire	Aleatorio	Случайный	随机	ランダム
+Quiet	Calme	Tranquilo	Тихо	安静	静か
+Loud	Fort	Alto	Громко	响亮	大きい音
+Loudness	Niveau sonore	Sonoridad	Громкость	响度	ラウドネス
+Name	Nom	Nombre	Название	名称	名前
+Group name	Nom du groupe	Nombre del grupo	Название группы	分组名称	グループ名
+New group	Nouveau groupe	Nuevo grupo	Новая группа	新建分组	新しいグループ
+New group…	Nouveau groupe…	Nuevo grupo…	Новая группа…	新建分组…	新しいグループ…
+Rename group	Renommer le groupe	Cambiar nombre del grupo	Переименовать группу	重命名分组	グループ名を変更
+Leave the group	Quitter le groupe	Salir del grupo	Покинуть группу	退出分组	グループを退出
+Give your group a name.	Donne un nom à ton groupe.	Ponle nombre al grupo.	Дай группе название.	给分组起个名字。	グループに名前を付けてください。
+Move down	Descendre	Mover abajo	Переместить вниз	下移	下へ移動
+Move up	Monter	Mover arriba	Переместить вверх	上移	上へ移動
+More	Plus	Más	Ещё	更多	もっと見る
+More options	Plus d’options	Más opciones	Дополнительные параметры	更多选项	その他のオプション
+Not now	Pas maintenant	Ahora no	Не сейчас	暂不	今はしない
+No	Non	No	Нет	否	いいえ
+OK	OK	Aceptar	ОК	确定	OK
+On	Activé	Activado	Включено	开启	オン
+Off	Désactivé	Desactivado	Выключено	关闭	オフ
+Offline	Hors ligne	Sin conexión	Офлайн	离线	オフライン
+Ready	Prêt	Listo	Готово	已就绪	準備完了
+Restart	Redémarrer	Reiniciar	Перезапустить	重新启动	再起動
+Restart now	Redémarrer maintenant	Reiniciar ahora	Перезапустить сейчас	立即重新启动	今すぐ再起動
+Reload Songsta	Recharger Songsta	Volver a cargar Songsta	Перезагрузить Songsta	重新加载 Songsta	Songstaを再読み込み
+Reset	Réinitialiser	Restablecer	Сбросить	重置	リセット
+Reset the app	Réinitialiser l’application	Restablecer la aplicación	Сбросить приложение	重置应用	アプリをリセット
+Reset the app?	Réinitialiser l’application ?	¿Restablecer la aplicación?	Сбросить приложение?	重置应用？	アプリをリセットしますか？
+Restart the app?	Redémarrer l’application ?	¿Reiniciar la aplicación?	Перезапустить приложение?	重新启动应用？	アプリを再起動しますか？
+Restore	Restaurer	Restaurar	Восстановить	恢复	復元
+Remove	Retirer	Quitar	Убрать	移除	削除
+Remove picture	Supprimer l’image	Eliminar imagen	Удалить изображение	移除图片	画像を削除
+Remove rule	Supprimer la règle	Eliminar regla	Удалить правило	移除规则	ルールを削除
+Remove band	Supprimer la bande	Eliminar banda	Удалить полосу	移除频段	バンドを削除
+Remove from this list	Retirer de cette liste	Quitar de esta lista	Убрать из этого списка	从此列表移除	このリストから削除
+Remove from Songsta (files stay on disk)	Retirer de Songsta (les fichiers restent sur le disque)	Quitar de Songsta (los archivos siguen en el disco)	Убрать из Songsta (файлы останутся на диске)	从 Songsta 移除（磁盘文件不变）	Songstaから削除（ディスク上のファイルは残ります）
+Rename in Songsta	Renommer dans Songsta	Cambiar nombre en Songsta	Переименовать в Songsta	在 Songsta 中重命名	Songsta内で名前を変更
+Rename this device	Renommer cet appareil	Cambiar nombre del dispositivo	Переименовать устройство	重命名此设备	このデバイスの名前を変更
+Rename…	Renommer…	Cambiar nombre…	Переименовать…	重命名…	名前を変更…
+Renamed	Renommé	Nombre cambiado	Переименовано	已重命名	名前を変更しました
+Sign out	Se déconnecter	Cerrar sesión	Выйти из аккаунта	退出登录	サインアウト
+Sign out?	Se déconnecter ?	¿Cerrar sesión?	Выйти из аккаунта?	退出登录？	サインアウトしますか？
+Password	Mot de passe	Contraseña	Пароль	密码	パスワード
+Input	Entrée	Entrada	Вход	输入	入力
+Instrumental	Instrumental	Instrumental	Инструментальная музыка	纯音乐	インストゥルメンタル
+List	Liste	Lista	Список	列表	リスト
+Now playing	Lecture en cours	Reproduciendo	Сейчас играет	正在播放	再生中
+NOW PLAYING	LECTURE EN COURS	REPRODUCIENDO	СЕЙЧАС ИГРАЕТ	正在播放	再生中
+Now playing bar	Barre de lecture en cours	Barra de reproducción	Панель воспроизведения	正在播放栏	再生バー
+Now playing panel	Panneau de lecture en cours	Panel de reproducción	Панель текущего трека	正在播放面板	再生中パネル
+Now playing view	Vue Lecture en cours	Vista de reproducción	Экран текущего трека	正在播放页面	再生中画面
+Nothing playing	Aucune lecture en cours	No suena nada	Ничего не играет	当前没有播放	再生中の曲はありません
+Nothing playing yet	Rien en lecture pour le moment	Todavía no suena nada	Пока ничего не играет	暂时没有播放	まだ何も再生していません
+No songs.	Aucun titre.	No hay canciones.	Треков нет.	没有歌曲。	曲がありません。
+No songs here yet.	Pas encore de titres ici.	Todavía no hay canciones aquí.	Здесь пока нет треков.	这里还没有歌曲。	ここにはまだ曲がありません。
+No songs match	Aucun titre ne correspond	No hay canciones que coincidan	Подходящих треков нет	没有匹配的歌曲	一致する曲はありません
+No songs match yet	Pas encore de titre correspondant	Aún no hay canciones que coincidan	Совпадающих треков пока нет	暂时没有匹配的歌曲	一致する曲はまだありません
+Nothing matches that search	Aucun résultat pour cette recherche	Nada coincide con la búsqueda	По запросу ничего не найдено	没有匹配的搜索结果	検索に一致するものはありません
+Nothing in your library matches	Aucun résultat dans ta bibliothèque	Nada coincide en tu biblioteca	В медиатеке ничего не найдено	音乐库中没有匹配项	ライブラリに一致するものはありません
+Nothing to explore yet	Rien à explorer pour le moment	Todavía no hay nada que explorar	Пока нечего исследовать	还没有可探索的内容	まだ見つけるものがありません
+Nothing to explore yet.	Rien à explorer pour le moment.	Todavía no hay nada que explorar.	Пока нечего исследовать.	还没有可探索的内容。	まだ見つけるものがありません。
+Nothing to fix	Rien à corriger	Nada que corregir	Исправлять нечего	无需修复	修正するものはありません
+Nothing left to check.	Plus rien à vérifier.	No queda nada por revisar.	Больше нечего проверять.	没有待检查的内容。	確認するものはもうありません。
+Not set up yet	Pas encore configuré	Todavía sin configurar	Ещё не настроено	尚未设置	まだ設定されていません
+Notifications	Notifications	Notificaciones	Уведомления	通知	通知
+Overview	Vue d’ensemble	Resumen	Обзор	概览	概要
+Release date	Date de sortie	Fecha de lanzamiento	Дата выхода	发行日期	発売日
+Released	Sorti	Publicado	Выпущен	已发行	発売済み
+Recorded at	Enregistré à	Grabado en	Записано в	录制地点	録音場所
+Position in the song	Position dans le titre	Posición en la canción	Позиция в треке	歌曲播放位置	曲の再生位置
+Preamp	Préampli	Preamplificador	Предусилитель	前级增益	プリアンプ
+Sample rate	Fréquence d’échantillonnage	Frecuencia de muestreo	Частота дискретизации	采样率	サンプリングレート
+Samples	Échantillons	Muestras	Сэмплы	采样	サンプル
+BPM	BPM	BPM	BPM	BPM	BPM
+Play a song first	Écoute d’abord un titre	Primero reproduce una canción	Сначала включи трек	请先播放一首歌	まず曲を再生してください
+Play now	Écouter maintenant	Reproducir ahora	Воспроизвести сейчас	立即播放	今すぐ再生
+Play all	Tout écouter	Reproducir todo	Воспроизвести всё	全部播放	すべて再生
+Play again (unmute)	Reprendre la lecture	Volver a reproducir	Снова воспроизводить	恢复播放	再び再生
+Play here	Écouter ici	Reproducir aquí	Воспроизвести здесь	在此播放	ここで再生
+Play there	Écouter là-bas	Reproducir allí	Воспроизвести там	在那里播放	そこで再生
+Play together	Écouter ensemble	Reproducir juntos	Воспроизводить вместе	一起播放	一緒に再生
+Play along	Écouter en même temps	Reproducir a la vez	Воспроизводить одновременно	同步播放	同時に再生
+Play on	Écouter sur	Reproducir en	Воспроизвести на	在此设备播放	再生先
+Playing	En cours de lecture	Reproduciendo	Воспроизводится	正在播放	再生中
+Playing from	Lecture depuis	Reproduciendo desde	Воспроизведение из	播放来源	再生元
+Playing on	Lecture sur	Reproduciendo en	Воспроизведение на	正在播放于	再生先
+Plays	Écoutes	Reproducciones	Прослушивания	播放次数	再生回数
+Plays next	Passe ensuite	Suena después	Следующий в очереди	下一首播放	次に再生
+Next up	À suivre	A continuación	Далее	接下来播放	次に再生
+Previous	Précédent	Anterior	Предыдущий	上一首	前へ
+Receiver	Ampli	Receptor	Ресивер	接收设备	レシーバー
+Receivers and TVs	Amplis et téléviseurs	Receptores y televisores	Ресиверы и телевизоры	接收设备与电视	レシーバーとテレビ
+RECEIVERS AND TVS	AMPLIS ET TÉLÉVISEURS	RECEPTORES Y TELEVISORES	РЕСИВЕРЫ И ТЕЛЕВИЗОРЫ	接收设备与电视	レシーバーとテレビ
+No fade	Sans fondu	Sin fundido	Без затухания	不淡出	フェードなし
+Fade between songs	Fondu entre les titres	Fundido entre canciones	Затухание между треками	歌曲之间淡入淡出	曲間のフェード
+Blend the end of one track into the next	Enchaîner la fin d’un titre avec le suivant	Fundir el final de una canción con la siguiente	Плавно соединять конец трека со следующим	让一首歌的结尾与下一首衔接	曲の終わりと次の曲をなめらかにつなぐ
+Seamless albums	Albums sans coupure	Álbumes sin pausas	Альбомы без пауз	无缝专辑	ギャップレスアルバム
+Seek	Avancer ou reculer	Desplazarse	Перемотать	定位播放进度	シーク
+Single	Simple	Sencillo	Сингл	单曲	シングル
+Singles & EPs	Singles et EP	Sencillos y EP	Синглы и EP	单曲与 EP	シングルとEP
+Workout	Sport	Entrenamiento	Тренировка	运动	ワークアウト
+Wind down	Se détendre	Relajarse	Расслабиться	放松	リラックス
+Electronic	Électronique	Electrónica	Электронная музыка	电子音乐	エレクトロニック
+Classical	Classique	Clásica	Классическая музыка	古典音乐	クラシック
+World	Musiques du monde	Músicas del mundo	Музыка мира	世界音乐	ワールドミュージック
+Folk & Country	Folk et country	Folk y country	Фолк и кантри	民谣与乡村	フォークとカントリー
+Jazz & Blues	Jazz et blues	Jazz y blues	Джаз и блюз	爵士与蓝调	ジャズとブルース
+R&B & Soul	R&B et soul	R&B y soul	R&B и соул	节奏布鲁斯与灵魂乐	R&Bとソウル
+Read more on Wikipedia	En savoir plus sur Wikipédia	Leer más en Wikipedia	Подробнее в Википедии	在维基百科了解更多	Wikipediaで詳しく見る
+Look again	Réessayer la recherche	Buscar de nuevo	Поискать ещё раз	再找一次	もう一度探す
+Look for updates	Rechercher les mises à jour	Buscar actualizaciones	Проверить обновления	检查更新	更新を確認
+Read the library again	Relire la bibliothèque	Volver a leer la biblioteca	Перечитать медиатеку	重新读取音乐库	ライブラリを再読み込み
+Reading tags and artwork…	Lecture des tags et pochettes…	Leyendo etiquetas y portadas…	Чтение тегов и обложек…	正在读取标签和封面…	タグとジャケットを読み込み中…
+Reading the library…	Lecture de la bibliothèque…	Leyendo la biblioteca…	Чтение медиатеки…	正在读取音乐库…	ライブラリを読み込み中…
+Reading your library…	Lecture de ta bibliothèque…	Leyendo tu biblioteca…	Чтение твоей медиатеки…	正在读取你的音乐库…	ライブラリを読み込み中…
+Scanning…	Analyse en cours…	Escaneando…	Сканирование…	正在扫描…	スキャン中…
+Scan failed	Échec de l’analyse	Error de escaneo	Ошибка сканирования	扫描失败	スキャンに失敗しました
+See more	Voir plus	Ver más	Подробнее	查看更多	もっと見る
+Searching the songbook	Recherche des titres	Buscando canciones	Поиск песен	正在搜索歌曲	曲を検索中
+No parametric filters found in that file	Aucun filtre paramétrique trouvé dans ce fichier	No se encontraron filtros paramétricos en ese archivo	В файле нет параметрических фильтров	该文件中没有参数均衡滤镜	このファイルにパラメトリックフィルターはありません
+Open Songsta	Ouvrir Songsta	Abrir Songsta	Открыть Songsta	打开 Songsta	Songstaを開く
+Open the player	Ouvrir le lecteur	Abrir el reproductor	Открыть плеер	打开播放器	プレーヤーを開く
+Open Miniplayer	Ouvrir le mini-lecteur	Abrir minirreproductor	Открыть мини-плеер	打开迷你播放器	ミニプレーヤーを開く
+Minimize miniplayer	Réduire le mini-lecteur	Minimizar minirreproductor	Свернуть мини-плеер	最小化迷你播放器	ミニプレーヤーを最小化
+Maximize	Agrandir	Maximizar	Развернуть	最大化	最大化
+Minimize	Réduire	Minimizar	Свернуть	最小化	最小化
