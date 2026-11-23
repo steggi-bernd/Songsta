@@ -1,0 +1,97 @@
+Let phones in	Autoriser les téléphones	Permitir que se conecten teléfonos	Разрешить подключение телефонов	允许手机连接	スマートフォンの接続を許可
+Link	Associer	Vincular	Связать	关联	リンクする
+Link to a computer	Se connecter à un ordinateur	Conectar con un ordenador	Подключиться к компьютеру	连接到电脑	パソコンに接続
+Link phones without a sync service	Connecter des téléphones sans service de synchronisation	Conectar teléfonos sin servicio de sincronización	Подключать телефоны без сервиса синхронизации	无需同步服务即可连接手机	同期サービスなしでスマートフォンを接続
+Pair a phone	Associer un téléphone	Emparejar un teléfono	Подключить телефон	配对手机	スマートフォンをペアリング
+Phones at home	Téléphones sur le réseau local	Teléfonos en la red de casa	Телефоны в домашней сети	家庭网络中的手机	ホームネットワークのスマートフォン
+Paired on {date}	Associé le {date}	Emparejado el {date}	Подключено {date}	配对日期：{date}	ペアリング日：{date}
+From this phone on {name}	Depuis ce téléphone sur {name}	Desde este teléfono en {name}	С этого телефона на {name}	通过此手机在 {name} 上播放	このスマートフォンから{name}で再生
+Looking for computers…	Recherche d’ordinateurs…	Buscando ordenadores…	Поиск компьютеров…	正在搜索电脑…	パソコンを検索中…
+Not linked to a computer	Aucun ordinateur connecté	No hay ningún ordenador conectado	Нет подключения к компьютеру	尚未连接电脑	パソコンに接続されていません
+Shows a code to type in on the phone	Affiche un code à saisir sur le téléphone	Muestra un código para introducir en el teléfono	Показывает код для ввода на телефоне	显示需要在手机上输入的代码	スマートフォンで入力するコードを表示
+That code doesn't fit	Ce code ne correspond pas	El código no coincide	Код не подходит	代码不匹配	コードが一致しません
+That didn't work	Ça n’a pas fonctionné	No ha funcionado	Не получилось	操作未成功	うまくいきませんでした
+The code has run out	Ce code a expiré	El código ha caducado	Срок действия кода истёк	代码已过期	コードの有効期限が切れました
+Type this code in on the phone	Saisis ce code sur ton téléphone	Introduce este código en el teléfono	Введи этот код на телефоне	在手机上输入此代码	スマートフォンでこのコードを入力
+Unlink	Dissocier	Desvincular	Отвязать	取消关联	リンクを解除
+Connection log	Journal de connexion	Registro de conexiones	Журнал подключений	连接日志	接続ログ
+CONNECTIONS	CONNEXIONS	CONEXIONES	ПОДКЛЮЧЕНИЯ	连接	接続
+Server address	Adresse du serveur	Dirección del servidor	Адрес сервера	服务器地址	サーバーのアドレス
+SERVER	SERVEUR	SERVIDOR	СЕРВЕР	服务器	サーバー
+Jellyfin user	Utilisateur Jellyfin	Usuario de Jellyfin	Пользователь Jellyfin	Jellyfin 用户	Jellyfinユーザー
+Jellyfin waits for a user — choose one below	Jellyfin attend un utilisateur : choisis-en un ci-dessous	Jellyfin necesita un usuario: elige uno abajo	Jellyfin ждёт выбора пользователя — выбери ниже	Jellyfin 正在等待选择用户，请在下方选择	Jellyfinのユーザーを下から選んでください
+Navidrome or any Subsonic server	Navidrome ou tout autre serveur Subsonic	Navidrome u otro servidor Subsonic	Navidrome или другой сервер Subsonic	Navidrome 或其他 Subsonic 服务器	Navidromeまたはその他のSubsonicサーバー
+No folders imported yet	Aucun dossier importé pour l’instant	Todavía no has importado carpetas	Папки ещё не импортированы	尚未导入文件夹	フォルダーはまだ読み込まれていません
+Folders on this device	Dossiers sur cet appareil	Carpetas de este dispositivo	Папки на этом устройстве	此设备上的文件夹	このデバイスのフォルダー
+On this device	Sur cet appareil	En este dispositivo	На этом устройстве	在此设备上	このデバイス上
+On this phone	Sur ce téléphone	En este teléfono	На этом телефоне	在此手机上	このスマートフォン上
+ON THIS PHONE	SUR CE TÉLÉPHONE	EN ESTE TELÉFONO	НА ЭТОМ ТЕЛЕФОНЕ	在此手机上	このスマートフォン上
+Other device	Autre appareil	Otro dispositivo	Другое устройство	其他设备	ほかのデバイス
+Output device	Périphérique de sortie	Dispositivo de salida	Устройство вывода	输出设备	出力デバイス
+Play on a device	Écouter sur un appareil	Reproducir en un dispositivo	Воспроизвести на устройстве	在设备上播放	デバイスで再生
+Playing on this phone	Lecture sur ce téléphone	Reproduciendo en este teléfono	Воспроизведение на этом телефоне	正在此手机上播放	このスマートフォンで再生中
+Playing on {deviceName}	Lecture sur {deviceName}	Reproduciendo en {deviceName}	Воспроизведение на {deviceName}	正在 {deviceName} 上播放	{deviceName}で再生中
+Played on {device}	Écouté sur {device}	Reproducido en {device}	Прослушано на {device}	在 {device} 上播放	{device}で再生
+Device at {host}	Appareil à l’adresse {host}	Dispositivo en {host}	Устройство по адресу {host}	位于 {host} 的设备	{host}のデバイス
+More about this phone	En savoir plus sur ce téléphone	Más sobre este teléfono	Подробнее об этом телефоне	关于此手机的更多信息	このスマートフォンの詳細
+More about {deviceName}	En savoir plus sur {deviceName}	Más sobre {deviceName}	Подробнее об устройстве {deviceName}	关于 {deviceName} 的更多信息	{deviceName}の詳細
+Add a device by its address	Ajouter un appareil par son adresse	Añadir un dispositivo por dirección	Добавить устройство по адресу	通过地址添加设备	アドレスを指定してデバイスを追加
+Looking on your network…	Recherche sur ton réseau…	Buscando en tu red…	Поиск в сети…	正在搜索你的网络…	ネットワークを検索中…
+Nothing found on your network.	Aucun appareil trouvé sur ton réseau.	No se han encontrado dispositivos en tu red.	В сети ничего не найдено.	网络中未找到设备。	ネットワーク上にデバイスが見つかりません。
+Connect to your Wi-Fi to see them.	Connecte-toi au Wi-Fi pour les voir.	Conéctate a tu Wi-Fi para verlos.	Подключись к Wi-Fi, чтобы увидеть устройства.	连接 Wi-Fi 后即可查看这些设备。	Wi-Fiに接続すると表示されます。
+Pair	Associer	Emparejar	Сопрячь	配对	ペアリング
+Pair again	Associer à nouveau	Volver a emparejar	Повторить сопряжение	重新配对	再ペアリング
+Pair it as a speaker	L’associer comme enceinte	Emparejar como altavoz	Сопрячь как колонку	配对为音箱	スピーカーとしてペアリング
+Pair to switch it off	Associer pour permettre l’arrêt automatique	Emparejar para apagarlo	Сопрячь для автоматического выключения	配对以便自动关机	自動電源オフのためにペアリング
+Open Android's setting	Ouvrir les paramètres Android	Abrir los ajustes de Android	Открыть настройки Android	打开 Android 设置	Androidの設定を開く
+Android's list of outputs	Sorties audio Android	Salidas de audio de Android	Аудиовыходы Android	Android 音频输出列表	Androidの音声出力一覧
+Headphones	Casque	Auriculares	Наушники	耳机	ヘッドホン
+Quality of new downloads	Qualité des nouveaux téléchargements	Calidad de las nuevas descargas	Качество новых загрузок	新下载内容的音质	新しいダウンロードの音質
+Find something to download	Trouver de la musique à télécharger	Encontrar música para descargar	Найти музыку для скачивания	查找可下载的音乐	ダウンロードする曲を探す
+Nothing downloaded yet	Aucun téléchargement pour l’instant	Todavía no hay descargas	Пока ничего не скачано	还没有下载内容	ダウンロードはまだありません
+Stop downloading	Arrêter le téléchargement	Detener descarga	Остановить скачивание	停止下载	ダウンロードを停止
+Stop waiting for Wi-Fi	Ne plus attendre le Wi-Fi	Dejar de esperar al Wi-Fi	Не ждать Wi-Fi	不再等待 Wi-Fi	Wi-Fi待ちをやめる
+Stop these downloads?	Arrêter ces téléchargements ?	¿Detener estas descargas?	Остановить эти загрузки?	停止这些下载任务？	これらのダウンロードを停止しますか？
+Remove download	Supprimer le téléchargement	Eliminar descarga	Удалить загрузку	移除下载内容	ダウンロードを削除
+Remove this download?	Supprimer ce téléchargement ?	¿Eliminar esta descarga?	Удалить эту загрузку?	移除此下载内容？	このダウンロードを削除しますか？
+Remove all downloads?	Supprimer tous les téléchargements ?	¿Eliminar todas las descargas?	Удалить все загрузки?	移除全部下载内容？	すべてのダウンロードを削除しますか？
+The download didn't start	Le téléchargement n’a pas démarré	La descarga no ha comenzado	Загрузка не началась	下载未开始	ダウンロードを開始できませんでした
+The download stopped	Le téléchargement s’est arrêté	La descarga se ha detenido	Загрузка остановилась	下载已停止	ダウンロードが停止しました
+The download couldn't be removed	Impossible de supprimer le téléchargement	No se pudo eliminar la descarga	Не удалось удалить загрузку	无法移除下载内容	ダウンロードを削除できませんでした
+Rescan	Relancer l’analyse des dossiers	Volver a escanear	Повторно сканировать	重新扫描	再スキャン
+Rescan library	Actualiser la bibliothèque	Volver a escanear la biblioteca	Пересканировать медиатеку	重新扫描音乐库	ライブラリを再スキャン
+Rescan every folder	Réanalyser tous les dossiers	Volver a escanear todas las carpetas	Пересканировать все папки	重新扫描所有文件夹	すべてのフォルダーを再スキャン
+Rescan failed	Échec de la nouvelle analyse	Error al volver a escanear	Ошибка повторного сканирования	重新扫描失败	再スキャンできませんでした
+Rescanning local library…	Nouvelle analyse de la bibliothèque locale…	Volviendo a escanear la biblioteca local…	Повторное сканирование локальной медиатеки…	正在重新扫描本地音乐库…	ローカルライブラリを再スキャン中…
+Reading your music…	Lecture de ta bibliothèque…	Leyendo tu música…	Чтение твоей музыки…	正在读取你的音乐…	音楽を読み込み中…
+Looking through the folders…	Exploration des dossiers…	Buscando en las carpetas…	Просмотр папок…	正在检查文件夹…	フォルダーを確認中…
+Import file	Importer un fichier	Importar archivo	Импортировать файл	导入文件	ファイルを読み込む
+Import data	Importer des données	Importar datos	Импортировать данные	导入数据	データを読み込む
+Import playlist	Importer une playlist	Importar lista de reproducción	Импортировать плейлист	导入播放列表	プレイリストを読み込む
+Import ZIP	Importer un ZIP	Importar ZIP	Импортировать ZIP	导入 ZIP	ZIPを読み込む
+Import ZIP…	Importer un ZIP…	Importar ZIP…	Импортировать ZIP…	导入 ZIP…	ZIPを読み込む…
+Import from Spotify	Importer depuis Spotify	Importar desde Spotify	Импортировать из Spotify	从 Spotify 导入	Spotifyから読み込む
+Spotify's own data download	Données exportées par Spotify	Datos descargados de Spotify	Данные, скачанные из Spotify	从 Spotify 下载的数据	Spotifyからダウンロードしたデータ
+Import a local folder first	Commence par importer un dossier local	Primero importa una carpeta local	Сначала импортируй локальную папку	请先导入本地文件夹	まずローカルフォルダーを読み込んでください
+Import another folder	Importer un autre dossier	Importar otra carpeta	Импортировать ещё одну папку	导入其他文件夹	別のフォルダーを読み込む
+Importing folder…	Importation du dossier…	Importando carpeta…	Импорт папки…	正在导入文件夹…	フォルダーを読み込み中…
+Import failed	Échec de l’importation	Error al importar	Не удалось импортировать	导入失败	読み込みに失敗しました
+Import a backup?	Importer une sauvegarde ?	¿Importar una copia de seguridad?	Импортировать резервную копию?	导入备份？	バックアップを読み込みますか？
+Import this backup?	Importer cette sauvegarde ?	¿Importar esta copia de seguridad?	Импортировать эту резервную копию?	导入此备份？	このバックアップを読み込みますか？
+Restore a backup, replacing what's here	Restaurer une sauvegarde et remplacer les données actuelles	Restaurar copia y sustituir los datos actuales	Восстановить копию с заменой текущих данных	恢复备份并替换现有数据	現在のデータを置き換えてバックアップを復元
+No setting fits “{query}”	Aucun réglage ne correspond à « {query} »	Ningún ajuste coincide con «{query}»	Настроек по запросу «{query}» нет	未找到与“{query}”匹配的设置	「{query}」に一致する設定はありません
+All here	Tout est là	Todo está aquí	Всё на месте	全部都在这里	すべてそろっています
+Everything you heard	Tout ce que tu as écouté	Todo lo que has escuchado	Вся прослушанная музыка	你听过的全部音乐	聴いた音楽のすべて
+KEPT ON THIS PHONE	CONSERVÉ SUR CE TÉLÉPHONE	GUARDADO EN ESTE TELÉFONO	СОХРАНЕНО НА ТЕЛЕФОНЕ	保存在此手机上	このスマートフォンに保存
+Shared with your own servers	Partagé avec tes propres serveurs	Compartido con tus servidores	Передаётся на твои серверы	与自己的服务器共享	自分のサーバーと共有
+SHARED WITH YOUR OWN SERVERS	PARTAGÉ AVEC TES SERVEURS	COMPARTIDO CON TUS SERVIDORES	ОБЩЕЕ С ТВОИМИ СЕРВЕРАМИ	与自己的服务器共享	自分のサーバーと共有
+Only my own server	Uniquement mon propre serveur	Solo mi servidor	Только мой сервер	仅使用自己的服务器	自分のサーバーのみ
+Only my own servers	Uniquement mes propres serveurs	Solo mis servidores	Только мои серверы	仅使用自己的服务器	自分のサーバーのみ
+Off with Only my own servers	Désactivé en mode « Uniquement mes propres serveurs »	Desactivado al usar «Solo mis servidores»	Недоступно при режиме «Только мои серверы»	启用“仅使用自己的服务器”时关闭	「自分のサーバーのみ」で無効
+Nothing to measure yet: add music first.	Rien à analyser pour le moment. Ajoute d’abord de la musique.	Aún no hay música para analizar. Añade canciones primero.	Пока нечего анализировать. Сначала добавь музыку.	还没有可以分析的音乐，请先添加歌曲。	まだ解析する音楽がありません。まず曲を追加してください。
+Local library scanned	Bibliothèque locale analysée	Biblioteca local escaneada	Локальная медиатека просканирована	本地音乐库扫描完成	ローカルライブラリをスキャンしました
+Local library updated	Bibliothèque locale mise à jour	Biblioteca local actualizada	Локальная медиатека обновлена	本地音乐库已更新	ローカルライブラリを更新しました
+Set up a local folder first	Commence par ajouter un dossier local	Primero configura una carpeta local	Сначала добавь локальную папку	请先添加本地文件夹	まずローカルフォルダーを設定してください
+Jellyfin or Navidrome, at home and on the road.	Jellyfin ou Navidrome, chez toi comme en déplacement.	Jellyfin o Navidrome, en casa o fuera.	Jellyfin или Navidrome — дома и в дороге.	通过 Jellyfin 或 Navidrome，在家或出门都能听。	JellyfinやNavidromeなら、自宅でも外出先でも。
+Jellyfin, at home and on the road.	Jellyfin, chez toi comme en déplacement.	Jellyfin, en casa o fuera.	Jellyfin — дома и в дороге.	通过 Jellyfin，在家或出门都能听。	Jellyfinなら、自宅でも外出先でも。
+Only on this computer and only until Songsta closes: when, which service, which address. No song or search goes into it.	Sur cet ordinateur seulement, jusqu’à la fermeture de Songsta : date, service et adresse. Ni titres ni recherches.	Solo en este ordenador y hasta cerrar Songsta: cuándo, servicio y dirección. No guarda canciones ni búsquedas.	Только на этом компьютере до закрытия Songsta: время, сервис и адрес. Названия треков и поисковые запросы не сохраняются.	仅保存在此电脑上，直到关闭 Songsta：请求时间、服务和地址。不记录歌曲或搜索内容。	このパソコンに、Songstaを閉じるまでの間だけ保存します。日時・サービス・アドレスのみで、曲名や検索内容は含みません。
