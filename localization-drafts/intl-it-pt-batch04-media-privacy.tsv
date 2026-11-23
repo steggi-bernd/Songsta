@@ -1,0 +1,225 @@
+{count} {value} by {name}	{count} {value} di {name}	{count} {value} de {name}
+{count} {value}{value2} in your library	{count} {value}{value2} nella tua libreria	{count} {value}{value2} na sua biblioteca
+{count} by {name}	{count} di {name}	{count} de {name}
+{count} by their lyrics	{count} trovati grazie al testo	{count} encontrados pela letra
+{count} chosen	{count} selezionati	{count} selecionados
+{count} days	{count} giorni	{count} dias
+{count} didn't download	{count} download non riusciti	{count} downloads falharam
+{count} folder{value} on this device{value2}	{count} cartelle{value} su questo dispositivo{value2}	{count} pastas{value} neste dispositivo{value2}
+{count} for Wi-Fi	{count} in attesa del Wi-Fi	{count} aguardando Wi-Fi
+{count} from this phone. They stay on your server.	{count} rimossi dal telefono. Restano sul server.	{count} removidos deste celular. Continuam no servidor.
+{count} joined last — the newest is {title}.	{count} aggiunti di recente; il più nuovo è {title}.	{count} adicionados recentemente; o mais novo é {title}.
+{count} min	{count} min	{count} min
+{count} missing songs are downloading again	Nuovo tentativo di download per {count} brani mancanti	Baixando novamente {count} músicas que estavam faltando
+{count} more	Altri {count}	Mais {count}
+{count} of its songs were	{count} dei suoi brani erano	{count} músicas dela eram
+{count} on no album	{count} senza album	{count} sem álbum
+{count} plays	{count} ascolti	{count} reproduções
+{count} ready offline	{count} disponibili offline	{count} disponíveis offline
+{count} song{value}	{count} brani{value}	{count} músicas{value}
+{count} song{value} · {path}	{count} brani{value} · {path}	{count} músicas{value} · {path}
+{count} songs	{count} brani	{count} músicas
+{count} songs can't be measured: files that can't be read, or stretches too short. Tried again when a file changes, or in a month.	Impossibile analizzare {count} brani: file illeggibili o estratti troppo brevi. Nuovo tentativo alla modifica del file o fra un mese.	Não foi possível analisar {count} músicas: arquivos ilegíveis ou trechos curtos demais. Uma nova tentativa será feita quando o arquivo mudar ou daqui a um mês.
+{count} songs downloaded	{count} brani scaricati	{count} músicas baixadas
+{count} songs found. Press to add another folder.	Trovati {count} brani. Premi per aggiungere un'altra cartella.	{count} músicas encontradas. Toque para adicionar outra pasta.
+{count} songs from the {d}	{count} brani del {d}	{count} músicas do dia {d}
+{count} songs measured here · {size} · start and progress under Library	{count} brani analizzati qui · {size} · avvio e progressi in Libreria	{count} músicas analisadas aqui · {size} · inicie e acompanhe em Biblioteca
+{count} songs stay, because they're on other downloaded lists too.	{count} brani rimangono perché sono anche in altre liste scaricate.	{count} músicas serão mantidas porque também estão em outras playlists baixadas.
+{count} songs, about {time} the first time.	{count} brani, circa {time} per la prima analisi.	{count} músicas; a primeira análise leva cerca de {time}.
+{count} songs, about {time} the first time. After that, only new songs are measured.	{count} brani: circa {time} la prima volta. Poi vengono analizzati solo quelli nuovi.	{count} músicas: cerca de {time} na primeira análise. Depois, só as novas são analisadas.
+{done} of {total} songs measured · {time} to go	Analizzati {done} brani su {total} · ancora {time}	{done} de {total} músicas analisadas · faltam {time}
+{from} to {to}	da {from} a {to}	de {from} a {to}
+{genre} · in your library	{genre} · nella tua libreria	{genre} · na sua biblioteca
+{h} h {m} min	{h} h {m} min	{h} h {m} min
+{held} held back by your switches	{held} richieste bloccate dalle tue impostazioni	{held} solicitações bloqueadas pelas suas configurações
+{n} bpm	{n} BPM	{n} BPM
+{n}%	{n}%	{n}%
+{on} of {count} providers on	{on} fornitori attivi su {count}	{on} de {count} provedores ativados
+{on} of {count} services on the internet on	{on} servizi Internet attivi su {count}	{on} de {count} serviços da internet ativados
+{time} heard by you	{time} di ascolto	{time} de reprodução
+{time} left	ancora {time}	faltam {time}
+{weekday} {day}	{weekday} {day}	{weekday} {day}
+{year} has the most: {count}	Il {year} è in testa: {count}	O ano {year} tem mais: {count}
+1 fits	1 risultato	1 resultado
+a folder you chose	una cartella scelta da te	uma pasta que você escolheu
+A song's lyrics are asked of the providers switched on at the same time; the best answer wins. Your own lyrics (in the files, beside them, on your server) always work.	Songsta interroga contemporaneamente i fornitori di testi attivati e sceglie il risultato migliore. I testi che hai salvato nei file, accanto a essi o sul server sono sempre disponibili.	O Songsta consulta os provedores de letras ativados ao mesmo tempo e escolhe o melhor resultado. Suas letras salvas nos arquivos, ao lado deles ou no servidor sempre ficam disponíveis.
+A song's story and credits, artist pictures, and plain lyrics when nothing else has them	Storia e crediti dei brani, foto degli artisti e testi semplici quando non sono disponibili altrove	Histórias e créditos das músicas, fotos de artistas e letras simples quando nenhuma outra fonte as oferece
+about {count} hours	circa {count} ore	cerca de {count} horas
+about {count} minutes	circa {count} minuti	cerca de {count} minutos
+Album and artist facts, release years, and the genres its community voted for	Informazioni su album e artisti, anni di pubblicazione e generi votati dalla community	Informações sobre álbuns e artistas, anos de lançamento e gêneros votados pela comunidade
+Album and artist names	Nomi di album e artisti	Nomes de álbuns e artistas
+Album covers your files lack	Copertine mancanti nei tuoi file	Capas de álbuns que faltam nos seus arquivos
+Album of all time	Album di sempre	Álbum de todos os tempos
+Album of the month	Album del mese	Álbum do mês
+Album of the year	Album dell'anno	Álbum do ano
+Album, artist and song names	Nomi di album, artisti e brani	Nomes de álbuns, artistas e músicas
+Albums by year	Album per anno	Álbuns por ano
+Albums per year	Album per anno	Álbuns por ano
+Albums: {count} new	Album: {count} nuovi	Álbuns: {count} novos
+Albums: up to date	Album: tutto aggiornato	Álbuns: tudo atualizado
+All {count} songs are measured already. Start it to measure new songs as they come.	Tutti i {count} brani sono già stati analizzati. Avvia l'analisi per includere automaticamente i nuovi.	Todas as {count} músicas já foram analisadas. Inicie a análise para incluir as novas automaticamente.
+All {count} songs measured. New ones follow by themselves.	Tutti i {count} brani sono stati analizzati. I nuovi verranno analizzati automaticamente.	Todas as {count} músicas foram analisadas. As novas serão analisadas automaticamente.
+All {count} songs measured. New ones wait until you switch this on.	Tutti i {count} brani sono stati analizzati. I nuovi aspetteranno che attivi questa funzione.	Todas as {count} músicas foram analisadas. As novas vão aguardar até você ativar esta opção.
+All of Songsta's data in this folder: {size}. Nothing of it leaves the computer unless you share it below.	Tutti i dati di Songsta in questa cartella: {size}. Non lasciano il computer a meno che tu non li condivida qui sotto.	Todos os dados do Songsta nesta pasta: {size}. Nada sai do computador a menos que você permita o compartilhamento abaixo.
+All up to date	Tutto aggiornato	Tudo atualizado
+Always reachable, also with Only my own servers: they're yours. {count} requests to them since Songsta started.	Sempre raggiungibili, anche con «Solo i miei server»: sono tuoi. {count} richieste dall'avvio di Songsta.	Sempre acessíveis, mesmo com “Apenas meus servidores”: eles são seus. {count} solicitações desde que o Songsta foi iniciado.
+Animated covers	Copertine animate	Capas animadas
+Answers are kept on this computer, so each thing is asked once.	Le risposte vengono salvate su questo computer per evitare richieste ripetute.	As respostas ficam salvas neste computador para evitar consultas repetidas.
+Answers from the internet	Risposte da Internet	Respostas da internet
+Artist and album names, database numbers	Nomi di artisti e album, identificativi dei database	Nomes de artistas e álbuns e identificadores dos bancos de dados
+Artist bios and photos, and album genres	Biografie e foto degli artisti e generi degli album	Biografias e fotos de artistas e gêneros de álbuns
+As a playlist	Come playlist	Como playlist
+Asked once a day while Startup & updates allow it.	Controllato una volta al giorno, se consentito in Avvio e aggiornamenti.	Verificado uma vez por dia, se permitido em Inicialização e atualizações.
+Asking your server…	Interrogazione del server…	Consultando seu servidor…
+Back to {key}	Torna a {key}	Voltar para {key}
+Back to the usual folder	Torna alla cartella abituale	Voltar à pasta padrão
+Back to the usual folder?	Tornare alla cartella abituale?	Voltar à pasta padrão?
+Back to your own order	Ripristina il tuo ordine	Voltar à sua ordem
+behind it.	dietro di loro.	por trás disso.
+Busiest day	Giorno con più ascolti	Dia com mais reproduções
+calm	rilassato	tranquilo
+Can't be read	Impossibile leggere	Não é possível ler
+Choose a whole folder	Scegli un'intera cartella	Escolher uma pasta inteira
+Choose an empty folder, or make a new one	Scegli una cartella vuota o creane una nuova	Escolha uma pasta vazia ou crie uma nova
+Choose providers one by one	Scegli i fornitori uno per uno	Escolher provedores um por um
+Classic	Classico	Clássico
+Close behind: {weekday} with {time}	Subito dopo: {weekday}, con {time}	Logo atrás: {weekday}, com {time}
+Connection log	Registro delle connessioni	Registro de conexões
+Connections	Connessioni	Conexões
+CONNECTIONS	CONNESSIONI	CONEXÕES
+Correct the key	Correggi la tonalità	Corrigir a tonalidade
+Couldn't move your data	Impossibile spostare i dati	Não foi possível mover seus dados
+Covers and album details where MusicBrainz has none, and the cover in your Discord status	Copertine e dettagli degli album non presenti su MusicBrainz e copertina nello stato Discord	Capas e detalhes de álbuns ausentes no MusicBrainz e capa no status do Discord
+Covers, facts, lyrics and animated covers from the services listed in Settings. Each one can be switched off there.	Copertine, informazioni, testi e copertine animate dai servizi elencati in Impostazioni. Puoi disattivarli uno alla volta.	Capas, informações, letras e capas animadas dos serviços listados em Configurações. Você pode desativar cada um.
+day by day.	giorno dopo giorno.	dia após dia.
+Decade	Decennio	Década
+Delete my plays	Elimina i miei ascolti	Excluir minhas reproduções
+Delete your plays?	Eliminare gli ascolti?	Excluir suas reproduções?
+Devices at home	Dispositivi di casa	Dispositivos em casa
+Done: {done} of {total} songs measured. New ones follow by themselves.	Completato: {done} brani su {total} analizzati. I nuovi verranno analizzati automaticamente.	Concluído: {done} de {total} músicas analisadas. As novas serão analisadas automaticamente.
+Done: {done} of {total} songs measured. New ones wait until you switch this on.	Completato: {done} brani su {total} analizzati. I nuovi aspetteranno che attivi questa funzione.	Concluído: {done} de {total} músicas analisadas. As novas vão aguardar até você ativar esta opção.
+Downloads: {count} tried again	Download: {count} nuovi tentativi	Downloads: {count} tentativas repetidas
+Downloads: checked	Download: verifica completata	Downloads: verificação concluída
+driving	alla guida	dirigindo
+Each bar is an hour, from midnight at the top to 23:00 at the bottom.	Ogni barra rappresenta un'ora: da mezzanotte in alto alle 23:00 in basso.	Cada barra representa uma hora: da meia-noite no topo até as 23h na parte de baixo.
+Each ray is an hour of the day, as long as you listened then.	Ogni raggio rappresenta un'ora. Più è lungo, più musica hai ascoltato.	Cada raio representa uma hora. Quanto maior ele for, mais música você ouviu.
+Each row is a day. The wider, the more played.	Ogni riga rappresenta un giorno. Più è larga, più musica hai ascoltato.	Cada linha representa um dia. Quanto mais larga, mais música você ouviu.
+Each row is a month. The wider, the more played.	Ogni riga rappresenta un mese. Più è larga, più musica hai ascoltato.	Cada linha representa um mês. Quanto mais larga, mais música você ouviu.
+Each switch holds back every request to that service: nothing of it leaves the phone while it's off.	Disattivando un servizio, nessuna richiesta viene inviata dal telefono a quel servizio.	Ao desativar um serviço, nenhuma solicitação é enviada pelo celular a ele.
+Each switch holds back every request to that service: nothing of it leaves this computer while it's off.	Disattivando un servizio, nessuna richiesta viene inviata dal computer a quel servizio.	Ao desativar um serviço, nenhuma solicitação é enviada pelo computador a ele.
+Elsewhere	Altrove	Em outro lugar
+Empty	Vuoto	Vazio
+Empty and restart	Svuota e riavvia	Limpar e reiniciar
+Empty the answers from the internet?	Svuotare le risposte da Internet?	Limpar as respostas da internet?
+Every service on the internet off at once: no facts or lyrics from outside. Your server, the sync service and the devices at home always work.	Disattiva tutti i servizi Internet: niente informazioni o testi da fonti esterne. Il tuo server, il servizio di sincronizzazione e i dispositivi di casa continuano a funzionare.	Desliga todos os serviços da internet: sem informações ou letras externas. Seu servidor, o serviço de sincronização e os dispositivos de casa continuam funcionando.
+Every service on the internet off at once: no facts, covers or lyrics from outside. Your servers and the devices at home always work.	Disattiva tutti i servizi Internet: niente informazioni, copertine o testi da fonti esterne. I tuoi server e dispositivi di casa continuano a funzionare.	Desliga todos os serviços da internet: sem informações, capas ou letras externas. Seus servidores e dispositivos de casa continuam funcionando.
+Everything Songsta kept in “{folder}” before the move is deleted. Your data in “{now}” stays. This can't be undone.	Tutti i dati salvati da Songsta in «{folder}» prima dello spostamento verranno eliminati. I dati in «{now}» resteranno. Non puoi annullare questa operazione.	Todos os dados que o Songsta mantinha em “{folder}” antes da mudança serão excluídos. Os dados de “{now}” serão mantidos. Não é possível desfazer.
+Everything that helps	Tutto quello che può aiutare	Tudo o que pode ajudar
+Facts, covers' details and lyrics already asked for, so nothing is asked twice · {size}	Informazioni, dettagli delle copertine e testi già recuperati, per evitare nuove richieste · {size}	Informações, detalhes de capas e letras já consultados, evitando novas solicitações · {size}
+Fewer details	Meno dettagli	Menos detalhes
+For you	Per te	Para você
+Forget	Dimentica	Esquecer
+GitHub is switched off in Network & privacy	GitHub è disattivato in Rete e privacy	GitHub está desativado em Rede e privacidade
+Give the key back to the measurement	Ripristina la tonalità rilevata dall'analisi	Restaurar a tonalidade detectada pela análise
+Go on	Continua	Continuar
+heard for the first time	ascoltati per la prima volta	ouvidas pela primeira vez
+held back	bloccati	bloqueados
+Hide them	Nascondili	Ocultar
+How it	Come suonava	Como soou
+in {key}	in {key}	em {key}
+in {key} and next to it	in {key} e tonalità vicine	em {key} e tonalidades próximas
+is still quiet.	è ancora tranquillo.	ainda está tranquilo.
+Its file can't be read, or the stretch your server makes of it is too short. It's tried again when the file changes, or in a month.	Il file non si può leggere oppure l'estratto fornito dal server è troppo breve. Nuovo tentativo quando il file cambia o fra un mese.	Não é possível ler o arquivo, ou o trecho enviado pelo servidor é curto demais. Uma nova tentativa será feita quando o arquivo mudar ou daqui a um mês.
+Jellyfin or Navidrome learns what you played	Jellyfin o Navidrome riceve le informazioni sui tuoi ascolti	Jellyfin ou Navidrome recebe informações sobre o que você ouviu
+Jump to {letter}	Vai alla lettera {letter}	Ir para a letra {letter}
+Jump to a letter	Vai a una lettera	Ir para uma letra
+Kept on this computer	Conservati su questo computer	Guardados neste computador
+KEPT ON THIS PHONE	CONSERVATI SU QUESTO TELEFONO	GUARDADOS NESTE CELULAR
+Kept the same both ways on Jellyfin or Navidrome	Sincronizzazione bidirezionale con Jellyfin o Navidrome	Sincronização nos dois sentidos com Jellyfin ou Navidrome
+Key · {camelot} · set by you	Tonalità · {camelot} · impostata da te	Tonalidade · {camelot} · definida por você
+last asked {when}	ultima richiesta {when}	última consulta: {when}
+Less	Meno	Menos
+less than a minute	meno di un minuto	menos de um minuto
+Let me choose	Lascia scegliere a me	Deixe-me escolher
+Library order, groups and album edits	Ordine della libreria, gruppi e modifiche agli album	Ordem da biblioteca, grupos e edições de álbuns
+Liked Songs and server favorites	Brani preferiti e preferiti del server	Músicas curtidas e favoritas do servidor
+lively	vivace	animado
+Loading	Caricamento	Carregando
+Loading the day…	Caricamento del giorno…	Carregando o dia…
+Longest streak	Serie più lunga	Maior sequência
+Look	Aspetto	Visual
+Look and app	Aspetto e app	Visual e aplicativo
+Looking through your music…	Esplorazione della tua musica…	Explorando suas músicas…
+Looping video covers	Copertine video in loop	Capas de vídeo em loop
+Looping video covers people collected	Copertine video in loop raccolte dalla community	Capas de vídeo em loop enviadas pela comunidade
+Lyrics from the internet	Testi da Internet	Letras da internet
+Measured: {key}	Analizzato: {key}	Analisado: {key}
+Mood	Atmosfera	Clima
+Most played from it	Più ascoltati di questo album	Mais ouvidas desse álbum
+mostly between {from} and {to}	soprattutto tra {from} e {to}	principalmente entre {from} e {to}
+Move and restart	Sposta e riavvia	Mover e reiniciar
+Move your data?	Spostare i dati?	Mover seus dados?
+Move…	Sposta…	Mover…
+Moves at the next start	Verrà spostato al prossimo avvio	Será movido na próxima inicialização
+Needs MusicBrainz, which is switched off in Network & privacy	Serve MusicBrainz, disattivato in Rete e privacy	Precisa do MusicBrainz, que está desativado em Rede e privacidade
+Neighbour {key}	Tonalità vicina: {key}	Tonalidade próxima: {key}
+No year	Anno sconosciuto	Sem ano
+not asked since Songsta started	nessuna richiesta dall'avvio di Songsta	nenhuma consulta desde que o Songsta foi iniciado
+Not connected	Non connesso	Não conectado
+Not linked	Non collegato	Não vinculado
+Nothing about you or your music	Niente su di te o sulla tua musica	Nada sobre você ou suas músicas
+Nothing asked of the internet yet.	Nessuna richiesta a Internet per ora.	Nenhuma consulta à internet até agora.
+Nothing but the request for its list	Solo la richiesta della lista	Apenas a solicitação da lista
+Nothing goes to the internet: what your files and servers have is what you see.	Non viene inviato niente a Internet: vedi solo i dati dei tuoi file e server.	Nada é enviado à internet: você vê apenas os dados dos seus arquivos e servidores.
+Nothing held back	Nessuna richiesta bloccata	Nenhuma solicitação bloqueada
+Nothing in your library fits this closely. Turn the wheel to a neighbour, or pick a mood.	Nessun brano corrisponde così precisamente. Gira la ruota verso una tonalità vicina o scegli un'atmosfera.	Nenhuma música da sua biblioteca combina tão bem. Gire a roda para uma tonalidade próxima ou escolha um clima.
+Nothing to measure yet: add music first.	Niente da analizzare: aggiungi prima della musica.	Nada para analisar: adicione músicas primeiro.
+Number 1	Numero 1	Número 1
+of {total} so far	di {total} finora	de {total} até agora
+Off while your plays aren't kept on this computer	Disattivato finché gli ascolti non vengono salvati su questo computer	Desativado enquanto as reproduções não forem salvas neste computador
+Off while your plays aren't kept on this phone	Disattivato finché gli ascolti non vengono salvati su questo telefono	Desativado enquanto as reproduções não forem salvas neste celular
+Off with Only my own servers	Disattivato con «Solo i miei server»	Desativado com “Apenas meus servidores”
+One song can't be measured: a file that can't be read, or a stretch too short. Tried again when the file changes, or in a month.	Un brano non può essere analizzato: file illeggibile o estratto troppo breve. Nuovo tentativo quando il file cambia o fra un mese.	Uma música não pôde ser analisada: arquivo ilegível ou trecho muito curto. Nova tentativa quando o arquivo mudar ou daqui a um mês.
+Only on this computer and only until Songsta closes: when, which service, which address. No song or search goes into it.	Solo su questo computer e fino alla chiusura di Songsta: quando, quale servizio e quale indirizzo. Nessun brano o ricerca viene registrato.	Só neste computador e até o Songsta fechar: quando, qual serviço e qual endereço. Nenhuma música nem pesquisa é registrada.
+Only the Discord app on this computer is told what plays	Solo l'app Discord su questo computer riceve le informazioni sulla riproduzione	Só o aplicativo Discord neste computador recebe informações sobre a reprodução
+Only while Animated cover art is on (Settings → Display).	Solo se Copertine animate è attivo (Impostazioni → Aspetto).	Apenas enquanto Capas animadas estiver ativado (Configurações → Aparência).
+Order the songs so each leads into the next: close in key and tempo, the energy rising and easing off	Ordina i brani con passaggi fluidi: tonalità e tempi vicini, energia che sale e poi si calma	Ordene músicas para que uma leve à outra: tonalidades e ritmos próximos, energia que sobe e depois diminui
+Partner {key}	Tonalità associata: {key}	Tonalidade parceira: {key}
+Paused · {done} of {total} songs measured	In pausa · {done} brani su {total} analizzati	Pausado · {done} de {total} músicas analisadas
+Pick the right one	Scegli quello giusto	Escolha o correto
+Pick the song's key on the Camelot wheel	Scegli la tonalità del brano sulla ruota Camelot	Escolha a tonalidade da música na roda Camelot
+Play album	Riproduci album	Reproduzir álbum
+Play on several together	Riproduci su più dispositivi insieme	Reproduzir em vários dispositivos ao mesmo tempo
+Play the day	Riproduci i brani del giorno	Reproduzir as músicas do dia
+Play the new ones	Riproduci i brani nuovi	Reproduzir as novas
+Play these five	Riproduci questi cinque	Reproduzir estas cinco
+playing	in riproduzione	reproduzindo
+Playing on this phone	In riproduzione su questo telefono	Tocando neste celular
+Playlists and likes: in step	Playlist e preferiti: sincronizzati	Playlists e curtidas: sincronizadas
+Playlists, likes, where playback stopped, and which of your devices plays what	Playlist, preferiti, posizione di riproduzione e musica sui tuoi dispositivi	Playlists, curtidas, ponto de reprodução e o que toca nos seus dispositivos
+Plays deleted	Ascolti eliminati	Reproduções excluídas
+Point at a day, click it to see its songs.	Passa su un giorno con il puntatore e fai clic per vedere i brani.	Passe o cursor sobre um dia e clique para ver as músicas.
+Popular with you	Popolari tra i tuoi ascolti	Populares entre as suas músicas
+Quietest month	Mese più tranquillo	Mês mais tranquilo
+Remove the old copy?	Rimuovere la vecchia copia?	Remover a cópia antiga?
+Replay, the listening history and Recently played on this phone start from nothing. Play counts on your server and what your sync service has stay. This can't be undone.	Replay, la cronologia e i brani riprodotti di recente su questo telefono verranno azzerati. I conteggi sul server e i dati del servizio di sincronizzazione resteranno. L'operazione non può essere annullata.	Replay, histórico e músicas reproduzidas recentemente neste celular serão zerados. As contagens do servidor e os dados do serviço de sincronização permanecem. Não é possível desfazer.
+Sealed by your operating system's keychain; never in a backup	Protetto dal portachiavi del sistema operativo; mai incluso nei backup	Protegido pelo cofre de chaves do sistema; nunca incluído em backups
+Searches deleted	Ricerche eliminate	Buscas excluídas
+Sends: {what}	Invia: {what}	Envia: {what}
+Server not reachable	Server non raggiungibile	Servidor inacessível
+Server: can't be reached	Server: non raggiungibile	Servidor: inacessível
+Server: reached	Server: raggiungibile	Servidor: acessível
+Settings → Network & privacy opens when you're done here, with every service and what goes to it.	Al termine si aprirà Impostazioni → Rete e privacy, con tutti i servizi e i dati inviati.	Ao terminar, Configurações → Rede e privacidade será aberta, mostrando os serviços e os dados enviados.
+Shared with your own servers	Condivisi con i tuoi server	Compartilhados com seus servidores
+SHARED WITH YOUR OWN SERVERS	CONDIVISI CON I TUOI SERVER	COMPARTILHADOS COM SEUS SERVIDORES
+Skips forgotten	Salti dimenticati	Pulos esquecidos
+So mixes play them less · {size}	Per farli comparire meno nei mix · {size}	Para que apareçam menos nos mixes · {size}
+Song {n} of {total}	Brano {n} di {total}	Música {n} de {total}
+Song and artist names	Nomi dei brani e degli artisti	Nomes das músicas e dos artistas
+Song, artist and album names	Nomi di brani, artisti e album	Nomes de músicas, artistas e álbuns
+Song, artist and album names, the song's length	Nomi di brani, artisti e album e durata del brano	Nomes de músicas, artistas e álbuns e duração
+Songs that sound like theirs, by tempo and key	Brani simili ai loro per ritmo e tonalità	Músicas parecidas com as deles em ritmo e tonalidade
+Songs: {count} new	Brani: {count} nuovi	Músicas: {count} novas
+Songs: up to date	Brani: tutto aggiornato	Músicas: tudo atualizado
+Songsta closes, copies everything back to “{folder}” as it starts again, and keeps it there.	Songsta si chiude, poi al riavvio ricopia tutti i dati in «{folder}» e li conserva lì.	O Songsta será fechado e, ao reiniciar, copiará todos os dados de volta para “{folder}”, onde ficarão armazenados.
+Songsta closes, copies everything to “{folder}” as it starts again, and keeps it there from then on. The old copy stays where it is until you remove it.	Songsta si chiude, poi al riavvio copia tutti i dati in «{folder}» e li conserva lì. La vecchia copia rimane finché non la elimini.	O Songsta será fechado e, ao reiniciar, copiará todos os dados para “{folder}”, onde ficarão armazenados. A cópia antiga permanecerá até você removê-la.
